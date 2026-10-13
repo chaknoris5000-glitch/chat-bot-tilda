@@ -16,7 +16,6 @@ const OPENROUTER_KEY = process.env.OPENROUTER_KEY || '';
 const FIRECRAWL_KEY = process.env.FIRECRAWL_KEY || '';
 const SITE_TO_CRAWL = process.env.SITE_TO_CRAWL || 'https://send-empty-creedite.tilda.ws';
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'AI-Администратор';
-const CLIENT_ID = 'tilda';
 
 console.log('TELEGRAM_TOKEN:', TELEGRAM_TOKEN ? 'ЕСТЬ' : 'НЕТ');
 console.log('SUPABASE_URL:', SUPABASE_URL ? 'ЕСТЬ' : 'НЕТ');
@@ -60,7 +59,6 @@ async function getTelegramFileUrl(fileId) {
   return `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${d.result.file_path}`;
 }
 
-// ==== ПОИСК ЧЕРЕЗ RPC (правильный, точный) ====
 async function searchDocuments(queryEmbedding, limit = 5) {
   try {
     const embeddingText = '[' + queryEmbedding.join(',') + ']';
@@ -93,13 +91,13 @@ async function saveDocument(content, embedding, url) {
   await fetch(`${SUPABASE_URL}/rest/v1/documents`, {
     method: 'POST',
     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ content, embedding, url, client_id: CLIENT_ID })
+    body: JSON.stringify({ content, embedding, url })
   });
 }
 
 async function getOrCreateSession(sessionId) {
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sessionId}&client_id=eq.${CLIENT_ID}&select=*`, {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sessionId}&select=*`, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
     });
     const rows = await r.json();
@@ -107,7 +105,7 @@ async function getOrCreateSession(sessionId) {
     const ins = await fetch(`${SUPABASE_URL}/rest/v1/chat_sessions`, {
       method: 'POST',
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-      body: JSON.stringify({ session_id: sessionId, history: [], client_id: CLIENT_ID })
+      body: JSON.stringify({ session_id: sessionId, history: [] })
     });
     const created = await ins.json();
     if (Array.isArray(created) && created.length > 0) return created[0];
@@ -117,7 +115,7 @@ async function getOrCreateSession(sessionId) {
 
 async function getSessionByTelegram(chatId) {
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/chat_sessions?telegram_chat_id=eq.${chatId}&client_id=eq.${CLIENT_ID}&select=*&order=updated_at.desc&limit=1`, {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/chat_sessions?telegram_chat_id=eq.${chatId}&select=*&order=updated_at.desc&limit=1`, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
     });
     const rows = await r.json();
@@ -127,7 +125,7 @@ async function getSessionByTelegram(chatId) {
 
 async function updateSession(sessionId, patch) {
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sessionId}&client_id=eq.${CLIENT_ID}`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sessionId}`, {
       method: 'PATCH',
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ ...patch, updated_at: new Date().toISOString() })
@@ -139,7 +137,7 @@ async function saveLead(sessionId, name, phone, problem) {
   await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
     method: 'POST',
     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ session_id: sessionId, name: name || null, phone: phone || null, problem: problem || null, client_id: CLIENT_ID })
+    body: JSON.stringify({ session_id: sessionId, name: name || null, phone: phone || null, problem: problem || null })
   });
 }
 
@@ -289,7 +287,7 @@ app.post('/telegram-webhook', async (req, res) => {
     } else return;
 
     if (text === '/leads' && String(chatId) === String(MANAGER_CHAT_ID)) {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&client_id=eq.${CLIENT_ID}&order=id.desc&limit=10`, {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc&limit=10`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       });
       const leads = await r.json();
