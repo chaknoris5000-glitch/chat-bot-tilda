@@ -54,34 +54,39 @@ async function getTelegramFileUrl(fileId) {
   return `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${d.result.file_path}`;
 }
 
-// ==== ПОИСК ЧЕРЕЗ RPC ====
+// ==== ПОИСК ПРЯМО В NODE.JS ====
 async function searchDocuments(queryEmbedding, limit = 5) {
   try {
-    const embeddingText = '[' + queryEmbedding.join(', ') + ']';
-    console.log('Отправляю вектор длиной:', queryEmbedding.length);
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/match_documents_text`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        query_embedding_text: embeddingText,
-        match_count: limit
-      })
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/documents?select=id,content,url,embedding`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
     });
-    const txt = await r.text();
-    if (!r.ok) {
-      console.log('RPC error:', txt.slice(0, 300));
-      return [];
+    if (!r.ok) { console.log('Supabase fetch error'); return []; }
+    const docs = await r.json();
+    if (!Array.isArray(docs) || docs.length === 0) { console.log('docs empty'); return []; }
+
+    function parseEmb(str) {
+      if (Array.isArray(str)) return str;
+      return str.replace(/[\[\]]/g, '').split(',').map(Number);
     }
-    let data;
-    try { data = JSON.parse(txt); } catch (e) { console.log('parse error:', txt.slice(0, 200)); return []; }
-    console.log('RPC вернул:', Array.isArray(data) ? data.length : 'не массив');
-    return Array.isArray(data) ? data : [];
+    function cos(a, b) {
+      let dot = 0, na = 0, nb = 0;
+      const len = Math.min(a.length, b.length);
+      for (let i = 0; i < len; i++) {
+        dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i];
+      }
+      return dot / (Math.sqrt(na) * Math.sqrt(nb));
+    }
+
+    const scored = docs.map(doc => ({
+      id: doc.id,
+      content: doc.content,
+      similarity: cos(queryEmbedding, parseEmb(doc.embedding))
+    }));
+    scored.sort((a, b) => b.similarity - a.similarity);
+    console.log('Всего документов:', docs.length, '| Топ similarity:', scored[0]?.similarity?.toFixed(3));
+    return scored.slice(0, limit);
   } catch (e) {
-    console.log('searchDocuments error:', e.message);
+    console.log('search error:', e.message);
     return [];
   }
 }
@@ -188,6 +193,7 @@ async function askAI(message, history, sessionId) {
     const matches = await searchDocuments(emb, 5);
     if (matches.length > 0) {
       context = matches.map(m => m.content).join('\n\n---\n\n');
+      console.log('Контекст собран, длина:', context.length);
     }
   } catch (e) { console.log('Контекст не собран:', e.message); }
 
@@ -307,6 +313,52 @@ app.post('/telegram-webhook', async (req, res) => {
     let session = await getSessionByTelegram(chatId);
     if (!session) {
       const newSid = 'tg_' + chatId;
+      await getOrCreateSession(newSid);
+      await updateSession(newSid, { telegram_chat_id: chatId });
+      session = await getSessionByTelegram(chatId);
+    }
+    if (!session) session = { session_id: 'tg_' + chatId, history: [] };
+
+    const history = session.history || [];
+    const reply = await askAI(text, history, session.session_id);
+    const newHistory = [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }];
+    await updateSession(session.session_id, { history: newHistory.slice(-20) });
+    await sendTelegram(chatId, reply);
+  } catch (error) {
+    console.log('Telegram error:', error);
+  }
+});
+
+app.get('/crawl', async (req, res) => {
+  try {
+    const scrape = await fetch('https://api.firecrawl.dev/v2/scrape', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${FIRECRAWL_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: SITE_TO_CRAWL, formats: ['markdown'] })
+    });
+    const scrapeData = await scrape.json();
+    if (!scrape.ok) return res.status(500).json({ error: 'Firecrawl error' });
+    const text = scrapeData.data?.markdown || '';
+    const chunks = [];
+    for (let i = 0; i < text.length; i += 1000) chunks.push(text.slice(i, i + 1000));
+
+    let saved = 0;
+    for (const chunk of chunks) {
+      try {
+        const embedding = await getEmbedding(chunk);
+        await saveDocument(chunk, embedding, SITE_TO_CRAWL);
+        saved++;
+      } catch (e) {}
+    }
+    res.json({ ok: true, saved, total: chunks.length });
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка кроулинга' });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Сервер запущен: http://localhost:${PORT}`);
+});
       await getOrCreateSession(newSid);
       await updateSession(newSid, { telegram_chat_id: chatId });
       session = await getSessionByTelegram(chatId);
