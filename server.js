@@ -8,9 +8,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '25mb' }));
 
-// ==== ЖЁСТКИЕ НАСТРОЙКИ TILDA (из Render Environment) ====
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || '';
-const TELEGRAM_USERNAME = process.env.TELEGRAM_USERNAME || 'vadim602_bot';
 const MANAGER_CHAT_ID = process.env.MANAGER_CHAT_ID || '';
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
@@ -62,18 +60,33 @@ async function getTelegramFileUrl(fileId) {
   return `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${d.result.file_path}`;
 }
 
-async function searchDocuments(queryEmbedding, limit = 3) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/documents?select=id,content,url,embedding&client_id=eq.${CLIENT_ID}`, {
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-  });
-  if (!r.ok) return [];
-  const docs = await r.json();
-  if (!Array.isArray(docs) || docs.length === 0) return [];
-  function cos(a, b) { let d=0,na=0,nb=0; for(let i=0;i<a.length;i++){d+=a[i]*b[i];na+=a[i]*a[i];nb+=b[i]*b[i];} return d/(Math.sqrt(na)*Math.sqrt(nb)); }
-  function parse(str) { if (Array.isArray(str)) return str; return str.replace(/[\[\]]/g,'').split(',').map(Number); }
-  const scored = docs.map(doc => ({ id: doc.id, content: doc.content, similarity: cos(queryEmbedding, parse(doc.embedding)) }));
-  scored.sort((a,b) => b.similarity - a.similarity);
-  return scored.slice(0, limit);
+// ==== ПОИСК ЧЕРЕЗ RPC (правильный, точный) ====
+async function searchDocuments(queryEmbedding, limit = 5) {
+  try {
+    const embeddingText = '[' + queryEmbedding.join(',') + ']';
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/match_documents_text`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        query_embedding_text: embeddingText,
+        match_count: limit
+      })
+    });
+    if (!r.ok) {
+      const err = await r.text();
+      console.log('RPC error:', err.slice(0, 200));
+      return [];
+    }
+    const data = await r.json();
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.log('searchDocuments error:', e.message);
+    return [];
+  }
 }
 
 async function saveDocument(content, embedding, url) {
@@ -175,16 +188,19 @@ async function askAI(message, history, sessionId) {
   let context = '';
   try {
     const emb = await getEmbedding(message);
-    const matches = await searchDocuments(emb, 3);
-    if (matches.length > 0) context = matches.map(m => m.content).join('\n\n---\n\n');
-  } catch (e) {}
+    const matches = await searchDocuments(emb, 5);
+    console.log('Найдено кусочков:', matches.length);
+    if (matches.length > 0) {
+      context = matches.map(m => m.content).join('\n\n---\n\n');
+    }
+  } catch (e) { console.log('Контекст не собран:', e.message); }
 
   const systemPrompt = `Ты — AI-Администратор компании «${BUSINESS_NAME}». Общаешься вежливо, на «Вы», коротко и по делу.
 
 СТИЛЬ:
 1. Коротко, 1-2 предложения.
 2. На «Вы».
-3. Без markdown.
+3. Без markdown (**звёздочек**, #заголовков).
 4. Не повторяй вопрос клиента.
 
 ФОРМАТИРОВАНИЕ:
@@ -196,6 +212,10 @@ async function askAI(message, history, sessionId) {
 - Когда есть РЕАЛЬНЫЕ имя + телефон — добавь В КОНЦЕ:
   [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:кратко]
 - Не добавляй маркеры, если данных нет.
+
+ВАЖНО:
+- Используй информацию о компании ниже для ответов про цены, услуги, условия.
+- Если данных нет — скажи «Уточните у менеджера».
 
 ИНФОРМАЦИЯ О КОМПАНИИ:
 ${context || 'Информация временно недоступна.'}`;
