@@ -17,11 +17,6 @@ const FIRECRAWL_KEY = process.env.FIRECRAWL_KEY || '';
 const SITE_TO_CRAWL = process.env.SITE_TO_CRAWL || 'https://send-empty-creedite.tilda.ws';
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'AI-Администратор';
 
-console.log('TELEGRAM_TOKEN:', TELEGRAM_TOKEN ? 'ЕСТЬ' : 'НЕТ');
-console.log('SUPABASE_URL:', SUPABASE_URL ? 'ЕСТЬ' : 'НЕТ');
-console.log('OPENROUTER_KEY:', OPENROUTER_KEY ? 'ЕСТЬ' : 'НЕТ');
-console.log('FIRECRAWL_KEY:', FIRECRAWL_KEY ? 'ЕСТЬ' : 'НЕТ');
-
 async function getEmbedding(text) {
   const r = await fetch('https://openrouter.ai/api/v1/embeddings', {
     method: 'POST',
@@ -59,9 +54,11 @@ async function getTelegramFileUrl(fileId) {
   return `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${d.result.file_path}`;
 }
 
+// ==== ПОИСК ЧЕРЕЗ RPC ====
 async function searchDocuments(queryEmbedding, limit = 5) {
   try {
-    const embeddingText = '[' + queryEmbedding.join(',') + ']';
+    const embeddingText = '[' + queryEmbedding.join(', ') + ']';
+    console.log('Отправляю вектор длиной:', queryEmbedding.length);
     const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/match_documents_text`, {
       method: 'POST',
       headers: {
@@ -74,12 +71,14 @@ async function searchDocuments(queryEmbedding, limit = 5) {
         match_count: limit
       })
     });
+    const txt = await r.text();
     if (!r.ok) {
-      const err = await r.text();
-      console.log('RPC error:', err.slice(0, 200));
+      console.log('RPC error:', txt.slice(0, 300));
       return [];
     }
-    const data = await r.json();
+    let data;
+    try { data = JSON.parse(txt); } catch (e) { console.log('parse error:', txt.slice(0, 200)); return []; }
+    console.log('RPC вернул:', Array.isArray(data) ? data.length : 'не массив');
     return Array.isArray(data) ? data : [];
   } catch (e) {
     console.log('searchDocuments error:', e.message);
@@ -187,7 +186,6 @@ async function askAI(message, history, sessionId) {
   try {
     const emb = await getEmbedding(message);
     const matches = await searchDocuments(emb, 5);
-    console.log('Найдено кусочков:', matches.length);
     if (matches.length > 0) {
       context = matches.map(m => m.content).join('\n\n---\n\n');
     }
@@ -198,12 +196,8 @@ async function askAI(message, history, sessionId) {
 СТИЛЬ:
 1. Коротко, 1-2 предложения.
 2. На «Вы».
-3. Без markdown (**звёздочек**, #заголовков).
+3. Без markdown.
 4. Не повторяй вопрос клиента.
-
-ФОРМАТИРОВАНИЕ:
-- 2+ мысли — с новой строки.
-- Между блоками — пустая строка.
 
 СБОР ЗАЯВКИ:
 - Если клиент готов — попроси имя и телефон.
