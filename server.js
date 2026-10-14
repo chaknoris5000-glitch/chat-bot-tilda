@@ -626,3 +626,86 @@ app.post('/telegram-webhook', async (req, res) => {
     if (!session) {
       const newSid = 'tg_' + chatId;
       await getOrCreateSession(newSid);
+      await updateSession(newSid, { telegram_chat_id: chatId });
+      session = await getSessionByTelegram(chatId);
+    }
+    if (!session) session = { session_id: 'tg_' + chatId, history: [] };
+
+    const history = session.history || [];
+    const reply = await askAI(text, history, session.session_id);
+    const newHistory = [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }];
+    await updateSession(session.session_id, { history: newHistory.slice(-20) });
+    await sendTelegram(chatId, reply);
+  } catch (error) {
+    console.log('Telegram error:', error);
+  }
+});
+
+app.get('/crawl', async (req, res) => {
+  try {
+    const scrape = await fetch('https://api.firecrawl.dev/v2/scrape', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${FIRECRAWL_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: SITE_TO_CRAWL, formats: ['markdown'] })
+    });
+    const scrapeData = await scrape.json();
+    if (!scrape.ok) return res.status(500).json({ error: 'Firecrawl error' });
+    const text = scrapeData.data?.markdown || '';
+    const chunks = [];
+    for (let i = 0; i < text.length; i += 1000) chunks.push(text.slice(i, i + 1000));
+
+    let saved = 0;
+    for (const chunk of chunks) {
+      try {
+        const embedding = await getEmbedding(chunk);
+        await saveDocument(chunk, embedding, SITE_TO_CRAWL);
+        saved++;
+      } catch (e) {}
+    }
+    res.json({ ok: true, saved, total: chunks.length });
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка кроулинга' });
+  }
+});
+
+// ========== АВТОСВОДКИ (CRON) ==========
+
+cron.schedule('0 17 * * *', async () => {
+  try {
+    if (!MANAGER_CHAT_ID) return;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const leads = await fetchLeads(today.toISOString());
+    if (leads.length === 0) return;
+    await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за сегодня (${today.toLocaleDateString('ru-RU')})`));
+    const buffer = await buildXlsx(leads, 'День');
+    await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_day_${new Date().toISOString().slice(0,10)}.xlsx`, `📥 Заявки за день (${leads.length} шт.)`);
+  } catch (e) { console.log('cron day error:', e.message); }
+});
+
+cron.schedule('0 7 * * 1', async () => {
+  try {
+    if (!MANAGER_CHAT_ID) return;
+    const since = new Date(); since.setDate(since.getDate() - 7); since.setHours(0, 0, 0, 0);
+    const leads = await fetchLeads(since.toISOString());
+    if (leads.length === 0) return;
+    await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за неделю (${since.toLocaleDateString('ru-RU')} — ${new Date().toLocaleDateString('ru-RU')})`));
+    const buffer = await buildXlsx(leads, 'Неделя');
+    await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_week_${new Date().toISOString().slice(0,10)}.xlsx`, `📥 Заявки за неделю (${leads.length} шт.)`);
+  } catch (e) { console.log('cron week error:', e.message); }
+});
+
+cron.schedule('0 7 1 * *', async () => {
+  try {
+    if (!MANAGER_CHAT_ID) return;
+    const since = new Date(); since.setMonth(since.getMonth() - 1); since.setDate(1); since.setHours(0, 0, 0, 0);
+    const leads = await fetchLeads(since.toISOString());
+    if (leads.length === 0) return;
+    await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за месяц (${since.toLocaleDateString('ru-RU')} — ${new Date().toLocaleDateString('ru-RU')})`));
+    const buffer = await buildXlsx(leads, 'Месяц');
+    await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_month_${new Date().toISOString().slice(0,7)}.xlsx`, `📥 Заявки за месяц (${leads.length} шт.)`);
+  } catch (e) { console.log('cron month error:', e.message); }
+});
+
+app.listen(PORT, () => {
+  console.log(`Сервер запущен: http://localhost:${PORT}`);
+});
