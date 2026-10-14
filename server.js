@@ -139,11 +139,16 @@ async function updateSession(sessionId, patch) {
 }
 
 async function saveLead(sessionId, name, phone, problem, source = 'site') {
-  await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
-    method: 'POST',
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ session_id: sessionId, name: name || null, phone: phone || null, problem: problem || null, source, status: 'new' })
-  });
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ session_id: sessionId, name: name || null, phone: phone || null, problem: problem || null, source, status: 'new' })
+    });
+    console.log('💾 saveLead status:', r.status, '| name:', name, '| phone:', phone);
+  } catch (e) {
+    console.log('❌ saveLead error:', e.message);
+  }
 }
 
 // ========== TELEGRAM API ==========
@@ -219,13 +224,12 @@ async function notifyManager(lead) {
     `📞 <b>Телефон:</b> ${lead.phone || '—'}\n` +
     `💬 <b>Задача:</b> ${lead.problem || '—'}`;
 
-  const keyboard = [
-    [
-      { text: '📞 Позвонить', url: `tel:${(lead.phone || '').replace(/\D/g, '')}` },
-      { text: '✉️ Написать', url: `https://t.me/+${(lead.phone || '').replace(/\D/g, '')}` }
-    ]
-  ];
-  await sendTelegram(MANAGER_CHAT_ID, text, keyboard);
+  try {
+    await sendTelegram(MANAGER_CHAT_ID, text);
+    console.log('✅ Уведомление отправлено менеджеру:', lead.phone);
+  } catch (e) {
+    console.log('❌ notifyManager error:', e.message);
+  }
 }
 
 // ========== ИИ ==========
@@ -319,11 +323,12 @@ ${context || 'Информация временно недоступна.'}`;
   let reply = data.choices?.[0]?.message?.content || 'Нет ответа';
 
   const leadData = extractLeadData(reply);
+  console.log('🔍 extractLeadData:', JSON.stringify(leadData));
   if (leadData.save && isValidLead(leadData.name, leadData.phone)) {
     try {
       await saveLead(sessionId, leadData.name, leadData.phone, leadData.problem);
       await notifyManager(leadData);
-    } catch (e) {}
+    } catch (e) { console.log('lead save/notify error:', e.message); }
   }
 
   return cleanReply(reply);
