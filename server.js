@@ -291,12 +291,17 @@ async function askAI(message, history, sessionId) {
 
 ГОЛОС: ты понимаешь голосовые, отвечаешь текстом.
 
-СБОР ЗАЯВКИ:
-- Если клиент готов — попроси имя и телефон.
-- Когда есть РЕАЛЬНЫЕ имя + телефон — добавь в САМОМ КОНЦЕ:
+СБОР ЗАЯВКИ — КРИТИЧЕСКИ ВАЖНО:
+- Твоя цель №1 — собрать имя и телефон клиента.
+- Как только клиент назвал имя и номер телефона (даже если имя короткое, а номер без +7) — ОБЯЗАТЕЛЬНО добавь в САМОМ КОНЦЕ ответа:
   [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:кратко задача]
-- НИКОГДА не пиши маркеры в обычных ответах.
-- Если имя/телефон не настоящие — НЕ добавляй маркеры.
+- НЕ оценивай «реальность» имени или номера. Если клиент написал — значит это его данные. Ставь маркер.
+- Если имя или телефон ещё не названы — маркер НЕ ставь, а спроси недостающее.
+- Если клиент назвал только имя — спроси телефон.
+- Если назвал только телефон — спроси имя.
+- Если есть и имя, и телефон — маркер ставь ВСЕГДА, без исключений.
+- В обычных ответах (без заявки) маркер НЕ пиши.
+- В [PROBLEM:...] пиши короткую суть из диалога (сфера бизнеса клиента или его задача).
 
 ЧЕГО НЕ ДЕЛАЕШЬ:
 - НЕ обещай интеграции с CRM, календарями, WhatsApp, VK.
@@ -434,7 +439,6 @@ app.post('/message', async (req, res) => {
 app.post('/telegram-webhook', async (req, res) => {
   res.sendStatus(200);
   try {
-    // Обработка кнопок
     if (req.body.callback_query) {
       const cb = req.body.callback_query;
       const chatId = cb.message.chat.id;
@@ -485,7 +489,6 @@ app.post('/telegram-webhook', async (req, res) => {
 
     const isManager = String(chatId) === String(MANAGER_CHAT_ID);
 
-    // /start
     if (text.startsWith('/start')) {
       const parts = text.split(' ');
       const siteSessionId = parts[1];
@@ -498,8 +501,6 @@ app.post('/telegram-webhook', async (req, res) => {
       }
       return;
     }
-
-    // ===== КОМАНДЫ МЕНЕДЖЕРА =====
 
     if (isManager && text === '/leads') {
       const leads = (await fetchLeads()).slice(0, 10);
@@ -526,8 +527,6 @@ app.post('/telegram-webhook', async (req, res) => {
       await sendTelegram(chatId, statsBlock(leads, `Итоги за сегодня (${today.toLocaleDateString('ru-RU')})`));
       return;
     }
-
-    // ===== ОБЫЧНЫЙ ДИАЛОГ =====
 
     let session = await getSessionByTelegram(chatId);
     if (!session) {
@@ -577,7 +576,6 @@ app.get('/crawl', async (req, res) => {
 
 // ========== АВТОСВОДКИ (CRON) ==========
 
-// Ежедневно в 20:00 по Москве (17:00 UTC)
 cron.schedule('0 17 * * *', async () => {
   try {
     if (!MANAGER_CHAT_ID) return;
@@ -592,7 +590,6 @@ cron.schedule('0 17 * * *', async () => {
   } catch (e) { console.log('cron day error:', e.message); }
 });
 
-// Каждый понедельник в 10:00 по Москве (07:00 UTC)
 cron.schedule('0 7 * * 1', async () => {
   try {
     if (!MANAGER_CHAT_ID) return;
@@ -607,7 +604,6 @@ cron.schedule('0 7 * * 1', async () => {
   } catch (e) { console.log('cron week error:', e.message); }
 });
 
-// 1-го числа каждого месяца в 10:00 по Москве (07:00 UTC)
 cron.schedule('0 7 1 * *', async () => {
   try {
     if (!MANAGER_CHAT_ID) return;
