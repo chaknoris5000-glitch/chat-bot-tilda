@@ -342,21 +342,35 @@ app.post('/telegram-webhook', async (req, res) => {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       });
-      const leads = await r.json();
-      if (!Array.isArray(leads) || leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
+      let leads = await r.json();
+      if (!Array.isArray(leads)) leads = [];
 
-      let csv = 'ID,Имя,Телефон,Задача,Дата\n';
+      // отсеиваем мусорные заявки (пустые / с "...")
+      leads = leads.filter(l => isValidLead(l.name, l.phone));
+
+      if (leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
+
+      const esc = (v) => {
+        if (v === null || v === undefined) return '';
+        const s = String(v);
+        return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      };
+
+      let csv = '\uFEFF'; // BOM — чтобы Excel понял UTF-8
+      csv += 'ID,Имя,Телефон,Задача,Дата\n';
       for (const l of leads) {
-        const name = (l.name || '').replace(/"/g, '""');
-        const phone = (l.phone || '').replace(/"/g, '""');
-        const problem = (l.problem || '').replace(/"/g, '""');
-        const date = l.created_at || '';
-        csv += `"${l.id}","${name}","${phone}","${problem}","${date}"\n`;
+        csv += [
+          l.id,
+          esc(l.name),
+          esc(l.phone),
+          esc(l.problem),
+          esc(l.created_at)
+        ].join(',') + '\n';
       }
 
       const formData = new FormData();
       formData.append('chat_id', chatId);
-      formData.append('document', new Blob([csv], { type: 'text/csv' }), 'leads.csv');
+      formData.append('document', new Blob([csv], { type: 'text/csv; charset=utf-8' }), 'leads.csv');
       formData.append('caption', `📋 Выгрузка заявок (${leads.length} шт.)`);
 
       await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
