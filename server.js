@@ -330,7 +330,44 @@ app.post('/telegram-webhook', async (req, res) => {
       text = msg.text.trim();
     } else return;
 
-    if (text === '/leads' && String(chatId) === String(MANAGER_CHAT_ID)) {
+    if (text === '/leads' && String(chatId) === String(cfg.manager_chat_id)) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc&limit=10`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  const leads = await r.json();
+  if (!Array.isArray(leads) || leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
+  const lines = leads.map((l, i) => `${i+1}. ${l.name||'—'} | ${l.phone||'—'}\n💬 ${l.problem||'—'}`);
+  await sendTelegram(chatId, '📋 Последние заявки:\n\n' + lines.join('\n\n'));
+  return;
+}
+
+if (text === '/export' && String(chatId) === String(cfg.manager_chat_id)) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  const leads = await r.json();
+  if (!Array.isArray(leads) || leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
+
+  let csv = 'ID,Имя,Телефон,Задача,Дата\n';
+  for (const l of leads) {
+    const name = (l.name || '').replace(/"/g, '""');
+    const phone = (l.phone || '').replace(/"/g, '""');
+    const problem = (l.problem || '').replace(/"/g, '""');
+    const date = l.created_at || '';
+    csv += `"${l.id}","${name}","${phone}","${problem}","${date}"\n`;
+  }
+
+  const formData = new FormData();
+  formData.append('chat_id', chatId);
+  formData.append('document', new Blob([csv], { type: 'text/csv' }), 'leads.csv');
+  formData.append('caption', `📋 Выгрузка заявок (${leads.length} шт.)`);
+
+  await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
+    method: 'POST',
+    body: formData
+  });
+  return;
+}
       const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc&limit=10`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       });
