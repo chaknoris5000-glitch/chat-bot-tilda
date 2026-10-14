@@ -142,12 +142,16 @@ async function saveLead(sessionId, name, phone, problem, source = 'site') {
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
       method: 'POST',
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
       body: JSON.stringify({ session_id: sessionId, name: name || null, phone: phone || null, problem: problem || null, source, status: 'new' })
     });
-    console.log('💾 saveLead status:', r.status, '| name:', name, '| phone:', phone);
+    const inserted = await r.json();
+    const leadId = Array.isArray(inserted) && inserted[0] ? inserted[0].id : 0;
+    console.log('💾 saveLead status:', r.status, '| id:', leadId, '| name:', name, '| phone:', phone);
+    return leadId;
   } catch (e) {
     console.log('❌ saveLead error:', e.message);
+    return 0;
   }
 }
 
@@ -170,6 +174,14 @@ async function sendTelegramDoc(chatId, buffer, filename, caption = '') {
   await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, { method: 'POST', body: formData });
 }
 
+async function sendContact(chatId, phone, name) {
+  const formData = new FormData();
+  formData.append('chat_id', chatId);
+  formData.append('phone_number', phone);
+  formData.append('first_name', name || 'Клиент');
+  await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendContact`, { method: 'POST', body: formData });
+}
+
 async function answerCallback(callbackId, text = '') {
   await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/answerCallbackQuery`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -183,17 +195,6 @@ async function editMessage(chatId, messageId, text, keyboard = null) {
   await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/editMessageText`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
-  });
-}
-
-async function sendContact(chatId, phone, name) {
-  const vcf = `BEGIN:VCARD\nVERSION:3.0\nFN:${name || 'Клиент'}\nTEL:${phone}\nEND:VCARD`;
-  const formData = new FormData();
-  formData.append('chat_id', chatId);
-  formData.append('phone_number', phone);
-  formData.append('first_name', name || 'Клиент');
-  await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendContact`, {
-    method: 'POST', body: formData
   });
 }
 
@@ -237,9 +238,7 @@ async function notifyManager(lead, leadId) {
     `<i>Статус: 🆕 Новая</i>`;
 
   const keyboard = [
-    [
-      { text: '🔄 Взять в работу', callback_data: `status_${leadId}_in_progress` }
-    ],
+    [{ text: '🔄 Взять в работу', callback_data: `status_${leadId}_in_progress` }],
     [
       { text: '📞 Позвонить', callback_data: `call_${leadId}` },
       { text: '✉️ Написать', callback_data: `write_${leadId}` }
@@ -285,15 +284,35 @@ async function askAI(message, history, sessionId) {
 - Запуск за 2 дня.
 - Отключить можно в любой момент.
 
-КАК ПОДАВАТЬ ЦЕНУ:
+ВАЖНО ПРО ЦЕНУ:
+- НИКОГДА не говори «первый месяц бесплатно». Только «первая неделя бесплатно».
 - Сначала ВСЕГДА подчёркивай: «Первая неделя бесплатно, настройка тоже бесплатно».
 - Цену 2 500 ₽/мес упоминай только когда клиент спрашивает про стоимость или готов подключать.
 - Объясняй: «2 500 ₽ — это меньше, чем один упущенный клиент».
 
-ТВОЯ РОЛЬ:
-- Выявляешь боль: клиенты не дожидаются ответа, заявки теряются, менеджер не успевает.
-- Показываешь, как ты это решаешь.
-- Ведёшь к бесплатному тесту.
+ОБЯЗАТЕЛЬНЫЕ ВОПРОСЫ (СНАЧАЛА СПРАШИВАЙ, ПОТОМ ПРЕДЛАГАЙ):
+1. Первым делом узнай сферу бизнеса клиента: «Подскажите, какой у вас бизнес?»
+2. Уточни боль: «Скажите, клиенты пишут вам ночью или в выходные? Кто отвечает?»
+3. Только после этого — короткая презентация под его сферу.
+4. И только потом — предложение: «Давайте поставим бесплатно, первую неделю тестируете».
+5. Контакты (имя, телефон) проси ТОЛЬКО когда клиент готов.
+
+НЕЛЬЗЯ:
+- Сразу просить телефон, не выяснив сферу бизнеса.
+- Пропускать уточняющие вопросы.
+- Говорить «первый месяц бесплатно».
+
+ВОРОНКА ПРОДАЖ:
+1. Приветствие → СПРОСИ сферу бизнеса.
+2. Уточни боль: теряются ли заявки, отвечает ли кто-то ночью.
+3. Презентация под его сферу: заявки не теряются, всё в таблице, менеджер разгружен.
+4. Бесплатный тест: «Поставим бесплатно, первую неделю тестируете. Понравится — 2 500 ₽/мес».
+5. Работа с возражениями:
+   - «Дорого» → «Первая неделя бесплатна. А 2 500 ₽ — это меньше, чем один упущенный клиент».
+   - «Подумаю» → «Конечно. Давайте пока поставим бесплатно — посмотрите заявки, потом решите».
+   - «У меня уже есть менеджер» → «Бот его разгрузит — менеджер займётся только горячими клиентами».
+6. Призыв: «Оставьте имя и номер телефона — поставим бота бесплатно за 2 дня».
+7. Передача менеджеру.
 
 СТИЛЬ:
 1. Коротко — 1-2 предложения. Без воды.
@@ -302,17 +321,16 @@ async function askAI(message, history, sessionId) {
 4. Не повторяй вопрос клиента.
 5. Задавай наводящие вопросы.
 
-ВОРОНКА ПРОДАЖ:
-1. Приветствие → выясни сферу бизнеса.
-2. Боль → уточни, теряются ли заявки, отвечает ли кто-то ночью.
-3. Презентация → покажи результат: заявки не теряются, всё в таблице, менеджер разгружен.
-4. Бесплатный тест → «Поставим бесплатно, первую неделю тестируете. Понравится — 2 500 ₽/мес».
-5. Работа с возражениями:
-   - «Дорого» → «Первая неделя бесплатна. А 2 500 ₽ — это меньше, чем один упущенный клиент».
-   - «Подумаю» → «Конечно. Давайте пока поставим бесплатно — посмотрите заявки, потом решите».
-   - «У меня уже есть менеджер» → «Бот его разгрузит — менеджер займётся только горячими клиентами».
-6. Призыв: «Оставьте имя и номер телефона — поставим бота бесплатно за 2 дня».
-7. Передача менеджеру.
+ЧТО ТЫ ЗНАЕШЬ О ПРОДУКТЕ:
+- Настройка — бесплатно.
+- Первая неделя — бесплатно.
+- Со второй недели — 2 500 ₽/мес.
+- При годовой оплате — 2 200 ₽/мес.
+- Запуск за 2 дня.
+- Работает 24/7.
+- Продолжает диалог в Telegram.
+- Обучается на данных бизнеса.
+- Не требует разработчиков.
 
 ЗНАНИЯ ПО СФЕРАМ:
 - Автосервис: запись на диагностику, уточнение модели авто, подбор запчастей.
@@ -326,7 +344,7 @@ async function askAI(message, history, sessionId) {
 ГОЛОС: ты понимаешь голосовые, отвечаешь текстом.
 
 СБОР ЗАЯВКИ — КРИТИЧЕСКИ ВАЖНО:
-- Твоя цель №1 — собрать имя и телефон клиента.
+- Контакты проси ТОЛЬКО после того, как выяснил сферу бизнеса и показал пользу.
 - Как только клиент назвал имя и номер телефона (даже если имя короткое, а номер без +7) — ОБЯЗАТЕЛЬНО добавь в САМОМ КОНЦЕ ответа:
   [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:кратко задача]
 - НЕ оценивай «реальность» имени или номера. Если клиент написал — значит это его данные. Ставь маркер.
@@ -339,7 +357,8 @@ async function askAI(message, history, sessionId) {
 - НЕ обещай интеграции с CRM, календарями, WhatsApp, VK.
 - НЕ выдумывай цены, сроки, гарантии, которых нет выше.
 - НЕ обещай бесплатный пробный период свыше 1 недели.
-- Не говори «настройка 2 500 ₽» — настройка теперь бесплатная.
+- НИКОГДА не говори «первый месяц бесплатно».
+- НЕ говори «настройка 2 500 ₽» — настройка бесплатная.
 - Если данных нет — «Уточните у менеджера».
 
 ИНФОРМАЦИЯ О КОМПАНИИ:
@@ -364,14 +383,7 @@ ${context || 'Информация временно недоступна.'}`;
   console.log('🔍 extractLeadData:', JSON.stringify(leadData));
   if (leadData.save && isValidLead(leadData.name, leadData.phone)) {
     try {
-      const insertResp = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
-        method: 'POST',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-        body: JSON.stringify({ session_id: sessionId, name: leadData.name, phone: leadData.phone, problem: leadData.problem, source: 'site', status: 'new' })
-      });
-      const inserted = await insertResp.json();
-      const leadId = Array.isArray(inserted) && inserted[0] ? inserted[0].id : 0;
-      console.log('💾 saveLead status:', insertResp.status, '| id:', leadId);
+      const leadId = await saveLead(sessionId, leadData.name, leadData.phone, leadData.problem);
       await notifyManager(leadData, leadId);
     } catch (e) { console.log('lead save/notify error:', e.message); }
   }
@@ -503,7 +515,6 @@ app.post('/telegram-webhook', async (req, res) => {
         const statusLabel = newStatus === 'closed' ? '✅ Закрыта' : (newStatus === 'in_progress' ? '🔄 В работе' : '🆕 Новая');
         await answerCallback(cb.id, `Статус: ${statusLabel}`);
 
-        // Пересобираем клавиатуру по новому статусу
         let newKeyboard = [];
         if (newStatus === 'in_progress') {
           newKeyboard = [
