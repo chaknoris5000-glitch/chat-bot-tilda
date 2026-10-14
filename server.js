@@ -353,11 +353,11 @@ app.post('/telegram-webhook', async (req, res) => {
       const esc = (v) => {
         if (v === null || v === undefined) return '';
         const s = String(v);
-        return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+        return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
       };
 
       let csv = '\uFEFF'; // BOM — чтобы Excel понял UTF-8
-      csv += 'ID,Имя,Телефон,Задача,Дата\n';
+      csv += 'ID;Имя;Телефон;Задача;Дата\n';
       for (const l of leads) {
         csv += [
           l.id,
@@ -365,7 +365,7 @@ app.post('/telegram-webhook', async (req, res) => {
           esc(l.phone),
           esc(l.problem),
           esc(l.created_at)
-        ].join(',') + '\n';
+        ].join(';') + '\n';
       }
 
       const formData = new FormData();
