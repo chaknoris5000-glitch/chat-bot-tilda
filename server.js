@@ -186,6 +186,17 @@ async function editMessage(chatId, messageId, text, keyboard = null) {
   });
 }
 
+async function sendContact(chatId, phone, name) {
+  const vcf = `BEGIN:VCARD\nVERSION:3.0\nFN:${name || 'Клиент'}\nTEL:${phone}\nEND:VCARD`;
+  const formData = new FormData();
+  formData.append('chat_id', chatId);
+  formData.append('phone_number', phone);
+  formData.append('first_name', name || 'Клиент');
+  await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendContact`, {
+    method: 'POST', body: formData
+  });
+}
+
 // ========== ЛОГИКА ЗАЯВОК ==========
 
 function extractLeadData(text) {
@@ -217,15 +228,26 @@ function cleanReply(text) {
     .replace(/^#{1,6}\s+/gm, '').replace(/`/g, '').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-async function notifyManager(lead) {
+async function notifyManager(lead, leadId) {
   if (!MANAGER_CHAT_ID) return;
   const text = `🔥 <b>НОВАЯ ЗАЯВКА</b>\n\n` +
     `👤 <b>Имя:</b> ${lead.name || '—'}\n` +
     `📞 <b>Телефон:</b> ${lead.phone || '—'}\n` +
-    `💬 <b>Задача:</b> ${lead.problem || '—'}`;
+    `💬 <b>Задача:</b> ${lead.problem || '—'}\n\n` +
+    `<i>Статус: 🆕 Новая</i>`;
+
+  const keyboard = [
+    [
+      { text: '🔄 Взять в работу', callback_data: `status_${leadId}_in_progress` }
+    ],
+    [
+      { text: '📞 Позвонить', callback_data: `call_${leadId}` },
+      { text: '✉️ Написать', callback_data: `write_${leadId}` }
+    ]
+  ];
 
   try {
-    await sendTelegram(MANAGER_CHAT_ID, text);
+    await sendTelegram(MANAGER_CHAT_ID, text, keyboard);
     console.log('✅ Уведомление отправлено менеджеру:', lead.phone);
   } catch (e) {
     console.log('❌ notifyManager error:', e.message);
@@ -244,13 +266,34 @@ async function askAI(message, history, sessionId) {
     }
   } catch (e) { console.log('Контекст не собран:', e.message); }
 
-  const systemPrompt = `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный продавец-консультант, знаешь продукт вдоль и поперёк, ведёшь клиента к покупке.
+  const systemPrompt = `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный продавец-консультант, продаёшь не бота, а результат: живые заявки, которые бизнес получает круглосуточно и не теряет ни одной.
+
+ЧТО ТЫ ПРОДАЁШЬ (ГЛАВНОЕ):
+Ты продаёшь НЕ программу, НЕ бота, НЕ технологии.
+Ты продаёшь РЕЗУЛЬТАТ:
+- Клиенты больше не уходят ночью и в выходные — бот отвечает мгновенно 24/7.
+- Ни одна заявка не теряется — всё собирается в одном месте.
+- Менеджер разгружен — бот берёт на себя типовые вопросы.
+- Владелец видит цифры — каждый день, неделю, месяц получает готовую таблицу.
+- Всё работает без разработчиков и без его участия.
+
+УСЛОВИЯ (ГОВОРИ ТОЧНО ТАК):
+- Подключение и настройка — БЕСПЛАТНО.
+- Первая неделя — БЕСПЛАТНО (полный тест, без ограничений).
+- Со второй недели — 2 500 ₽ в месяц.
+- При годовой оплате — 2 200 ₽ в месяц.
+- Запуск за 2 дня.
+- Отключить можно в любой момент.
+
+КАК ПОДАВАТЬ ЦЕНУ:
+- Сначала ВСЕГДА подчёркивай: «Первая неделя бесплатно, настройка тоже бесплатно».
+- Цену 2 500 ₽/мес упоминай только когда клиент спрашивает про стоимость или готов подключать.
+- Объясняй: «2 500 ₽ — это меньше, чем один упущенный клиент».
 
 ТВОЯ РОЛЬ:
-- Помогаешь владельцу бизнеса понять, как AI-администратор решит его проблемы.
 - Выявляешь боль: клиенты не дожидаются ответа, заявки теряются, менеджер не успевает.
-- Показываешь решение: бот отвечает 24/7, собирает заявки, продолжает диалог в Telegram.
-- Ведёшь к оформлению подписки.
+- Показываешь, как ты это решаешь.
+- Ведёшь к бесплатному тесту.
 
 СТИЛЬ:
 1. Коротко — 1-2 предложения. Без воды.
@@ -261,24 +304,15 @@ async function askAI(message, history, sessionId) {
 
 ВОРОНКА ПРОДАЖ:
 1. Приветствие → выясни сферу бизнеса.
-2. Презентация → покажи, как бот решит его задачу.
-3. Работа с возражениями:
-   - «Дорого» → «2 500 ₽ за настройку + месяц бесплатно — это меньше, чем один упущенный клиент.»
-   - «Подумаю» → «Конечно. Могу пока оставить вам демо?»
-   - «У меня уже есть менеджер» → «Бот его разгрузит — менеджер займётся только горячими клиентами.»
-4. Призыв: «Оставьте имя и номер телефона — запустим бота за 2 дня.»
-5. Передача менеджеру.
-
-ЧТО ТЫ ЗНАЕШЬ О ПРОДУКТЕ:
-- Настройка — 2 500 ₽.
-- Первый месяц — бесплатно.
-- Со второго — 2 500 ₽/мес.
-- При годовой оплате — 2 200 ₽/мес (экономия 3 600 ₽).
-- Запуск за 2 дня.
-- Работает 24/7.
-- Продолжает диалог в Telegram.
-- Обучается на данных бизнеса.
-- Не требует разработчиков.
+2. Боль → уточни, теряются ли заявки, отвечает ли кто-то ночью.
+3. Презентация → покажи результат: заявки не теряются, всё в таблице, менеджер разгружен.
+4. Бесплатный тест → «Поставим бесплатно, первую неделю тестируете. Понравится — 2 500 ₽/мес».
+5. Работа с возражениями:
+   - «Дорого» → «Первая неделя бесплатна. А 2 500 ₽ — это меньше, чем один упущенный клиент».
+   - «Подумаю» → «Конечно. Давайте пока поставим бесплатно — посмотрите заявки, потом решите».
+   - «У меня уже есть менеджер» → «Бот его разгрузит — менеджер займётся только горячими клиентами».
+6. Призыв: «Оставьте имя и номер телефона — поставим бота бесплатно за 2 дня».
+7. Передача менеджеру.
 
 ЗНАНИЯ ПО СФЕРАМ:
 - Автосервис: запись на диагностику, уточнение модели авто, подбор запчастей.
@@ -297,16 +331,15 @@ async function askAI(message, history, sessionId) {
   [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:кратко задача]
 - НЕ оценивай «реальность» имени или номера. Если клиент написал — значит это его данные. Ставь маркер.
 - Если имя или телефон ещё не названы — маркер НЕ ставь, а спроси недостающее.
-- Если клиент назвал только имя — спроси телефон.
-- Если назвал только телефон — спроси имя.
 - Если есть и имя, и телефон — маркер ставь ВСЕГДА, без исключений.
 - В обычных ответах (без заявки) маркер НЕ пиши.
 - В [PROBLEM:...] пиши короткую суть из диалога (сфера бизнеса клиента или его задача).
 
 ЧЕГО НЕ ДЕЛАЕШЬ:
 - НЕ обещай интеграции с CRM, календарями, WhatsApp, VK.
-- НЕ выдумывай цены, сроки, гарантии.
-- НЕ обещай бесплатный пробный период свыше указанного.
+- НЕ выдумывай цены, сроки, гарантии, которых нет выше.
+- НЕ обещай бесплатный пробный период свыше 1 недели.
+- Не говори «настройка 2 500 ₽» — настройка теперь бесплатная.
 - Если данных нет — «Уточните у менеджера».
 
 ИНФОРМАЦИЯ О КОМПАНИИ:
@@ -331,8 +364,15 @@ ${context || 'Информация временно недоступна.'}`;
   console.log('🔍 extractLeadData:', JSON.stringify(leadData));
   if (leadData.save && isValidLead(leadData.name, leadData.phone)) {
     try {
-      await saveLead(sessionId, leadData.name, leadData.phone, leadData.problem);
-      await notifyManager(leadData);
+      const insertResp = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+        body: JSON.stringify({ session_id: sessionId, name: leadData.name, phone: leadData.phone, problem: leadData.problem, source: 'site', status: 'new' })
+      });
+      const inserted = await insertResp.json();
+      const leadId = Array.isArray(inserted) && inserted[0] ? inserted[0].id : 0;
+      console.log('💾 saveLead status:', insertResp.status, '| id:', leadId);
+      await notifyManager(leadData, leadId);
     } catch (e) { console.log('lead save/notify error:', e.message); }
   }
 
@@ -439,6 +479,7 @@ app.post('/message', async (req, res) => {
 app.post('/telegram-webhook', async (req, res) => {
   res.sendStatus(200);
   try {
+    // ===== ОБРАБОТКА КНОПОК =====
     if (req.body.callback_query) {
       const cb = req.body.callback_query;
       const chatId = cb.message.chat.id;
@@ -447,6 +488,7 @@ app.post('/telegram-webhook', async (req, res) => {
 
       if (String(chatId) !== String(MANAGER_CHAT_ID)) { await answerCallback(cb.id, 'Нет доступа'); return; }
 
+      // Статус
       if (data.startsWith('status_')) {
         const parts = data.split('_');
         const leadId = parts[1];
@@ -461,17 +503,69 @@ app.post('/telegram-webhook', async (req, res) => {
         const statusLabel = newStatus === 'closed' ? '✅ Закрыта' : (newStatus === 'in_progress' ? '🔄 В работе' : '🆕 Новая');
         await answerCallback(cb.id, `Статус: ${statusLabel}`);
 
-        const newKeyboard = [
-          [
-            { text: newStatus === 'in_progress' ? '✅ Закрыть' : '🔄 Взять в работу', callback_data: newStatus === 'in_progress' ? `status_${leadId}_closed` : `status_${leadId}_in_progress` }
-          ]
-        ];
+        // Пересобираем клавиатуру по новому статусу
+        let newKeyboard = [];
+        if (newStatus === 'in_progress') {
+          newKeyboard = [
+            [{ text: '✅ Закрыть', callback_data: `status_${leadId}_closed` }],
+            [
+              { text: '📞 Позвонить', callback_data: `call_${leadId}` },
+              { text: '✉️ Написать', callback_data: `write_${leadId}` }
+            ]
+          ];
+        } else if (newStatus === 'closed') {
+          newKeyboard = [
+            [{ text: '🔄 Вернуть в работу', callback_data: `status_${leadId}_in_progress` }]
+          ];
+        } else {
+          newKeyboard = [
+            [{ text: '🔄 Взять в работу', callback_data: `status_${leadId}_in_progress` }],
+            [
+              { text: '📞 Позвонить', callback_data: `call_${leadId}` },
+              { text: '✉️ Написать', callback_data: `write_${leadId}` }
+            ]
+          ];
+        }
+
         const baseText = cb.message.text.replace(/\n\n<i>Статус:.*<\/i>$/, '');
         await editMessage(chatId, messageId, `${baseText}\n\n<i>Статус: ${statusLabel}</i>`, newKeyboard);
+        return;
       }
+
+      // Позвонить
+      if (data.startsWith('call_')) {
+        const leadId = data.split('_')[1];
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}&select=*`, {
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        const rows = await r.json();
+        if (!Array.isArray(rows) || !rows[0]) { await answerCallback(cb.id, 'Заявка не найдена'); return; }
+        const l = rows[0];
+        await answerCallback(cb.id, `Телефон: ${l.phone}`);
+        await sendContact(chatId, l.phone, l.name);
+        return;
+      }
+
+      // Написать
+      if (data.startsWith('write_')) {
+        const leadId = data.split('_')[1];
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}&select=*`, {
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        const rows = await r.json();
+        if (!Array.isArray(rows) || !rows[0]) { await answerCallback(cb.id, 'Заявка не найдена'); return; }
+        const l = rows[0];
+        const digits = (l.phone || '').replace(/\D/g, '');
+        const text = `👤 ${l.name || '—'}\n📞 ${l.phone || '—'}\n💬 ${l.problem || '—'}\n\n🔗 https://t.me/+${digits}`;
+        await answerCallback(cb.id, 'Ссылка ниже');
+        await sendTelegram(chatId, text);
+        return;
+      }
+
       return;
     }
 
+    // ===== ОБЫЧНЫЕ СООБЩЕНИЯ =====
     const msg = req.body.message;
     if (!msg) return;
     const chatId = msg.chat.id;
@@ -532,92 +626,3 @@ app.post('/telegram-webhook', async (req, res) => {
     if (!session) {
       const newSid = 'tg_' + chatId;
       await getOrCreateSession(newSid);
-      await updateSession(newSid, { telegram_chat_id: chatId });
-      session = await getSessionByTelegram(chatId);
-    }
-    if (!session) session = { session_id: 'tg_' + chatId, history: [] };
-
-    const history = session.history || [];
-    const reply = await askAI(text, history, session.session_id);
-    const newHistory = [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }];
-    await updateSession(session.session_id, { history: newHistory.slice(-20) });
-    await sendTelegram(chatId, reply);
-  } catch (error) {
-    console.log('Telegram error:', error);
-  }
-});
-
-app.get('/crawl', async (req, res) => {
-  try {
-    const scrape = await fetch('https://api.firecrawl.dev/v2/scrape', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${FIRECRAWL_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: SITE_TO_CRAWL, formats: ['markdown'] })
-    });
-    const scrapeData = await scrape.json();
-    if (!scrape.ok) return res.status(500).json({ error: 'Firecrawl error' });
-    const text = scrapeData.data?.markdown || '';
-    const chunks = [];
-    for (let i = 0; i < text.length; i += 1000) chunks.push(text.slice(i, i + 1000));
-
-    let saved = 0;
-    for (const chunk of chunks) {
-      try {
-        const embedding = await getEmbedding(chunk);
-        await saveDocument(chunk, embedding, SITE_TO_CRAWL);
-        saved++;
-      } catch (e) {}
-    }
-    res.json({ ok: true, saved, total: chunks.length });
-  } catch (error) {
-    res.status(500).json({ error: 'Ошибка кроулинга' });
-  }
-});
-
-// ========== АВТОСВОДКИ (CRON) ==========
-
-cron.schedule('0 17 * * *', async () => {
-  try {
-    if (!MANAGER_CHAT_ID) return;
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const leads = await fetchLeads(today.toISOString());
-    if (leads.length === 0) return;
-
-    await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за сегодня (${today.toLocaleDateString('ru-RU')})`));
-
-    const buffer = await buildXlsx(leads, 'День');
-    await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_day_${new Date().toISOString().slice(0,10)}.xlsx`, `📥 Заявки за день (${leads.length} шт.)`);
-  } catch (e) { console.log('cron day error:', e.message); }
-});
-
-cron.schedule('0 7 * * 1', async () => {
-  try {
-    if (!MANAGER_CHAT_ID) return;
-    const since = new Date(); since.setDate(since.getDate() - 7); since.setHours(0, 0, 0, 0);
-    const leads = await fetchLeads(since.toISOString());
-    if (leads.length === 0) return;
-
-    await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за неделю (${since.toLocaleDateString('ru-RU')} — ${new Date().toLocaleDateString('ru-RU')})`));
-
-    const buffer = await buildXlsx(leads, 'Неделя');
-    await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_week_${new Date().toISOString().slice(0,10)}.xlsx`, `📥 Заявки за неделю (${leads.length} шт.)`);
-  } catch (e) { console.log('cron week error:', e.message); }
-});
-
-cron.schedule('0 7 1 * *', async () => {
-  try {
-    if (!MANAGER_CHAT_ID) return;
-    const since = new Date(); since.setMonth(since.getMonth() - 1); since.setDate(1); since.setHours(0, 0, 0, 0);
-    const leads = await fetchLeads(since.toISOString());
-    if (leads.length === 0) return;
-
-    await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за месяц (${since.toLocaleDateString('ru-RU')} — ${new Date().toLocaleDateString('ru-RU')})`));
-
-    const buffer = await buildXlsx(leads, 'Месяц');
-    await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_month_${new Date().toISOString().slice(0,7)}.xlsx`, `📥 Заявки за месяц (${leads.length} шт.)`);
-  } catch (e) { console.log('cron month error:', e.message); }
-});
-
-app.listen(PORT, () => {
-  console.log(`Сервер запущен: http://localhost:${PORT}`);
-});
