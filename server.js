@@ -350,28 +350,66 @@ app.post('/telegram-webhook', async (req, res) => {
 
       if (leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
 
-      const esc = (v) => {
-        if (v === null || v === undefined) return '';
-        const s = String(v);
-        return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-      };
+      const ExcelJS = require('exceljs');
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Заявки');
 
-      let csv = '\uFEFF'; // BOM — чтобы Excel понял UTF-8
-      csv += 'ID;Имя;Телефон;Задача;Дата\n';
-      for (const l of leads) {
-        csv += [
-          l.id,
-          esc(l.name),
-          esc(l.phone),
-          esc(l.problem),
-          esc(l.created_at)
-        ].join(';') + '\n';
-      }
+      ws.columns = [
+        { header: 'ID', key: 'id', width: 8 },
+        { header: 'Имя', key: 'name', width: 20 },
+        { header: 'Телефон', key: 'phone', width: 20 },
+        { header: 'Задача', key: 'problem', width: 45 },
+        { header: 'Дата', key: 'date', width: 22 }
+      ];
+
+      // жирный заголовок + цветной фон
+      ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      ws.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF2F5B43' }
+      };
+      ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+      leads.forEach(l => {
+        ws.addRow({
+          id: l.id,
+          name: l.name || '',
+          phone: l.phone || '',
+          problem: l.problem || '',
+          date: l.created_at ? new Date(l.created_at).toLocaleString('ru-RU') : ''
+        });
+      });
+
+      // выравнивание и перенос текста
+      ws.getColumn('problem').alignment = { wrapText: true, vertical: 'top' };
+      ws.getColumn('date').alignment = { vertical: 'top' };
+      ws.getColumn('name').alignment = { vertical: 'top' };
+      ws.getColumn('phone').alignment = { vertical: 'top' };
+      ws.getColumn('id').alignment = { vertical: 'top', horizontal: 'center' };
+
+      // границы на все ячейки
+      ws.eachRow({ includeEmpty: false }, (row) => {
+        row.eachCell({ includeEmpty: false }, (cell) => {
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+            left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+            bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+            right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
+          };
+        });
+      });
+
+      const buffer = await wb.xlsx.writeBuffer();
 
       const formData = new FormData();
       formData.append('chat_id', chatId);
-      formData.append('document', new Blob([csv], { type: 'text/csv; charset=utf-8' }), 'leads.csv');
-      formData.append('caption', `📋 Выгрузка заявок (${leads.length} шт.)`);
+      formData.append(
+        'document',
+        new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+        `leads_${new Date().toISOString().slice(0, 10)}.xlsx`
+      );
+      formData.append('caption', `📊 Выгрузка заявок (${leads.length} шт.)`);
 
       await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
         method: 'POST',
