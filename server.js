@@ -54,7 +54,6 @@ async function getTelegramFileUrl(fileId) {
   return `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${d.result.file_path}`;
 }
 
-// ==== ПОИСК ПРЯМО В NODE.JS ====
 async function searchDocuments(queryEmbedding, limit = 5) {
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/documents?select=id,content,url,embedding`, {
@@ -197,7 +196,7 @@ async function askAI(message, history, sessionId) {
     }
   } catch (e) { console.log('Контекст не собран:', e.message); }
 
-    const systemPrompt = `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный продавец-консультант, знаешь продукт вдоль и поперёк, ведёшь клиента к покупке.
+  const systemPrompt = `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный продавец-консультант, знаешь продукт вдоль и поперёк, ведёшь клиента к покупке.
 
 ТВОЯ РОЛЬ:
 - Помогаешь владельцу бизнеса понять, как AI-администратор решит его проблемы.
@@ -208,16 +207,16 @@ async function askAI(message, history, sessionId) {
 СТИЛЬ:
 1. Коротко — 1-2 предложения. Без воды.
 2. На «Вы», дружелюбно, но по-деловому.
-3. Без markdown (**звёздочек**, #заголовков).
+3. Без markdown.
 4. Не повторяй вопрос клиента.
-5. Задавай наводящие вопросы — не просто отвечай, а вовлекай в диалог.
+5. Задавай наводящие вопросы.
 
 ВОРОНКА ПРОДАЖ:
-1. Приветствие → выясни сферу бизнеса: «Подскажите, для какого бизнеса интересует бот?»
-2. Презентация → покажи, как бот решит его задачу (для автосервиса — запись на диагностику, для стоматологии — консультации, и т.д.).
+1. Приветствие → выясни сферу бизнеса.
+2. Презентация → покажи, как бот решит его задачу.
 3. Работа с возражениями:
    - «Дорого» → «2 500 ₽ за настройку + месяц бесплатно — это меньше, чем один упущенный клиент.»
-   - «Подумаю» → «Конечно. Могу пока оставить вам демо, чтобы вы посмотрели?»
+   - «Подумаю» → «Конечно. Могу пока оставить вам демо?»
    - «У меня уже есть менеджер» → «Бот его разгрузит — менеджер займётся только горячими клиентами.»
 4. Призыв: «Оставьте имя и номер телефона — запустим бота за 2 дня.»
 5. Передача менеджеру.
@@ -231,33 +230,31 @@ async function askAI(message, history, sessionId) {
 - Работает 24/7.
 - Продолжает диалог в Telegram.
 - Обучается на данных бизнеса.
-- Не требует разработчиков — вставляется на сайт кодом.
+- Не требует разработчиков.
 
-ЗНАНИЯ ПО СФЕРАМ (для экспертного диалога):
+ЗНАНИЯ ПО СФЕРАМ:
 - Автосервис: запись на диагностику, уточнение модели авто, подбор запчастей.
-- Стоматология: запись на консультацию, вопросы про цены, врачей, процедуры.
-- Салон красоты: запись на услугу, подбор времени «после работы», вопросы про мастеров.
-- Кофейня / ресторан: бронь столика, вопросы про меню, доставку.
-- Магазин: консультация по товару, наличие, доставка.
-- Клиника: запись на приём, вопросы про врачей, услуги.
-- Фитнес: расписание, абонементы, пробные тренировки.
+- Стоматология: запись на консультацию, вопросы про цены, врачей.
+- Салон красоты: запись, подбор времени, вопросы про мастеров.
+- Кофейня / ресторан: бронь, меню, доставка.
+- Магазин: консультация по товару, наличие.
+- Клиника: запись, услуги.
+- Фитнес: расписание, абонементы.
 
-ГОЛОС:
-- Ты умеешь распознавать голосовые сообщения — клиент может прислать голосовое, ты его слышишь и понимаешь.
-- Отвечаешь текстом.
+ГОЛОС: ты понимаешь голосовые, отвечаешь текстом.
 
 СБОР ЗАЯВКИ:
-- Если клиент готов — вежливо попроси имя и телефон: «Оставьте, пожалуйста, имя и номер — менеджер свяжется с вами.»
-- Когда есть РЕАЛЬНЫЕ имя + телефон — добавь в САМОМ КОНЦЕ ответа:
+- Если клиент готов — попроси имя и телефон.
+- Когда есть РЕАЛЬНЫЕ имя + телефон — добавь в САМОМ КОНЦЕ:
   [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:кратко задача]
 - НИКОГДА не пиши маркеры в обычных ответах.
-- Если имя или телефон не настоящие (например, «...», пусто, «нет») — НЕ добавляй маркеры.
+- Если имя/телефон не настоящие — НЕ добавляй маркеры.
 
 ЧЕГО НЕ ДЕЛАЕШЬ:
-- НЕ обещай интеграции с CRM, календарями, WhatsApp, VK — если этого нет в информации.
+- НЕ обещай интеграции с CRM, календарями, WhatsApp, VK.
 - НЕ выдумывай цены, сроки, гарантии.
 - НЕ обещай бесплатный пробный период свыше указанного.
-- Если данных нет — скажи «Уточните у менеджера».
+- Если данных нет — «Уточните у менеджера».
 
 ИНФОРМАЦИЯ О КОМПАНИИ:
 ${context || 'Информация временно недоступна.'}`;
@@ -330,44 +327,7 @@ app.post('/telegram-webhook', async (req, res) => {
       text = msg.text.trim();
     } else return;
 
-    if (text === '/leads' && String(chatId) === String(cfg.manager_chat_id)) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc&limit=10`, {
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-  });
-  const leads = await r.json();
-  if (!Array.isArray(leads) || leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
-  const lines = leads.map((l, i) => `${i+1}. ${l.name||'—'} | ${l.phone||'—'}\n💬 ${l.problem||'—'}`);
-  await sendTelegram(chatId, '📋 Последние заявки:\n\n' + lines.join('\n\n'));
-  return;
-}
-
-if (text === '/export' && String(chatId) === String(cfg.manager_chat_id)) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`, {
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-  });
-  const leads = await r.json();
-  if (!Array.isArray(leads) || leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
-
-  let csv = 'ID,Имя,Телефон,Задача,Дата\n';
-  for (const l of leads) {
-    const name = (l.name || '').replace(/"/g, '""');
-    const phone = (l.phone || '').replace(/"/g, '""');
-    const problem = (l.problem || '').replace(/"/g, '""');
-    const date = l.created_at || '';
-    csv += `"${l.id}","${name}","${phone}","${problem}","${date}"\n`;
-  }
-
-  const formData = new FormData();
-  formData.append('chat_id', chatId);
-  formData.append('document', new Blob([csv], { type: 'text/csv' }), 'leads.csv');
-  formData.append('caption', `📋 Выгрузка заявок (${leads.length} шт.)`);
-
-  await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
-    method: 'POST',
-    body: formData
-  });
-  return;
-}
+    if (text === '/leads' && String(chatId) === String(MANAGER_CHAT_ID)) {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc&limit=10`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       });
@@ -375,6 +335,34 @@ if (text === '/export' && String(chatId) === String(cfg.manager_chat_id)) {
       if (!Array.isArray(leads) || leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
       const lines = leads.map((l, i) => `${i+1}. ${l.name||'—'} | ${l.phone||'—'}\n💬 ${l.problem||'—'}`);
       await sendTelegram(chatId, '📋 Последние заявки:\n\n' + lines.join('\n\n'));
+      return;
+    }
+
+    if (text === '/export' && String(chatId) === String(MANAGER_CHAT_ID)) {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      });
+      const leads = await r.json();
+      if (!Array.isArray(leads) || leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
+
+      let csv = 'ID,Имя,Телефон,Задача,Дата\n';
+      for (const l of leads) {
+        const name = (l.name || '').replace(/"/g, '""');
+        const phone = (l.phone || '').replace(/"/g, '""');
+        const problem = (l.problem || '').replace(/"/g, '""');
+        const date = l.created_at || '';
+        csv += `"${l.id}","${name}","${phone}","${problem}","${date}"\n`;
+      }
+
+      const formData = new FormData();
+      formData.append('chat_id', chatId);
+      formData.append('document', new Blob([csv], { type: 'text/csv' }), 'leads.csv');
+      formData.append('caption', `📋 Выгрузка заявок (${leads.length} шт.)`);
+
+      await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
+        method: 'POST',
+        body: formData
+      });
       return;
     }
 
