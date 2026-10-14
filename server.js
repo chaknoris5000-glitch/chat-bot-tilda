@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const cron = require('node-cron');
 
 try { require('dotenv').config(); } catch (e) {}
 
@@ -16,6 +17,8 @@ const OPENROUTER_KEY = process.env.OPENROUTER_KEY || '';
 const FIRECRAWL_KEY = process.env.FIRECRAWL_KEY || '';
 const SITE_TO_CRAWL = process.env.SITE_TO_CRAWL || 'https://send-empty-creedite.tilda.ws';
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'AI-Администратор';
+
+// ========== БАЗОВЫЕ ФУНКЦИИ ==========
 
 async function getEmbedding(text) {
   const r = await fetch('https://openrouter.ai/api/v1/embeddings', {
@@ -82,7 +85,6 @@ async function searchDocuments(queryEmbedding, limit = 5) {
       similarity: cos(queryEmbedding, parseEmb(doc.embedding))
     }));
     scored.sort((a, b) => b.similarity - a.similarity);
-    console.log('Всего документов:', docs.length, '| Топ similarity:', scored[0]?.similarity?.toFixed(3));
     return scored.slice(0, limit);
   } catch (e) {
     console.log('search error:', e.message);
@@ -136,25 +138,50 @@ async function updateSession(sessionId, patch) {
   } catch (e) {}
 }
 
-async function saveLead(sessionId, name, phone, problem) {
+async function saveLead(sessionId, name, phone, problem, source = 'site') {
   await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
     method: 'POST',
     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ session_id: sessionId, name: name || null, phone: phone || null, problem: problem || null })
+    body: JSON.stringify({ session_id: sessionId, name: name || null, phone: phone || null, problem: problem || null, source, status: 'new' })
   });
 }
 
-async function notifyManager(lead) {
-  if (!MANAGER_CHAT_ID) return;
-  const lines = ['🔔 Новая заявка'];
-  if (lead.name) lines.push('👤 ' + lead.name);
-  if (lead.phone) lines.push('📞 ' + lead.phone);
-  if (lead.problem) lines.push('💬 ' + lead.problem);
+// ========== TELEGRAM API ==========
+
+async function sendTelegram(chatId, text, keyboard = null) {
+  const body = { chat_id: chatId, text, parse_mode: 'HTML' };
+  if (keyboard) body.reply_markup = { inline_keyboard: keyboard };
   await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: MANAGER_CHAT_ID, text: lines.join('\n') })
+    body: JSON.stringify(body)
   });
 }
+
+async function sendTelegramDoc(chatId, buffer, filename, caption = '') {
+  const formData = new FormData();
+  formData.append('chat_id', chatId);
+  formData.append('document', new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename);
+  if (caption) formData.append('caption', caption);
+  await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, { method: 'POST', body: formData });
+}
+
+async function answerCallback(callbackId, text = '') {
+  await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/answerCallbackQuery`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ callback_query_id: callbackId, text })
+  });
+}
+
+async function editMessage(chatId, messageId, text, keyboard = null) {
+  const body = { chat_id: chatId, message_id: messageId, text, parse_mode: 'HTML' };
+  if (keyboard) body.reply_markup = { inline_keyboard: keyboard };
+  await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/editMessageText`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+
+// ========== ЛОГИКА ЗАЯВОК ==========
 
 function extractLeadData(text) {
   const data = { name: null, phone: null, problem: null, save: false };
@@ -185,6 +212,24 @@ function cleanReply(text) {
     .replace(/^#{1,6}\s+/gm, '').replace(/`/g, '').replace(/\n{3,}/g, '\n\n').trim();
 }
 
+async function notifyManager(lead) {
+  if (!MANAGER_CHAT_ID) return;
+  const text = `🔥 <b>НОВАЯ ЗАЯВКА</b>\n\n` +
+    `👤 <b>Имя:</b> ${lead.name || '—'}\n` +
+    `📞 <b>Телефон:</b> ${lead.phone || '—'}\n` +
+    `💬 <b>Задача:</b> ${lead.problem || '—'}`;
+
+  const keyboard = [
+    [
+      { text: '📞 Позвонить', url: `tel:${(lead.phone || '').replace(/\D/g, '')}` },
+      { text: '✉️ Написать', url: `https://t.me/+${(lead.phone || '').replace(/\D/g, '')}` }
+    ]
+  ];
+  await sendTelegram(MANAGER_CHAT_ID, text, keyboard);
+}
+
+// ========== ИИ ==========
+
 async function askAI(message, history, sessionId) {
   let context = '';
   try {
@@ -192,7 +237,6 @@ async function askAI(message, history, sessionId) {
     const matches = await searchDocuments(emb, 5);
     if (matches.length > 0) {
       context = matches.map(m => m.content).join('\n\n---\n\n');
-      console.log('Контекст собран, длина:', context.length);
     }
   } catch (e) { console.log('Контекст не собран:', e.message); }
 
@@ -285,12 +329,85 @@ ${context || 'Информация временно недоступна.'}`;
   return cleanReply(reply);
 }
 
-async function sendTelegram(chatId, text) {
-  await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text })
+// ========== ЭКСПОРТ XLSX ==========
+
+async function buildXlsx(leads, title = 'Заявки') {
+  const ExcelJS = require('exceljs');
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(title);
+
+  ws.columns = [
+    { header: 'ID', key: 'id', width: 8 },
+    { header: 'Дата', key: 'date', width: 20 },
+    { header: 'Имя', key: 'name', width: 18 },
+    { header: 'Телефон', key: 'phone', width: 18 },
+    { header: 'Задача', key: 'problem', width: 45 },
+    { header: 'Источник', key: 'source', width: 12 },
+    { header: 'Статус', key: 'status', width: 14 }
+  ];
+
+  ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
+  ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2F5B43' } };
+  ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+  ws.getRow(1).height = 24;
+
+  leads.forEach(l => {
+    ws.addRow({
+      id: l.id,
+      date: l.created_at ? new Date(l.created_at).toLocaleString('ru-RU') : '',
+      name: l.name || '',
+      phone: l.phone || '',
+      problem: l.problem || '',
+      source: l.source === 'telegram' ? 'Telegram' : 'Сайт',
+      status: l.status === 'closed' ? 'Закрыта' : (l.status === 'in_progress' ? 'В работе' : 'Новая')
+    });
   });
+
+  ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    row.eachCell({ includeEmpty: false }, (cell) => {
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFDDDDDD' } },
+        left: { style: 'thin', color: { argb: 'FFDDDDDD' } },
+        bottom: { style: 'thin', color: { argb: 'FFDDDDDD' } },
+        right: { style: 'thin', color: { argb: 'FFDDDDDD' } }
+      };
+      cell.alignment = { vertical: 'top', wrapText: true };
+      if (rowNumber > 1) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowNumber % 2 === 0 ? 'FFF7F9F8' : 'FFFFFFFF' } };
+      }
+    });
+  });
+
+  return await wb.xlsx.writeBuffer();
 }
+
+async function fetchLeads(sinceIso = null) {
+  let url = `${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`;
+  if (sinceIso) url += `&created_at=gte.${encodeURIComponent(sinceIso)}`;
+  const r = await fetch(url, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  let leads = await r.json();
+  if (!Array.isArray(leads)) leads = [];
+  return leads.filter(l => isValidLead(l.name, l.phone));
+}
+
+function statsBlock(leads, periodLabel) {
+  const total = leads.length;
+  const closed = leads.filter(l => l.status === 'closed').length;
+  const inProgress = leads.filter(l => l.status === 'in_progress').length;
+  const newOnes = total - closed - inProgress;
+  const conversion = total > 0 ? Math.round((closed / total) * 100) : 0;
+
+  return `📊 <b>${periodLabel}</b>\n\n` +
+    `📥 Всего заявок: <b>${total}</b>\n` +
+    `🆕 Новых: <b>${newOnes}</b>\n` +
+    `🔄 В работе: <b>${inProgress}</b>\n` +
+    `✅ Закрыто: <b>${closed}</b>\n` +
+    `📈 Конверсия: <b>${conversion}%</b>`;
+}
+
+// ========== ВЕБХУКИ ==========
 
 app.post('/message', async (req, res) => {
   try {
@@ -312,6 +429,40 @@ app.post('/message', async (req, res) => {
 app.post('/telegram-webhook', async (req, res) => {
   res.sendStatus(200);
   try {
+    // Обработка кнопок
+    if (req.body.callback_query) {
+      const cb = req.body.callback_query;
+      const chatId = cb.message.chat.id;
+      const messageId = cb.message.message_id;
+      const data = cb.data;
+
+      if (String(chatId) !== String(MANAGER_CHAT_ID)) { await answerCallback(cb.id, 'Нет доступа'); return; }
+
+      if (data.startsWith('status_')) {
+        const parts = data.split('_');
+        const leadId = parts[1];
+        const newStatus = parts.slice(2).join('_');
+
+        await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`, {
+          method: 'PATCH',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() })
+        });
+
+        const statusLabel = newStatus === 'closed' ? '✅ Закрыта' : (newStatus === 'in_progress' ? '🔄 В работе' : '🆕 Новая');
+        await answerCallback(cb.id, `Статус: ${statusLabel}`);
+
+        const newKeyboard = [
+          [
+            { text: newStatus === 'in_progress' ? '✅ Закрыть' : '🔄 Взять в работу', callback_data: newStatus === 'in_progress' ? `status_${leadId}_closed` : `status_${leadId}_in_progress` }
+          ]
+        ];
+        const baseText = cb.message.text.replace(/\n\n<i>Статус:.*<\/i>$/, '');
+        await editMessage(chatId, messageId, `${baseText}\n\n<i>Статус: ${statusLabel}</i>`, newKeyboard);
+      }
+      return;
+    }
+
     const msg = req.body.message;
     if (!msg) return;
     const chatId = msg.chat.id;
@@ -327,109 +478,51 @@ app.post('/telegram-webhook', async (req, res) => {
       text = msg.text.trim();
     } else return;
 
-    if (text === '/leads' && String(chatId) === String(MANAGER_CHAT_ID)) {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc&limit=10`, {
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-      });
-      const leads = await r.json();
-      if (!Array.isArray(leads) || leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
-      const lines = leads.map((l, i) => `${i+1}. ${l.name||'—'} | ${l.phone||'—'}\n💬 ${l.problem||'—'}`);
-      await sendTelegram(chatId, '📋 Последние заявки:\n\n' + lines.join('\n\n'));
-      return;
-    }
+    const isManager = String(chatId) === String(MANAGER_CHAT_ID);
 
-    if (text === '/export' && String(chatId) === String(MANAGER_CHAT_ID)) {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`, {
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-      });
-      let leads = await r.json();
-      if (!Array.isArray(leads)) leads = [];
-
-      // отсеиваем мусорные заявки (пустые / с "...")
-      leads = leads.filter(l => isValidLead(l.name, l.phone));
-
-      if (leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
-
-      const ExcelJS = require('exceljs');
-      const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet('Заявки');
-
-      ws.columns = [
-        { header: 'ID', key: 'id', width: 8 },
-        { header: 'Имя', key: 'name', width: 20 },
-        { header: 'Телефон', key: 'phone', width: 20 },
-        { header: 'Задача', key: 'problem', width: 45 },
-        { header: 'Дата', key: 'date', width: 22 }
-      ];
-
-      // жирный заголовок + цветной фон
-      ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      ws.getRow(1).fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF2F5B43' }
-      };
-      ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
-
-      leads.forEach(l => {
-        ws.addRow({
-          id: l.id,
-          name: l.name || '',
-          phone: l.phone || '',
-          problem: l.problem || '',
-          date: l.created_at ? new Date(l.created_at).toLocaleString('ru-RU') : ''
-        });
-      });
-
-      // выравнивание и перенос текста
-      ws.getColumn('problem').alignment = { wrapText: true, vertical: 'top' };
-      ws.getColumn('date').alignment = { vertical: 'top' };
-      ws.getColumn('name').alignment = { vertical: 'top' };
-      ws.getColumn('phone').alignment = { vertical: 'top' };
-      ws.getColumn('id').alignment = { vertical: 'top', horizontal: 'center' };
-
-      // границы на все ячейки
-      ws.eachRow({ includeEmpty: false }, (row) => {
-        row.eachCell({ includeEmpty: false }, (cell) => {
-          cell.border = {
-            top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-            left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-            bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-            right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
-          };
-        });
-      });
-
-      const buffer = await wb.xlsx.writeBuffer();
-
-      const formData = new FormData();
-      formData.append('chat_id', chatId);
-      formData.append(
-        'document',
-        new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
-        `leads_${new Date().toISOString().slice(0, 10)}.xlsx`
-      );
-      formData.append('caption', `📊 Выгрузка заявок (${leads.length} шт.)`);
-
-      await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
-        method: 'POST',
-        body: formData
-      });
-      return;
-    }
-
+    // /start
     if (text.startsWith('/start')) {
       const parts = text.split(' ');
       const siteSessionId = parts[1];
-      if (siteSessionId) {
+      if (siteSessionId && siteSessionId.startsWith('sess_')) {
         await getOrCreateSession(siteSessionId);
         await updateSession(siteSessionId, { telegram_chat_id: chatId });
-        await sendTelegram(chatId, 'Продолжаем диалог с сайта. Чем помочь?');
+        await sendTelegram(chatId, '👋 Продолжаем диалог с сайта. Чем помочь?');
       } else {
-        await sendTelegram(chatId, 'Здравствуйте! Я AI-Администратор. Задайте вопрос.');
+        await sendTelegram(chatId, '👋 Здравствуйте! Я AI-Администратор. Задайте вопрос.');
       }
       return;
     }
+
+    // ===== КОМАНДЫ МЕНЕДЖЕРА =====
+
+    if (isManager && text === '/leads') {
+      const leads = (await fetchLeads()).slice(0, 10);
+      if (leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
+      const lines = leads.map((l, i) => {
+        const s = l.status === 'closed' ? '✅' : (l.status === 'in_progress' ? '🔄' : '🆕');
+        return `${s} <b>${i+1}. ${l.name || '—'}</b> | ${l.phone || '—'}\n💬 ${l.problem || '—'}`;
+      });
+      await sendTelegram(chatId, '📋 <b>Последние заявки</b>\n\n' + lines.join('\n\n'));
+      return;
+    }
+
+    if (isManager && text === '/export') {
+      const leads = await fetchLeads();
+      if (leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
+      const buffer = await buildXlsx(leads, 'Все заявки');
+      await sendTelegramDoc(chatId, buffer, `leads_${new Date().toISOString().slice(0,10)}.xlsx`, `📊 Выгрузка заявок (${leads.length} шт.)`);
+      return;
+    }
+
+    if (isManager && text === '/stats') {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const leads = await fetchLeads(today.toISOString());
+      await sendTelegram(chatId, statsBlock(leads, `Итоги за сегодня (${today.toLocaleDateString('ru-RU')})`));
+      return;
+    }
+
+    // ===== ОБЫЧНЫЙ ДИАЛОГ =====
 
     let session = await getSessionByTelegram(chatId);
     if (!session) {
@@ -475,6 +568,53 @@ app.get('/crawl', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Ошибка кроулинга' });
   }
+});
+
+// ========== АВТОСВОДКИ (CRON) ==========
+
+// Ежедневно в 20:00 по Москве (17:00 UTC)
+cron.schedule('0 17 * * *', async () => {
+  try {
+    if (!MANAGER_CHAT_ID) return;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const leads = await fetchLeads(today.toISOString());
+    if (leads.length === 0) return;
+
+    await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за сегодня (${today.toLocaleDateString('ru-RU')})`));
+
+    const buffer = await buildXlsx(leads, 'День');
+    await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_day_${new Date().toISOString().slice(0,10)}.xlsx`, `📥 Заявки за день (${leads.length} шт.)`);
+  } catch (e) { console.log('cron day error:', e.message); }
+});
+
+// Каждый понедельник в 10:00 по Москве (07:00 UTC)
+cron.schedule('0 7 * * 1', async () => {
+  try {
+    if (!MANAGER_CHAT_ID) return;
+    const since = new Date(); since.setDate(since.getDate() - 7); since.setHours(0, 0, 0, 0);
+    const leads = await fetchLeads(since.toISOString());
+    if (leads.length === 0) return;
+
+    await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за неделю (${since.toLocaleDateString('ru-RU')} — ${new Date().toLocaleDateString('ru-RU')})`));
+
+    const buffer = await buildXlsx(leads, 'Неделя');
+    await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_week_${new Date().toISOString().slice(0,10)}.xlsx`, `📥 Заявки за неделю (${leads.length} шт.)`);
+  } catch (e) { console.log('cron week error:', e.message); }
+});
+
+// 1-го числа каждого месяца в 10:00 по Москве (07:00 UTC)
+cron.schedule('0 7 1 * *', async () => {
+  try {
+    if (!MANAGER_CHAT_ID) return;
+    const since = new Date(); since.setMonth(since.getMonth() - 1); since.setDate(1); since.setHours(0, 0, 0, 0);
+    const leads = await fetchLeads(since.toISOString());
+    if (leads.length === 0) return;
+
+    await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за месяц (${since.toLocaleDateString('ru-RU')} — ${new Date().toLocaleDateString('ru-RU')})`));
+
+    const buffer = await buildXlsx(leads, 'Месяц');
+    await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_month_${new Date().toISOString().slice(0,7)}.xlsx`, `📥 Заявки за месяц (${leads.length} шт.)`);
+  } catch (e) { console.log('cron month error:', e.message); }
 });
 
 app.listen(PORT, () => {
