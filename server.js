@@ -17,8 +17,8 @@ const OPENROUTER_KEY = process.env.OPENROUTER_KEY || '';
 const FIRECRAWL_KEY = process.env.FIRECRAWL_KEY || '';
 const SITE_TO_CRAWL = process.env.SITE_TO_CRAWL || 'https://send-empty-creedite.tilda.ws';
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'AI-Администратор';
+const PRICE_PER_LEAD = 25; // ₽ за заявку в тарифе «за результат»
 
-// защита от повторных вебхуков Telegram
 const processedUpdates = new Set();
 
 // ========== БАЗОВЫЕ ФУНКЦИИ ==========
@@ -276,31 +276,51 @@ async function askAI(message, history, sessionId) {
 1. Отвечай ОЧЕНЬ коротко. Максимум 2 предложения. Не 3, не 4 — 2.
 2. НЕ используй списки, тире, нумерацию, звёздочки. Только обычный текст.
 3. НЕ повторяй то, что уже сказал. Один раз сказал — хватит.
-4. НЕ переспрашивай то, что клиент уже рассказал. Если он сказал «стоматология» — ты это уже знаешь.
-5. Говори как человек: «Отлично», «Понял», «Согласен», «Да, это решаемо». Без канцелярита.
-6. Задавай ОДИН вопрос за раз. Не три сразу.
-7. Если клиент молчит или не отвечает — не спамь.
-8. НЕ подтверждай заявку дважды. Один раз оформил — всё.
+4. НЕ переспрашивай то, что клиент уже рассказал.
+5. Говори как человек: «Отлично», «Понял», «Согласен», «Да, это решаемо».
+6. Задавай ОДИН вопрос за раз.
+7. НЕ подтверждай заявку дважды.
 
 ЧТО ТЫ ПРОДАЁШЬ:
-Ты продаёшь результат, а не бота: клиенты не теряются ночью, заявки собираются в одном месте, менеджер разгружен.
+Ты продаёшь результат: клиенты не теряются ночью, заявки собираются в одном месте, менеджер разгружен. Бот отвечает 24/7, собирает заявки и присылает их владельцу готовой таблицей.
 
-УСЛОВИЯ:
-- Настройка и подключение — бесплатно.
-- Первая неделя — бесплатно.
-- Со второй недели — 2 500 ₽/мес.
-- При годовой — 2 200 ₽/мес.
+УСЛОВИЯ (ГОВОРИ ТОЧНО ТАК):
+- Подключение и настройка — БЕСПЛАТНО.
+- Первая неделя — БЕСПЛАТНО (полный тест, без ограничений).
+- Дальше на выбор два тарифа:
+  - Фикс: 2 490 ₽/мес, заявок без ограничений.
+  - За результат: 25 ₽ за заявку, платите в конце месяца по факту.
+- При годовой оплате фикса — 2 199 ₽/мес.
 - Запуск за 2 дня.
+- Отключить можно в любой момент.
 
-ВАЖНО: никогда не говори «первый месяц бесплатно». Только «первая неделя».
+ВАЖНО ПРО ЦЕНУ:
+- НИКОГДА не говори «первый месяц бесплатно». Только «первая неделя бесплатно».
+- Сначала ВСЕГДА подчёркивай: «Первая неделя бесплатно, настройка тоже бесплатно».
+- Про тарифы говори только когда клиент спросил про цену или готов подключать.
+- Объясняй: «2 490 ₽ — это меньше, чем один упущенный клиент».
+- Если клиент сомневается — предложи тариф «за результат»: платит только за заявки, сколько собрал — за столько и заплатил.
 
-КАК ВЕСТИ ДИАЛОГ (как живой человек, а не скрипт):
-1. Клиент поздоровался → поздоровайся коротко и спроси, чем занимается.
-2. Клиент назвал сферу → отреагируй живо и задай ОДИН уточняющий вопрос: теряются ли заявки, кто отвечает ночью.
-3. Клиент ответил → коротко покажи, как ты решишь его ситуацию (1-2 предложения).
+ОБЯЗАТЕЛЬНЫЕ ВОПРОСЫ:
+1. Первым делом узнай сферу бизнеса: «Подскажите, какой у вас бизнес?»
+2. Уточни боль: «Клиенты пишут вам ночью или в выходные? Кто отвечает?»
+3. Потом — короткая презентация под его сферу.
+4. Потом — предложение: «Давайте поставим бесплатно, первую неделю тестируете».
+5. Контакты проси ТОЛЬКО когда клиент готов.
+
+НЕЛЬЗЯ:
+- Сразу просить телефон, не выяснив сферу бизнеса.
+- Пропускать уточняющие вопросы.
+- Говорить «первый месяц бесплатно».
+- Писать длинные абзацы и списки.
+
+КАК ВЕСТИ ДИАЛОГ:
+1. Клиент поздоровался → коротко поздоровайся и спроси, чем занимается.
+2. Клиент назвал сферу → живо отреагируй и задай ОДИН уточняющий вопрос.
+3. Клиент ответил → покажи, как ты решишь его ситуацию (1-2 предложения).
 4. Клиент заинтересовался → предложи бесплатный тест одной фразой.
-5. Клиент готов → попроси имя и телефон ОДНИМ сообщением. Не двумя, не тремя.
-6. Клиент сомневается → работай с возражением коротко, не дави.
+5. Клиент готов → попроси имя и телефон ОДНИМ сообщением.
+6. Клиент сомневается → работай с возражением коротко.
 
 ПРИМЕРЫ ЖИВЫХ ОТВЕТОВ:
 - «Здравствуйте! Подскажите, какой у вас бизнес?»
@@ -321,7 +341,7 @@ async function askAI(message, history, sessionId) {
 СБОР ЗАЯВКИ:
 Когда клиент готов оставить контакты и назвал имя + телефон — добавь в САМОМ КОНЦЕ ответа (и только один раз):
 [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:краткая суть из диалога]
-Не оценивай «реальность» имени и номера — если клиент написал, значит это его данные. Если чего-то не хватает (только имя или только телефон) — не ставь маркер, а спроси недостающее.
+Не оценивай «реальность» имени и номера — если клиент написал, значит это его данные. Если чего-то не хватает — не ставь маркер, а спроси недостающее.
 
 ИНФОРМАЦИЯ О КОМПАНИИ:
 ${context || 'Информация временно недоступна.'}`;
@@ -422,14 +442,26 @@ function statsBlock(leads, periodLabel) {
   const inProgress = leads.filter(l => l.status === 'in_progress').length;
   const newOnes = total - closed - inProgress;
   const conversion = total > 0 ? Math.round((closed / total) * 100) : 0;
+  const sum = total * PRICE_PER_LEAD;
 
   return `📊 <b>${periodLabel}</b>\n\n` +
     `📥 Всего заявок: <b>${total}</b>\n` +
     `🆕 Новых: <b>${newOnes}</b>\n` +
     `🔄 В работе: <b>${inProgress}</b>\n` +
     `✅ Закрыто: <b>${closed}</b>\n` +
-    `📈 Конверсия: <b>${conversion}%</b>`;
+    `📈 Конверсия: <b>${conversion}%</b>\n\n` +
+    `💰 По тарифу «за результат»: <b>${total} × ${PRICE_PER_LEAD} ₽ = ${sum} ₽</b>`;
 }
+
+// ========== HEALTH (для внешнего пинга) ==========
+
+app.get('/health', (req, res) => {
+  res.json({ ok: true, time: new Date().toISOString(), uptime: process.uptime() });
+});
+
+app.get('/', (req, res) => {
+  res.json({ ok: true, service: 'AI-Администратор Tilda', time: new Date().toISOString() });
+});
 
 // ========== ВЕБХУКИ ==========
 
@@ -454,7 +486,6 @@ app.post('/telegram-webhook', async (req, res) => {
   res.sendStatus(200);
 
   try {
-    // защита от дублей
     const updateId = req.body.update_id;
     if (updateId) {
       if (processedUpdates.has(updateId)) {
@@ -469,7 +500,6 @@ app.post('/telegram-webhook', async (req, res) => {
       }
     }
 
-    // ===== ОБРАБОТКА КНОПОК =====
     if (req.body.callback_query) {
       const cb = req.body.callback_query;
       const chatId = cb.message.chat.id;
@@ -551,7 +581,6 @@ app.post('/telegram-webhook', async (req, res) => {
       return;
     }
 
-    // ===== ОБЫЧНЫЕ СООБЩЕНИЯ =====
     const msg = req.body.message;
     if (!msg) return;
     const chatId = msg.chat.id;
@@ -608,6 +637,21 @@ app.post('/telegram-webhook', async (req, res) => {
       return;
     }
 
+    if (isManager && text === '/bill') {
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const leads = await fetchLeads(monthStart.toISOString());
+      const total = leads.length;
+      const sum = total * PRICE_PER_LEAD;
+      const monthLabel = now.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+      await sendTelegram(chatId, `🧾 <b>Счёт за ${monthLabel}</b>\n\n` +
+        `📥 Заявок: <b>${total}</b>\n` +
+        `💵 Цена за заявку: <b>${PRICE_PER_LEAD} ₽</b>\n` +
+        `💰 Итого к оплате: <b>${sum} ₽</b>\n\n` +
+        `<i>Тариф «за результат». Оплата — до 5-го числа следующего месяца.</i>`);
+      return;
+    }
+
     let session = await getSessionByTelegram(chatId);
     if (!session) {
       const newSid = 'tg_' + chatId;
@@ -654,13 +698,16 @@ app.get('/crawl', async (req, res) => {
   }
 });
 
-// ========== АВТОСВОДКИ (CRON) ==========
+// ========== АВТОСВОДКИ И СЧЕТА (CRON) ==========
+// Render Free засыпает — нужен внешний пинг cron-job.org на /health
 
+// Ежедневно 20:00 МСК (17:00 UTC) — сводка + выгрузка
 cron.schedule('0 17 * * *', async () => {
   try {
     if (!MANAGER_CHAT_ID) return;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const leads = await fetchLeads(today.toISOString());
+    console.log('⏰ cron day сработал, заявок:', leads.length);
     if (leads.length === 0) return;
     await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за сегодня (${today.toLocaleDateString('ru-RU')})`));
     const buffer = await buildXlsx(leads, 'День');
@@ -668,11 +715,13 @@ cron.schedule('0 17 * * *', async () => {
   } catch (e) { console.log('cron day error:', e.message); }
 });
 
+// Каждый понедельник 10:00 МСК (07:00 UTC)
 cron.schedule('0 7 * * 1', async () => {
   try {
     if (!MANAGER_CHAT_ID) return;
     const since = new Date(); since.setDate(since.getDate() - 7); since.setHours(0, 0, 0, 0);
     const leads = await fetchLeads(since.toISOString());
+    console.log('⏰ cron week сработал, заявок:', leads.length);
     if (leads.length === 0) return;
     await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за неделю (${since.toLocaleDateString('ru-RU')} — ${new Date().toLocaleDateString('ru-RU')})`));
     const buffer = await buildXlsx(leads, 'Неделя');
@@ -680,15 +729,29 @@ cron.schedule('0 7 * * 1', async () => {
   } catch (e) { console.log('cron week error:', e.message); }
 });
 
+// 1-го числа каждого месяца 10:00 МСК (07:00 UTC) — итоги + счёт
 cron.schedule('0 7 1 * *', async () => {
   try {
     if (!MANAGER_CHAT_ID) return;
-    const since = new Date(); since.setMonth(since.getMonth() - 1); since.setDate(1); since.setHours(0, 0, 0, 0);
-    const leads = await fetchLeads(since.toISOString());
+    const now = new Date();
+    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
+    const leads = await fetchLeads(prevMonthStart.toISOString());
+    console.log('⏰ cron month сработал, заявок:', leads.length);
     if (leads.length === 0) return;
-    await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за месяц (${since.toLocaleDateString('ru-RU')} — ${new Date().toLocaleDateString('ru-RU')})`));
+
+    const total = leads.length;
+    const sum = total * PRICE_PER_LEAD;
+    const monthLabel = prevMonthStart.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+
+    await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за ${monthLabel}`));
+    await sendTelegram(MANAGER_CHAT_ID, `🧾 <b>Счёт за ${monthLabel}</b>\n\n` +
+      `📥 Заявок: <b>${total}</b>\n` +
+      `💵 Цена за заявку: <b>${PRICE_PER_LEAD} ₽</b>\n` +
+      `💰 Итого к оплате: <b>${sum} ₽</b>\n\n` +
+      `<i>Тариф «за результат». Оплата — до 5-го числа.</i>`);
+
     const buffer = await buildXlsx(leads, 'Месяц');
-    await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_month_${new Date().toISOString().slice(0,7)}.xlsx`, `📥 Заявки за месяц (${leads.length} шт.)`);
+    await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_month_${prevMonthStart.toISOString().slice(0,7)}.xlsx`, `📥 Заявки за ${monthLabel} (${total} шт.)`);
   } catch (e) { console.log('cron month error:', e.message); }
 });
 
