@@ -17,7 +17,7 @@ const OPENROUTER_KEY = process.env.OPENROUTER_KEY || '';
 const FIRECRAWL_KEY = process.env.FIRECRAWL_KEY || '';
 const SITE_TO_CRAWL = process.env.SITE_TO_CRAWL || 'https://send-empty-creedite.tilda.ws';
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'AI-Администратор';
-const CLIENT_ID = process.env.CLIENT_ID || 'tilda'; // ID этого бота в таблице clients
+const CLIENT_ID = process.env.CLIENT_ID || 'tilda';
 const PRICE_PER_LEAD = 25;
 
 const processedUpdates = new Set();
@@ -492,7 +492,6 @@ app.post('/message', async (req, res) => {
     const { message, session_id } = req.body;
     if (!message || typeof message !== 'string') return res.status(400).json({ error: 'Введите сообщение' });
 
-    // проверка оплаты
     const client = await getClient(CLIENT_ID);
     if (!isPaid(client)) {
       return res.json({ reply: 'Сервис временно приостановлен. Свяжитесь с менеджером.', session_id: session_id || 'default' });
@@ -637,7 +636,6 @@ app.post('/telegram-webhook', async (req, res) => {
       return;
     }
 
-    // ===== КОМАНДЫ МЕНЕДЖЕРА =====
     if (isManager && text === '/leads') {
       const leads = (await fetchLeads()).slice(0, 10);
       if (leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
@@ -675,7 +673,6 @@ app.post('/telegram-webhook', async (req, res) => {
       return;
     }
 
-    // Список клиентов + статус оплаты
     if (isManager && text === '/clients') {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/clients?select=*&order=id.desc`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
@@ -685,13 +682,13 @@ app.post('/telegram-webhook', async (req, res) => {
       const lines = rows.map(c => {
         const paid = isPaid(c);
         const until = c.paid_until ? new Date(c.paid_until).toLocaleDateString('ru-RU') : '—';
-        return `${paid ? '✅' : '⛔️'} <b>${c.client_id}</b> — ${c.business_name || '—'}\nОплачено до: ${until}`;
+        const tz = c.timezone || 'Europe/Moscow';
+        return `${paid ? '✅' : '⛔️'} <b>${c.client_id}</b> — ${c.business_name || '—'}\nОплачено до: ${until}\nЧасовой пояс: ${tz}`;
       });
       await sendTelegram(chatId, '👥 <b>Клиенты</b>\n\n' + lines.join('\n\n'));
       return;
     }
 
-    // Продление оплаты: /paid client_id месяцев
     if (isManager && text.startsWith('/paid ')) {
       const parts = text.split(' ');
       const cid = parts[1];
@@ -706,7 +703,6 @@ app.post('/telegram-webhook', async (req, res) => {
       return;
     }
 
-    // Отключение оплаты: /unpaid client_id
     if (isManager && text.startsWith('/unpaid ')) {
       const cid = text.split(' ')[1];
       if (!cid) { await sendTelegram(chatId, 'Формат: /unpaid client_id'); return; }
@@ -715,7 +711,6 @@ app.post('/telegram-webhook', async (req, res) => {
       return;
     }
 
-    // ===== ОБЫЧНЫЙ ДИАЛОГ =====
     let session = await getSessionByTelegram(chatId);
     if (!session) {
       const newSid = 'tg_' + chatId;
@@ -725,7 +720,6 @@ app.post('/telegram-webhook', async (req, res) => {
     }
     if (!session) session = { session_id: 'tg_' + chatId, history: [] };
 
-    // проверка оплаты (для не-менеджера)
     if (!isManager) {
       const client = await getClient(CLIENT_ID);
       if (!isPaid(client)) {
@@ -771,21 +765,75 @@ app.get('/crawl', async (req, res) => {
   }
 });
 
-// ========== АВТОСВОДКИ И СЧЕТА ==========
+// ========== АВТОСВОДКИ С ЧАСОВЫМ ПОЯСОМ ==========
 
-cron.schedule('0 17 * * *', async () => {
+function getLocalTime(timezone) {
   try {
-    if (!MANAGER_CHAT_ID) return;
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const leads = await fetchLeads(today.toISOString());
-    console.log('⏰ cron day сработал, заявок:', leads.length);
+    const now = new Date();
+    const fmt = new Intl.DateTimeFormat('ru-RU', {
+      timeZone: timezone || 'Europe/Moscow',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    });
+    const parts = fmt.formatToParts(now);
+    const get = (t) => parts.find(p => p.type === t)?.value;
+    return {
+      hour: parseInt(get('hour'), 10),
+      minute: parseInt(get('minute'), 10),
+      year: parseInt(get('year'), 10),
+      month: parseInt(get('month'), 10),
+      day: parseInt(get('day'), 10),
+      dateStr: `${get('year')}-${get('month')}-${get('day')}`
+    };
+  } catch (e) {
+    return { hour: 20, minute: 0, dateStr: '' };
+  }
+}
+
+async function sendDailyReportForClient(client) {
+  try {
+    const tz = client.timezone || 'Europe/Moscow';
+    const local = getLocalTime(tz);
+
+    const since = new Date();
+    since.setUTCHours(0, 0, 0, 0);
+
+    const leads = await fetchLeads(since.toISOString());
     if (leads.length === 0) return;
-    await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за сегодня (${today.toLocaleDateString('ru-RU')})`));
+
+    const chatId = client.chat_id || MANAGER_CHAT_ID;
+    if (!chatId) return;
+
+    await sendTelegram(chatId, statsBlock(leads, `Итоги за сегодня (${local.dateStr})`));
     const buffer = await buildXlsx(leads, 'День');
-    await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_day_${new Date().toISOString().slice(0,10)}.xlsx`, `📥 Заявки за день (${leads.length} шт.)`);
-  } catch (e) { console.log('cron day error:', e.message); }
+    await sendTelegramDoc(chatId, buffer, `leads_day_${local.dateStr}.xlsx`, `📥 Заявки за день (${leads.length} шт.)`);
+    console.log(`✅ Сводка отправлена клиенту ${client.client_id} (${tz})`);
+  } catch (e) {
+    console.log('sendDailyReportForClient error:', e.message);
+  }
+}
+
+// Каждые 15 минут проверяем: у кого сейчас локально 20:00
+cron.schedule('*/15 * * * *', async () => {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/clients?select=*`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    const clients = await r.json();
+    if (!Array.isArray(clients)) return;
+
+    for (const client of clients) {
+      if (!isPaid(client)) continue;
+      const tz = client.timezone || 'Europe/Moscow';
+      const local = getLocalTime(tz);
+      if (local.hour === 20 && local.minute >= 0 && local.minute < 15) {
+        await sendDailyReportForClient(client);
+      }
+    }
+  } catch (e) { console.log('cron 15min error:', e.message); }
 });
 
+// Еженедельная сводка (понедельник 10:00 МСК — для менеджера)
 cron.schedule('0 7 * * 1', async () => {
   try {
     if (!MANAGER_CHAT_ID) return;
@@ -799,6 +847,7 @@ cron.schedule('0 7 * * 1', async () => {
   } catch (e) { console.log('cron week error:', e.message); }
 });
 
+// Ежемесячный счёт (1-го числа 10:00 МСК)
 cron.schedule('0 7 1 * *', async () => {
   try {
     if (!MANAGER_CHAT_ID) return;
