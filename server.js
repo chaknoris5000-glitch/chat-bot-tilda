@@ -17,9 +17,50 @@ const OPENROUTER_KEY = process.env.OPENROUTER_KEY || '';
 const FIRECRAWL_KEY = process.env.FIRECRAWL_KEY || '';
 const SITE_TO_CRAWL = process.env.SITE_TO_CRAWL || 'https://send-empty-creedite.tilda.ws';
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'AI-Администратор';
-const PRICE_PER_LEAD = 25; // ₽ за заявку в тарифе «за результат»
+const CLIENT_ID = process.env.CLIENT_ID || 'tilda'; // ID этого бота в таблице clients
+const PRICE_PER_LEAD = 25;
 
 const processedUpdates = new Set();
+
+// ========== КЛИЕНТЫ И ОПЛАТА ==========
+
+async function getClient(clientId) {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/clients?client_id=eq.${clientId}&select=*&limit=1`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    const rows = await r.json();
+    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  } catch (e) { return null; }
+}
+
+function isPaid(client) {
+  if (!client || !client.paid_until) return false;
+  return new Date(client.paid_until) > new Date();
+}
+
+async function extendPayment(clientId, months = 1) {
+  const client = await getClient(clientId);
+  if (!client) return null;
+  const base = client.paid_until && new Date(client.paid_until) > new Date()
+    ? new Date(client.paid_until)
+    : new Date();
+  base.setMonth(base.getMonth() + months);
+  await fetch(`${SUPABASE_URL}/rest/v1/clients?client_id=eq.${clientId}`, {
+    method: 'PATCH',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ paid_until: base.toISOString(), updated_at: new Date().toISOString() })
+  });
+  return base;
+}
+
+async function disablePayment(clientId) {
+  await fetch(`${SUPABASE_URL}/rest/v1/clients?client_id=eq.${clientId}`, {
+    method: 'PATCH',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ paid_until: new Date(Date.now() - 86400000).toISOString(), updated_at: new Date().toISOString() })
+  });
+}
 
 // ========== БАЗОВЫЕ ФУНКЦИИ ==========
 
@@ -273,11 +314,11 @@ async function askAI(message, history, sessionId) {
   const systemPrompt = `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты живой человек-администратор, который работает на сайте и в Telegram. Общайся так, как общался бы опытный администратор: тепло, коротко, по делу.
 
 ГЛАВНЫЕ ПРАВИЛА ОБЩЕНИЯ:
-1. Отвечай ОЧЕНЬ коротко. Максимум 2 предложения. Не 3, не 4 — 2.
-2. НЕ используй списки, тире, нумерацию, звёздочки. Только обычный текст.
-3. НЕ повторяй то, что уже сказал. Один раз сказал — хватит.
+1. Отвечай ОЧЕНЬ коротко. Максимум 2 предложения.
+2. НЕ используй списки, тире, нумерацию, звёздочки.
+3. НЕ повторяй то, что уже сказал.
 4. НЕ переспрашивай то, что клиент уже рассказал.
-5. Говори как человек: «Отлично», «Понял», «Согласен», «Да, это решаемо».
+5. Говори как человек: «Отлично», «Понял», «Согласен».
 6. Задавай ОДИН вопрос за раз.
 7. НЕ подтверждай заявку дважды.
 
@@ -286,62 +327,43 @@ async function askAI(message, history, sessionId) {
 
 УСЛОВИЯ (ГОВОРИ ТОЧНО ТАК):
 - Подключение и настройка — БЕСПЛАТНО.
-- Первая неделя — БЕСПЛАТНО (полный тест, без ограничений).
+- Первая неделя — БЕСПЛАТНО.
 - Дальше на выбор два тарифа:
   - Фикс: 2 490 ₽/мес, заявок без ограничений.
   - За результат: 25 ₽ за заявку, платите в конце месяца по факту.
 - При годовой оплате фикса — 2 199 ₽/мес.
 - Запуск за 2 дня.
-- Отключить можно в любой момент.
 
 ВАЖНО ПРО ЦЕНУ:
-- НИКОГДА не говори «первый месяц бесплатно». Только «первая неделя бесплатно».
-- Сначала ВСЕГДА подчёркивай: «Первая неделя бесплатно, настройка тоже бесплатно».
-- Про тарифы говори только когда клиент спросил про цену или готов подключать.
-- Объясняй: «2 490 ₽ — это меньше, чем один упущенный клиент».
-- Если клиент сомневается — предложи тариф «за результат»: платит только за заявки, сколько собрал — за столько и заплатил.
+- НИКОГДА не говори «первый месяц бесплатно». Только «первая неделя».
+- Сначала подчёркивай: «Первая неделя бесплатно, настройка тоже бесплатно».
+- Про тарифы говори, когда клиент спросил про цену.
+- Если клиент сомневается — предложи тариф «за результат».
 
 ОБЯЗАТЕЛЬНЫЕ ВОПРОСЫ:
 1. Первым делом узнай сферу бизнеса: «Подскажите, какой у вас бизнес?»
-2. Уточни боль: «Клиенты пишут вам ночью или в выходные? Кто отвечает?»
+2. Уточни боль: «Клиенты пишут вам ночью или в выходные?»
 3. Потом — короткая презентация под его сферу.
-4. Потом — предложение: «Давайте поставим бесплатно, первую неделю тестируете».
-5. Контакты проси ТОЛЬКО когда клиент готов.
+4. Потом — предложение: «Давайте поставим бесплатно на неделю».
+5. Контакты проси, когда клиент готов.
 
 НЕЛЬЗЯ:
-- Сразу просить телефон, не выяснив сферу бизнеса.
+- Сразу просить телефон, не выяснив сферу.
 - Пропускать уточняющие вопросы.
 - Говорить «первый месяц бесплатно».
 - Писать длинные абзацы и списки.
 
-КАК ВЕСТИ ДИАЛОГ:
-1. Клиент поздоровался → коротко поздоровайся и спроси, чем занимается.
-2. Клиент назвал сферу → живо отреагируй и задай ОДИН уточняющий вопрос.
-3. Клиент ответил → покажи, как ты решишь его ситуацию (1-2 предложения).
-4. Клиент заинтересовался → предложи бесплатный тест одной фразой.
-5. Клиент готов → попроси имя и телефон ОДНИМ сообщением.
-6. Клиент сомневается → работай с возражением коротко.
-
 ПРИМЕРЫ ЖИВЫХ ОТВЕТОВ:
 - «Здравствуйте! Подскажите, какой у вас бизнес?»
-- «Понял, стоматология. Скажите, пациенты пишут вечером или в выходные?»
-- «Да, это как раз наш случай. Бот отвечает 24/7 и собирает записи, даже когда администратор спит.»
-- «Давайте поставим бесплатно на неделю — посмотрите, как собираются заявки.»
-- «Отлично. Напишите, пожалуйста, имя и телефон — запустим за 2 дня.»
-
-ЧЕГО НЕ ДЕЛАЕШЬ:
-- Не пиши длинные абзацы и списки.
-- Не повторяй один и тот же смысл дважды.
-- Не переспрашивай то, что уже знаешь.
-- Не обещай то, чего нет (CRM, WhatsApp, календари).
-- Не говори «первый месяц бесплатно».
-- Не говори «настройка 2 500 ₽» — настройка бесплатная.
-- Не пиши «жду звонка», «менеджер свяжется» — только если клиент сам попросил.
+- «Понял, стоматология. Пациенты пишут вечером или в выходные?»
+- «Да, это как раз наш случай. Бот отвечает 24/7.»
+- «Давайте поставим бесплатно на неделю.»
+- «Отлично. Напишите имя и телефон — запустим за 2 дня.»
 
 СБОР ЗАЯВКИ:
-Когда клиент готов оставить контакты и назвал имя + телефон — добавь в САМОМ КОНЦЕ ответа (и только один раз):
-[LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:краткая суть из диалога]
-Не оценивай «реальность» имени и номера — если клиент написал, значит это его данные. Если чего-то не хватает — не ставь маркер, а спроси недостающее.
+Когда клиент назвал имя + телефон — добавь в САМОМ КОНЦЕ ответа (один раз):
+[LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:краткая суть]
+Если чего-то не хватает — не ставь маркер, спроси недостающее.
 
 ИНФОРМАЦИЯ О КОМПАНИИ:
 ${context || 'Информация временно недоступна.'}`;
@@ -453,14 +475,14 @@ function statsBlock(leads, periodLabel) {
     `💰 По тарифу «за результат»: <b>${total} × ${PRICE_PER_LEAD} ₽ = ${sum} ₽</b>`;
 }
 
-// ========== HEALTH (для внешнего пинга) ==========
+// ========== HEALTH ==========
 
 app.get('/health', (req, res) => {
-  res.json({ ok: true, time: new Date().toISOString(), uptime: process.uptime() });
+  res.json({ ok: true, time: new Date().toISOString(), uptime: process.uptime(), client_id: CLIENT_ID });
 });
 
 app.get('/', (req, res) => {
-  res.json({ ok: true, service: 'AI-Администратор Tilda', time: new Date().toISOString() });
+  res.json({ ok: true, service: 'AI-Администратор Tilda', client_id: CLIENT_ID, time: new Date().toISOString() });
 });
 
 // ========== ВЕБХУКИ ==========
@@ -469,6 +491,13 @@ app.post('/message', async (req, res) => {
   try {
     const { message, session_id } = req.body;
     if (!message || typeof message !== 'string') return res.status(400).json({ error: 'Введите сообщение' });
+
+    // проверка оплаты
+    const client = await getClient(CLIENT_ID);
+    if (!isPaid(client)) {
+      return res.json({ reply: 'Сервис временно приостановлен. Свяжитесь с менеджером.', session_id: session_id || 'default' });
+    }
+
     const sid = session_id || 'default';
     const session = await getOrCreateSession(sid);
     const history = session.history || [];
@@ -532,9 +561,7 @@ app.post('/telegram-webhook', async (req, res) => {
             ]
           ];
         } else if (newStatus === 'closed') {
-          newKeyboard = [
-            [{ text: '🔄 Вернуть в работу', callback_data: `status_${leadId}_in_progress` }]
-          ];
+          newKeyboard = [[{ text: '🔄 Вернуть в работу', callback_data: `status_${leadId}_in_progress` }]];
         } else {
           newKeyboard = [
             [{ text: '🔄 Взять в работу', callback_data: `status_${leadId}_in_progress` }],
@@ -572,9 +599,8 @@ app.post('/telegram-webhook', async (req, res) => {
         if (!Array.isArray(rows) || !rows[0]) { await answerCallback(cb.id, 'Заявка не найдена'); return; }
         const l = rows[0];
         const digits = (l.phone || '').replace(/\D/g, '');
-        const text = `👤 ${l.name || '—'}\n📞 ${l.phone || '—'}\n💬 ${l.problem || '—'}\n\n🔗 https://t.me/+${digits}`;
         await answerCallback(cb.id, 'Ссылка ниже');
-        await sendTelegram(chatId, text);
+        await sendTelegram(chatId, `👤 ${l.name || '—'}\n📞 ${l.phone || '—'}\n💬 ${l.problem || '—'}\n\n🔗 https://t.me/+${digits}`);
         return;
       }
 
@@ -611,6 +637,7 @@ app.post('/telegram-webhook', async (req, res) => {
       return;
     }
 
+    // ===== КОМАНДЫ МЕНЕДЖЕРА =====
     if (isManager && text === '/leads') {
       const leads = (await fetchLeads()).slice(0, 10);
       if (leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
@@ -644,14 +671,51 @@ app.post('/telegram-webhook', async (req, res) => {
       const total = leads.length;
       const sum = total * PRICE_PER_LEAD;
       const monthLabel = now.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
-      await sendTelegram(chatId, `🧾 <b>Счёт за ${monthLabel}</b>\n\n` +
-        `📥 Заявок: <b>${total}</b>\n` +
-        `💵 Цена за заявку: <b>${PRICE_PER_LEAD} ₽</b>\n` +
-        `💰 Итого к оплате: <b>${sum} ₽</b>\n\n` +
-        `<i>Тариф «за результат». Оплата — до 5-го числа следующего месяца.</i>`);
+      await sendTelegram(chatId, `🧾 <b>Счёт за ${monthLabel}</b>\n\n📥 Заявок: <b>${total}</b>\n💵 Цена: <b>${PRICE_PER_LEAD} ₽</b>\n💰 Итого: <b>${sum} ₽</b>`);
       return;
     }
 
+    // Список клиентов + статус оплаты
+    if (isManager && text === '/clients') {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/clients?select=*&order=id.desc`, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      });
+      const rows = await r.json();
+      if (!Array.isArray(rows) || rows.length === 0) { await sendTelegram(chatId, 'Клиентов нет.'); return; }
+      const lines = rows.map(c => {
+        const paid = isPaid(c);
+        const until = c.paid_until ? new Date(c.paid_until).toLocaleDateString('ru-RU') : '—';
+        return `${paid ? '✅' : '⛔️'} <b>${c.client_id}</b> — ${c.business_name || '—'}\nОплачено до: ${until}`;
+      });
+      await sendTelegram(chatId, '👥 <b>Клиенты</b>\n\n' + lines.join('\n\n'));
+      return;
+    }
+
+    // Продление оплаты: /paid client_id месяцев
+    if (isManager && text.startsWith('/paid ')) {
+      const parts = text.split(' ');
+      const cid = parts[1];
+      const months = parseInt(parts[2] || '1', 10);
+      if (!cid || isNaN(months) || months < 1) {
+        await sendTelegram(chatId, 'Формат: /paid client_id количество_месяцев\nПример: /paid tilda 1');
+        return;
+      }
+      const newDate = await extendPayment(cid, months);
+      if (!newDate) { await sendTelegram(chatId, `Клиент «${cid}» не найден.`); return; }
+      await sendTelegram(chatId, `✅ Клиенту «${cid}» оплата продлена на ${months} мес.\nНовая дата: ${newDate.toLocaleDateString('ru-RU')}`);
+      return;
+    }
+
+    // Отключение оплаты: /unpaid client_id
+    if (isManager && text.startsWith('/unpaid ')) {
+      const cid = text.split(' ')[1];
+      if (!cid) { await sendTelegram(chatId, 'Формат: /unpaid client_id'); return; }
+      await disablePayment(cid);
+      await sendTelegram(chatId, `⛔️ Клиенту «${cid}» оплата отключена.`);
+      return;
+    }
+
+    // ===== ОБЫЧНЫЙ ДИАЛОГ =====
     let session = await getSessionByTelegram(chatId);
     if (!session) {
       const newSid = 'tg_' + chatId;
@@ -660,6 +724,15 @@ app.post('/telegram-webhook', async (req, res) => {
       session = await getSessionByTelegram(chatId);
     }
     if (!session) session = { session_id: 'tg_' + chatId, history: [] };
+
+    // проверка оплаты (для не-менеджера)
+    if (!isManager) {
+      const client = await getClient(CLIENT_ID);
+      if (!isPaid(client)) {
+        await sendTelegram(chatId, '⛔️ Сервис временно приостановлен. Свяжитесь с менеджером.');
+        return;
+      }
+    }
 
     const history = session.history || [];
     const reply = await askAI(text, history, session.session_id);
@@ -698,10 +771,8 @@ app.get('/crawl', async (req, res) => {
   }
 });
 
-// ========== АВТОСВОДКИ И СЧЕТА (CRON) ==========
-// Render Free засыпает — нужен внешний пинг cron-job.org на /health
+// ========== АВТОСВОДКИ И СЧЕТА ==========
 
-// Ежедневно 20:00 МСК (17:00 UTC) — сводка + выгрузка
 cron.schedule('0 17 * * *', async () => {
   try {
     if (!MANAGER_CHAT_ID) return;
@@ -715,7 +786,6 @@ cron.schedule('0 17 * * *', async () => {
   } catch (e) { console.log('cron day error:', e.message); }
 });
 
-// Каждый понедельник 10:00 МСК (07:00 UTC)
 cron.schedule('0 7 * * 1', async () => {
   try {
     if (!MANAGER_CHAT_ID) return;
@@ -729,7 +799,6 @@ cron.schedule('0 7 * * 1', async () => {
   } catch (e) { console.log('cron week error:', e.message); }
 });
 
-// 1-го числа каждого месяца 10:00 МСК (07:00 UTC) — итоги + счёт
 cron.schedule('0 7 1 * *', async () => {
   try {
     if (!MANAGER_CHAT_ID) return;
@@ -744,11 +813,7 @@ cron.schedule('0 7 1 * *', async () => {
     const monthLabel = prevMonthStart.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
 
     await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за ${monthLabel}`));
-    await sendTelegram(MANAGER_CHAT_ID, `🧾 <b>Счёт за ${monthLabel}</b>\n\n` +
-      `📥 Заявок: <b>${total}</b>\n` +
-      `💵 Цена за заявку: <b>${PRICE_PER_LEAD} ₽</b>\n` +
-      `💰 Итого к оплате: <b>${sum} ₽</b>\n\n` +
-      `<i>Тариф «за результат». Оплата — до 5-го числа.</i>`);
+    await sendTelegram(MANAGER_CHAT_ID, `🧾 <b>Счёт за ${monthLabel}</b>\n\n📥 Заявок: <b>${total}</b>\n💵 Цена: <b>${PRICE_PER_LEAD} ₽</b>\n💰 Итого: <b>${sum} ₽</b>`);
 
     const buffer = await buildXlsx(leads, 'Месяц');
     await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_month_${prevMonthStart.toISOString().slice(0,7)}.xlsx`, `📥 Заявки за ${monthLabel} (${total} шт.)`);
