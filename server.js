@@ -636,6 +636,8 @@ app.post('/telegram-webhook', async (req, res) => {
       return;
     }
 
+    // ===== КОМАНДЫ МЕНЕДЖЕРА =====
+
     if (isManager && text === '/leads') {
       const leads = (await fetchLeads()).slice(0, 10);
       if (leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
@@ -685,7 +687,7 @@ app.post('/telegram-webhook', async (req, res) => {
         const tz = c.timezone || 'Europe/Moscow';
         return `${paid ? '✅' : '⛔️'} <b>${c.client_id}</b> — ${c.business_name || '—'}\nОплачено до: ${until}\nЧасовой пояс: ${tz}`;
       });
-      await sendTelegram(chatId, '👥 <b>Клиенты</b>\n\n' + lines.join('\n\n'));
+      await sendTelegram(chatId, '👥 <b>Клиенты</b>\n\n' + lines.join('\n\n') + '\n\n<i>Команды:\n/add id | название | chat_id | пояс\n/view id\n/remove id\n/paid id месяцев\n/unpaid id</i>');
       return;
     }
 
@@ -711,6 +713,83 @@ app.post('/telegram-webhook', async (req, res) => {
       return;
     }
 
+    // /add client_id | business_name | chat_id | timezone
+    if (isManager && text.startsWith('/add ')) {
+      const raw = text.slice(5).trim();
+      const parts = raw.split('|').map(s => s.trim());
+      if (parts.length < 3) {
+        await sendTelegram(chatId, 'Формат:\n/add client_id | название | chat_id | часовой_пояс\n\nПример:\n/add salon-1 | Салон Красоты | 5818548555 | Europe/Moscow');
+        return;
+      }
+      const [cid, bname, cchat, ctz] = [parts[0], parts[1], parts[2], parts[3] || 'Europe/Moscow'];
+
+      const existing = await getClient(cid);
+      if (existing) {
+        await sendTelegram(chatId, `⚠️ Клиент «${cid}» уже существует.\nИспользуй /paid для продления или /remove для удаления.`);
+        return;
+      }
+
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/clients`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+          client_id: cid,
+          business_name: bname,
+          chat_id: parseInt(cchat, 10) || null,
+          paid_until: new Date(Date.now() + 7 * 86400000).toISOString(),
+          timezone: ctz
+        })
+      });
+      if (!r.ok) {
+        const err = await r.text();
+        await sendTelegram(chatId, `❌ Ошибка: ${err.slice(0, 200)}`);
+        return;
+      }
+      await sendTelegram(chatId, `✅ Клиент «${cid}» добавлен.\n\n` +
+        `Название: ${bname}\n` +
+        `Chat ID: ${cchat}\n` +
+        `Часовой пояс: ${ctz}\n` +
+        `Оплачено до: ${new Date(Date.now() + 7 * 86400000).toLocaleDateString('ru-RU')} (+7 дней теста)`);
+      return;
+    }
+
+    // /view client_id
+    if (isManager && text.startsWith('/view ')) {
+      const cid = text.slice(6).trim();
+      const client = await getClient(cid);
+      if (!client) { await sendTelegram(chatId, `Клиент «${cid}» не найден.`); return; }
+      const paid = isPaid(client);
+      const until = client.paid_until ? new Date(client.paid_until).toLocaleDateString('ru-RU') : '—';
+      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+      const leadsMonth = await fetchLeads(monthStart.toISOString());
+      const sum = leadsMonth.length * PRICE_PER_LEAD;
+
+      await sendTelegram(chatId, `👤 <b>Клиент: ${client.client_id}</b>\n\n` +
+        `🏢 Название: ${client.business_name || '—'}\n` +
+        `💬 Chat ID: ${client.chat_id || '—'}\n` +
+        `🌍 Часовой пояс: ${client.timezone || 'Europe/Moscow'}\n` +
+        `💳 Статус: ${paid ? '✅ оплачено' : '⛔️ не оплачено'}\n` +
+        `📅 Оплачено до: ${until}\n\n` +
+        `📊 <b>За текущий месяц</b>\n` +
+        `📥 Заявок: ${leadsMonth.length}\n` +
+        `💰 По тарифу «за результат»: ${sum} ₽`);
+      return;
+    }
+
+    // /remove client_id
+    if (isManager && text.startsWith('/remove ')) {
+      const cid = text.slice(8).trim();
+      const client = await getClient(cid);
+      if (!client) { await sendTelegram(chatId, `Клиент «${cid}» не найден.`); return; }
+      await fetch(`${SUPABASE_URL}/rest/v1/clients?client_id=eq.${cid}`, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      });
+      await sendTelegram(chatId, `🗑 Клиент «${cid}» удалён.\n⚠️ Данные заявок не тронуты.`);
+      return;
+    }
+
+    // ===== ОБЫЧНЫЙ ДИАЛОГ =====
     let session = await getSessionByTelegram(chatId);
     if (!session) {
       const newSid = 'tg_' + chatId;
@@ -780,9 +859,6 @@ function getLocalTime(timezone) {
     return {
       hour: parseInt(get('hour'), 10),
       minute: parseInt(get('minute'), 10),
-      year: parseInt(get('year'), 10),
-      month: parseInt(get('month'), 10),
-      day: parseInt(get('day'), 10),
       dateStr: `${get('year')}-${get('month')}-${get('day')}`
     };
   } catch (e) {
@@ -813,7 +889,6 @@ async function sendDailyReportForClient(client) {
   }
 }
 
-// Каждые 15 минут проверяем: у кого сейчас локально 20:00
 cron.schedule('*/15 * * * *', async () => {
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/clients?select=*`, {
@@ -833,7 +908,6 @@ cron.schedule('*/15 * * * *', async () => {
   } catch (e) { console.log('cron 15min error:', e.message); }
 });
 
-// Еженедельная сводка (понедельник 10:00 МСК — для менеджера)
 cron.schedule('0 7 * * 1', async () => {
   try {
     if (!MANAGER_CHAT_ID) return;
@@ -847,7 +921,6 @@ cron.schedule('0 7 * * 1', async () => {
   } catch (e) { console.log('cron week error:', e.message); }
 });
 
-// Ежемесячный счёт (1-го числа 10:00 МСК)
 cron.schedule('0 7 1 * *', async () => {
   try {
     if (!MANAGER_CHAT_ID) return;
