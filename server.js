@@ -379,7 +379,7 @@ ${context || 'Информация временно недоступна.'}`;
   if (lowerMsg.includes('тариф') || lowerMsg.includes('цен') || lowerMsg.includes('стоимост') || lowerMsg.includes('подробн')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:tariffs]';
     if (!reply.includes(BASE_URL)) {
-      reply += `\n\nПосмотреть тарифы: ${BASE_URL}/`;
+      reply += `\n\nПосмотреть тарифы: https://send-empty-creedite.tilda.ws/?go=tariffs`;
     }
   }
   
