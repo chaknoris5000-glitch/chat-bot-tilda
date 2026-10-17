@@ -327,6 +327,11 @@ async function askAI(message, history, sessionId) {
 Если клиент спрашивает про цены/тарифы — в ответе ОБЯЗАТЕЛЬНО добавь тег [SCROLL:tariffs]. 
 Если клиент спрашивает "как это работает" — добавь [SCROLL:how].
 Если клиент просит показать примеры/демо — добавь [SCROLL:demos].
+Если клиент спрашивает про гарантии — добавь [SCROLL:guarantee].
+Если спрашивает "почему вы" или "почему я" — добавь [SCROLL:why-me].
+Если спрашивает про прибыль или выгоду — добавь [SCROLL:profit].
+Если спрашивает "кому подходит" или про сферы бизнеса — добавь [SCROLL:for-whom].
+Если просит оферту или договор — добавь [SCROLL:oferta].
 
 ТВОИ ЗНАНИЯ О ПРОДУКТЕ:
 - Бот работает 24/7, отвечает мгновенно.
@@ -378,29 +383,42 @@ ${context || 'Информация временно недоступна.'}`;
   
   if (lowerMsg.includes('тариф') || lowerMsg.includes('цен') || lowerMsg.includes('стоимост') || lowerMsg.includes('подробн')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:tariffs]';
-    if (!reply.includes(BASE_URL)) {
-      reply += `\n\nПосмотреть тарифы: https://send-empty-creedite.tilda.ws/?go=tariffs`;
-    }
+    if (!reply.includes(BASE_URL)) reply += `\n\nПосмотреть тарифы: ${BASE_URL}/?go=tariffs`;
   }
   
   if (lowerMsg.includes('как работает') || lowerMsg.includes('как это работает')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:how]';
-    if (!reply.includes(BASE_URL)) {
-      reply += `\n\nКак это работает: ${BASE_URL}/`;
-    }
+    if (!reply.includes(BASE_URL)) reply += `\n\nКак это работает: ${BASE_URL}/?go=how`;
   }
   
   if (lowerMsg.includes('пример') || lowerMsg.includes('демо')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:demos]';
-    if (!reply.includes(BASE_URL)) {
-      reply += `\n\nПримеры работ: ${BASE_URL}/`;
-    }
+    if (!reply.includes(BASE_URL)) reply += `\n\nПримеры работ: ${BASE_URL}/?go=demos`;
   }
 
   if (lowerMsg.includes('гаранти')) {
-    if (!reply.includes(BASE_URL)) {
-      reply += `\n\nО гарантиях: ${BASE_URL}/`;
-    }
+    if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:guarantee]';
+    if (!reply.includes(BASE_URL)) reply += `\n\nО гарантиях: ${BASE_URL}/?go=guarantee`;
+  }
+
+  if (lowerMsg.includes('почему вы') || lowerMsg.includes('почему я') || lowerMsg.includes('кому доверять')) {
+    if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:why-me]';
+    if (!reply.includes(BASE_URL)) reply += `\n\nПочему стоит выбрать нас: ${BASE_URL}/?go=why-me`;
+  }
+
+  if (lowerMsg.includes('прибыл') || lowerMsg.includes('выгод') || lowerMsg.includes('заработ')) {
+    if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:profit]';
+    if (!reply.includes(BASE_URL)) reply += `\n\nО прибыли и выгоде: ${BASE_URL}/?go=profit`;
+  }
+
+  if (lowerMsg.includes('кому подход') || lowerMsg.includes('какой бизнес') || lowerMsg.includes('сферы')) {
+    if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:for-whom]';
+    if (!reply.includes(BASE_URL)) reply += `\n\nКому подходит: ${BASE_URL}/?go=for-whom`;
+  }
+
+  if (lowerMsg.includes('оферт') || lowerMsg.includes('договор')) {
+    if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:oferta]';
+    if (!reply.includes(BASE_URL)) reply += `\n\nПубличная оферта: ${BASE_URL}/?go=oferta`;
   }
 
   const leadData = extractLeadData(reply);
