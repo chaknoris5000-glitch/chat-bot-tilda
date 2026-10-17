@@ -101,7 +101,7 @@ async function getTelegramFileUrl(fileId) {
   return `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${d.result.file_path}`;
 }
 
-async function searchDocuments(queryEmbedding, limit = 8) { // Увеличили лимит поиска
+async function searchDocuments(queryEmbedding, limit = 8) {
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/documents?select=id,content,url,embedding`, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
@@ -269,6 +269,7 @@ function isValidLead(name, phone) {
 function cleanReply(text) {
   return text
     .replace(/\[LEAD_SAVE\]/g, '').replace(/\[NAME:[^\]]*\]/g, '').replace(/\[PHONE:[^\]]*\]/g, '').replace(/\[PROBLEM:[^\]]*\]/g, '')
+    .replace(/\[SCROLL:[^\]]*\]/g, '') // Убираем теги скролла из текста
     .replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/__(.*?)__/g, '$1').replace(/_(.*?)_/g, '$1')
     .replace(/^#{1,6}\s+/gm, '').replace(/`/g, '')
     .replace(/^\s*[-•]\s+/gm, '')
@@ -311,7 +312,6 @@ async function askAI(message, history, sessionId) {
     }
   } catch (e) { console.log('Контекст не собран:', e.message); }
 
-  // ОБНОВЛЕННЫЙ ПРОМПТ С 4 ТАРИФАМИ И ПОЛНОЙ ИНФОРМАЦИЕЙ
   const systemPrompt = `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте. Твоя цель — продать услугу, собрать заявку и работать с возражениями. Ты продаешь не бота, а результат (прибыль, удобство, экономию времени).
 
 ГЛАВНЫЕ ПРАВИЛА ОБЩЕНИЯ:
@@ -321,6 +321,12 @@ async function askAI(message, history, sessionId) {
 4. Говори как человек: «Отлично», «Понял», «Да, это решаемо».
 5. Задавай ОДИН наводящий вопрос за раз, чтобы понять боль клиента.
 6. НИКОГДА не пиши маркеры [LEAD_SAVE] в обычных сообщениях.
+
+УМНАЯ НАВИГАЦИЯ ПО САЙТУ (КРИТИЧЕСКИ ВАЖНО):
+Если клиент спрашивает про цены/тарифы — добавь в конец ответа тег [SCROLL:tariffs].
+Если клиент спрашивает "как это работает" — добавь [SCROLL:how].
+Если клиент просит показать примеры/демо — добавь [SCROLL:demos].
+Виджет на сайте поймет этот тег и прокрутит страницу вниз.
 
 ТВОИ ЗНАНИЯ О ПРОДУКТЕ:
 - Бот работает 24/7, отвечает мгновенно.
