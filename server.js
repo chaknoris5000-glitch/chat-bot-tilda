@@ -378,7 +378,6 @@ async function askAI(message, history, sessionId) {
 Если клиент просит показать примеры/демо — добавь [SCROLL:demos].
 Если клиент спрашивает про гарантии — добавь [SCROLL:guarantee].
 Если спрашивает "почему вы" или "почему я" — добавь [SCROLL:why-me].
-Если спрашивает про прибыль или выгоду — добавь [SCROLL:profit].
 Если спрашивает "кому подходит" или про сферы бизнеса — добавь [SCROLL:for-whom].
 Если просит оферту или договор — добавь [SCROLL:oferta].
 Если просит отзывы — добавь [SCROLL:reviews].
@@ -456,9 +455,16 @@ ${context || 'Информация временно недоступна.'}`;
     if (!reply.includes(BASE_URL)) reply += `\n\nПочему стоит выбрать нас: ${BASE_URL}/?go=why-me`;
   }
 
-  if (lowerMsg.includes('прибыл') || lowerMsg.includes('выгод') || lowerMsg.includes('заработ')) {
+  // СНАЧАЛА ПРОВЕРЯЕМ ВЫГОДЫ (чтобы не улетело в прибыль)
+  if (lowerMsg.includes('выгод')) {
+    if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:benefits]';
+    if (!reply.includes(BASE_URL)) reply += `\n\nВыгоды: ${BASE_URL}/?go=benefits`;
+  }
+
+  // ПОТОМ ПРИБЫЛЬ
+  if (lowerMsg.includes('прибыл') || lowerMsg.includes('заработ')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:profit]';
-    if (!reply.includes(BASE_URL)) reply += `\n\nО прибыли и выгоде: ${BASE_URL}/?go=profit`;
+    if (!reply.includes(BASE_URL)) reply += `\n\nО прибыли: ${BASE_URL}/?go=profit`;
   }
 
   if (lowerMsg.includes('кому подход') || lowerMsg.includes('какой бизнес') || lowerMsg.includes('сферы')) {
@@ -474,11 +480,6 @@ ${context || 'Информация временно недоступна.'}`;
   if (lowerMsg.includes('отзыв')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:reviews]';
     if (!reply.includes(BASE_URL)) reply += `\n\nОтзывы клиентов: ${BASE_URL}/?go=reviews`;
-  }
-
-  if (lowerMsg.includes('выгод')) { // Для якоря benefits
-    if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:benefits]';
-    if (!reply.includes(BASE_URL)) reply += `\n\nВыгоды: ${BASE_URL}/?go=benefits`;
   }
 
   const leadData = extractLeadData(reply);
