@@ -19,6 +19,7 @@ const SITE_TO_CRAWL = process.env.SITE_TO_CRAWL || 'https://send-empty-creedite.
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'AI-Администратор';
 const CLIENT_ID = process.env.CLIENT_ID || 'tilda';
 const PRICE_PER_LEAD = 25;
+const BASE_URL = 'https://send-empty-creedite.tilda.ws';
 
 const processedUpdates = new Set();
 
@@ -202,7 +203,7 @@ async function saveLead(sessionId, name, phone, problem, source = 'site') {
 // ========== TELEGRAM API ==========
 
 async function sendTelegram(chatId, text, keyboard = null) {
-  const body = { chat_id: chatId, text, parse_mode: 'HTML' };
+  const body = { chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: false };
   if (keyboard) body.reply_markup = { inline_keyboard: keyboard };
   await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -322,8 +323,8 @@ async function askAI(message, history, sessionId) {
 5. Задавай ОДИН наводящий вопрос за раз.
 6. НИКОГДА не пиши маркеры [LEAD_SAVE] в обычных сообщениях.
 
-УМНАЯ НАВИГАЦИЯ ПО САЙТУ (КРИТИЧЕСКИ ВАЖНО):
-Если клиент спрашивает про цены/тарифы или "где посмотреть подробности" — в ответе ОБЯЗАТЕЛЬНО добавь тег [SCROLL:tariffs]. 
+УМНАЯ НАВИГАЦИЯ ПО САЙТУ:
+Если клиент спрашивает про цены/тарифы — в ответе ОБЯЗАТЕЛЬНО добавь тег [SCROLL:tariffs]. 
 Если клиент спрашивает "как это работает" — добавь [SCROLL:how].
 Если клиент просит показать примеры/демо — добавь [SCROLL:demos].
 
@@ -372,17 +373,34 @@ ${context || 'Информация временно недоступна.'}`;
   if (!r.ok) throw new Error('OpenRouter error');
   let reply = data.choices?.[0]?.message?.content || 'Нет ответа';
 
-  // ПРИНУДИТЕЛЬНЫЙ СКРОЛЛ И ССЫЛКА, ЕСЛИ ИИ ЗАБЫЛ
+  // ПРИНУДИТЕЛЬНЫЙ СКРОЛЛ И ССЫЛКИ НА БЛОКИ
   const lowerMsg = message.toLowerCase();
+  
   if (lowerMsg.includes('тариф') || lowerMsg.includes('цен') || lowerMsg.includes('стоимост') || lowerMsg.includes('подробн')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:tariffs]';
-    if (!reply.includes('tilda.ws')) reply += ` Подробнее: https://send-empty-creedite.tilda.ws/#tariffs`;
+    if (!reply.includes(BASE_URL)) {
+      reply += `\n\nПосмотреть тарифы: ${BASE_URL}/#tariffs`;
+    }
   }
+  
   if (lowerMsg.includes('как работает') || lowerMsg.includes('как это работает')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:how]';
+    if (!reply.includes(BASE_URL)) {
+      reply += `\n\nКак это работает: ${BASE_URL}/#how`;
+    }
   }
+  
   if (lowerMsg.includes('пример') || lowerMsg.includes('демо')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:demos]';
+    if (!reply.includes(BASE_URL)) {
+      reply += `\n\nПримеры работ: ${BASE_URL}/#demos`;
+    }
+  }
+
+  if (lowerMsg.includes('гаранти')) {
+    if (!reply.includes(BASE_URL)) {
+      reply += `\n\nО гарантиях: ${BASE_URL}/#guarantee`;
+    }
   }
 
   const leadData = extractLeadData(reply);
