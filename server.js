@@ -573,6 +573,20 @@ app.post('/telegram-webhook', async (req, res) => {
 
       if (String(chatId) !== String(MANAGER_CHAT_ID)) { await answerCallback(cb.id, 'Нет доступа'); return; }
 
+      if (data === 'menu_bill') {
+        const billText = `<b>Наши тарифы:</b>\n\n` +
+          `1. <b>Старт</b> — 1 990 ₽/мес (до 100 заявок, далее 25 ₽/заявка).\n` +
+          `2. <b>Бизнес</b> — 2 490 ₽/мес (до 300 заявок, далее 25 ₽/заявка).\n` +
+          `3. <b>Безлимит</b> — 4 990 ₽/мес (без ограничений).\n` +
+          `4. <b>За результат</b> — 25 ₽ за заявку.\n\n` +
+          `<i>При оплате за год скидка! Первая неделя бесплатно.</i>`;
+        
+        await answerCallback(cb.id, 'Загружаю тарифы...');
+        await sendTelegram(chatId, billText);
+        await sendTelegram(chatId, `Подробнее на сайте: ${BASE_URL}/?go=tariffs`);
+        return;
+      }
+
       if (data.startsWith('status_')) {
         const parts = data.split('_');
         const leadId = parts[1];
@@ -668,7 +682,24 @@ app.post('/telegram-webhook', async (req, res) => {
         await updateSession(siteSessionId, { telegram_chat_id: chatId });
         await sendTelegram(chatId, '👋 Продолжаем диалог с сайта. Чем помочь?');
       } else {
-        await sendTelegram(chatId, '👋 Здравствуйте! Я AI-Администратор. Задайте вопрос.');
+        const startText = `<b>👋 Добро пожаловать!</b>\n\n` +
+          `Я — AI-Администратор. Отвечаю клиентам 24/7, собираю заявки и присылаю их вам в Telegram.\n\n` +
+          `<b>Что я умею:</b>\n` +
+          `📥 Собирать заявки (имя, телефон, запрос)\n` +
+          `💼 Работать как CRM (все заявки в одном месте)\n` +
+          `📊 Выгружать данные в Excel\n` +
+          `🎙 Понимать голосовые сообщения\n\n` +
+          `<b>Условия:</b>\n` +
+          `🎁 Настройка и первая неделя — бесплатно\n` +
+          `🚀 Запуск за 2 дня\n\n` +
+          `Нажмите на кнопку ниже, чтобы посмотреть тарифы, или просто напишите мне свой вопрос.`;
+
+        const startKeyboard = [
+          [{ text: '💳 Посмотреть тарифы', callback_data: 'menu_bill' }],
+          [{ text: '🌐 Открыть сайт', url: BASE_URL }]
+        ];
+
+        await sendTelegram(chatId, startText, startKeyboard);
       }
       return;
     }
@@ -699,7 +730,7 @@ app.post('/telegram-webhook', async (req, res) => {
       return;
     }
 
-    if (isManager && text === '/bill') {
+    if (isManager && text === '/invoice') {
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const leads = await fetchLeads(monthStart.toISOString());
