@@ -269,7 +269,7 @@ function isValidLead(name, phone) {
 function cleanReply(text) {
   return text
     .replace(/\[LEAD_SAVE\]/g, '').replace(/\[NAME:[^\]]*\]/g, '').replace(/\[PHONE:[^\]]*\]/g, '').replace(/\[PROBLEM:[^\]]*\]/g, '')
-    .replace(/\[SCROLL:[^\]]*\]/g, '') // Убираем теги скролла из текста
+    .replace(/\[SCROLL:[^\]]*\]/g, '') // Убираем теги из вывода
     .replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/__(.*?)__/g, '$1').replace(/_(.*?)_/g, '$1')
     .replace(/^#{1,6}\s+/gm, '').replace(/`/g, '')
     .replace(/^\s*[-•]\s+/gm, '')
@@ -312,21 +312,20 @@ async function askAI(message, history, sessionId) {
     }
   } catch (e) { console.log('Контекст не собран:', e.message); }
 
-  const systemPrompt = `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте. Твоя цель — продать услугу, собрать заявку и работать с возражениями. Ты продаешь не бота, а результат (прибыль, удобство, экономию времени).
+  const systemPrompt = `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте. Твоя цель — продать услугу, собрать заявку и работать с возражениями.
 
 ГЛАВНЫЕ ПРАВИЛА ОБЩЕНИЯ:
 1. Отвечай ОЧЕНЬ коротко: максимум 2-3 предложения. Без воды.
 2. НЕ используй списки, тире, нумерацию, звёздочки. Только обычный текст.
 3. Не повторяй вопрос клиента.
 4. Говори как человек: «Отлично», «Понял», «Да, это решаемо».
-5. Задавай ОДИН наводящий вопрос за раз, чтобы понять боль клиента.
+5. Задавай ОДИН наводящий вопрос за раз.
 6. НИКОГДА не пиши маркеры [LEAD_SAVE] в обычных сообщениях.
 
 УМНАЯ НАВИГАЦИЯ ПО САЙТУ (КРИТИЧЕСКИ ВАЖНО):
-Если клиент спрашивает про цены/тарифы — добавь в конец ответа тег [SCROLL:tariffs].
+Если клиент спрашивает про цены/тарифы или "где посмотреть подробности" — в ответе ОБЯЗАТЕЛЬНО добавь тег [SCROLL:tariffs]. 
 Если клиент спрашивает "как это работает" — добавь [SCROLL:how].
 Если клиент просит показать примеры/демо — добавь [SCROLL:demos].
-Виджет на сайте поймет этот тег и прокрутит страницу вниз.
 
 ТВОИ ЗНАНИЯ О ПРОДУКТЕ:
 - Бот работает 24/7, отвечает мгновенно.
@@ -334,29 +333,31 @@ async function askAI(message, history, sessionId) {
 - Собирает заявки (имя, телефон, запрос).
 - Работает как CRM: все заявки в одном месте, группировка, выгрузка в Excel и на почту.
 - Публичная оферта: ИП Груданов Вячеслав Владимирович, работает официально.
-- Первая неделя и настройка ВСЕГДА бесплатно. Клиент ничем не рискует.
+- Первая неделя и настройка ВСЕГДА бесплатно.
 - Отключить можно в любой момент (без штрафов).
 
 ТАРИФЫ И ЦЕНЫ (ЗНАЙ ИХ НАИЗУСТЬ):
 1. Тариф «Старт» — 1 990 ₽/мес (до 100 заявок, свыше — 25 ₽/заявка). При годовой оплате — 1 490 ₽/мес.
 2. Тариф «Бизнес» — 2 490 ₽/мес (до 300 заявок, свыше — 25 ₽/заявка). При годовой оплате — 1 990 ₽/мес.
 3. Тариф «Безлимит» — 4 990 ₽/мес (без ограничений). При годовой оплате — 3 990 ₽/мес.
-4. Тариф «За результат» — 25 ₽ за заявку (платит в конце месяца, если нет заявок — платит 0).
+4. Тариф «За результат» — 25 ₽ за заявку (платит в конце месяца).
+
+ССЫЛКИ:
+Если клиенту нужны детали, можешь дать ссылку на сайт: https://send-empty-creedite.tilda.ws/
 
 ПРАВИЛА ПРОДАЖ (ВОРОНКА):
-1. Поздоровайся и спроси, чем занимается бизнес (сфера).
-2. Уточни боль: теряются ли заявки ночью? Кто отвечает клиентам?
-3. Покажи выгоду: "Бот закроет рутину, менеджер займется горячими клиентами, а вы перестанете терять деньги".
-4. Если спрашивают цену — озвучь ВСЕ 4 ТАРИФА кратко, и спроси, какой поток заявок у них (чтобы подобрать лучший).
+1. Поздоровайся и спроси, чем занимается бизнес.
+2. Уточни боль: теряются ли заявки?
+3. Покажи выгоду.
+4. Если спрашивают цену — озвучь ВСЕ 4 ТАРИФА кратко.
 5. Обязательно подчеркни: "Настройка и первая неделя бесплатно".
-6. Призыв к действию: «Оставьте имя и телефон, запустим за 2 дня».
+6. Призыв к действию: «Оставьте имя и телефон».
 
-СБОР ЗАЯВКИ (КРИТИЧЕСКИ ВАЖНО):
-Когда клиент назвал имя + телефон (или сам попросил связаться) — добавь в САМОМ КОНЦЕ ответа:
+СБОР ЗАЯВКИ:
+Когда клиент назвал имя + телефон — добавь в САМОМ КОНЦЕ ответа:
 [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:краткая суть]
-Если клиент назвал только имя или только телефон — не ставь маркер, а попроси вторую часть.
 
-БАЗА ЗНАНИЙ (ИНФОРМАЦИЯ С САЙТА):
+БАЗА ЗНАНИЙ:
 ${context || 'Информация временно недоступна.'}`;
 
   const messages = [
@@ -375,7 +376,6 @@ ${context || 'Информация временно недоступна.'}`;
   let reply = data.choices?.[0]?.message?.content || 'Нет ответа';
 
   const leadData = extractLeadData(reply);
-  console.log('🔍 extractLeadData:', JSON.stringify(leadData));
   if (leadData.save && isValidLead(leadData.name, leadData.phone)) {
     try {
       const leadId = await saveLead(sessionId, leadData.name, leadData.phone, leadData.problem);
@@ -387,68 +387,40 @@ ${context || 'Информация временно недоступна.'}`;
 }
 
 // ========== ЭКСПОРТ XLSX ==========
-
+// ... (остальной код без изменений, buildXlsx, fetchLeads, statsBlock) ...
 async function buildXlsx(leads, title = 'Заявки') {
   const ExcelJS = require('exceljs');
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet(title);
-
   ws.columns = [
-    { header: 'ID', key: 'id', width: 8 },
-    { header: 'Дата', key: 'date', width: 20 },
-    { header: 'Имя', key: 'name', width: 18 },
-    { header: 'Телефон', key: 'phone', width: 18 },
-    { header: 'Задача', key: 'problem', width: 45 },
-    { header: 'Источник', key: 'source', width: 12 },
-    { header: 'Статус', key: 'status', width: 14 }
+    { header: 'ID', key: 'id', width: 8 }, { header: 'Дата', key: 'date', width: 20 }, { header: 'Имя', key: 'name', width: 18 },
+    { header: 'Телефон', key: 'phone', width: 18 }, { header: 'Задача', key: 'problem', width: 45 },
+    { header: 'Источник', key: 'source', width: 12 }, { header: 'Статус', key: 'status', width: 14 }
   ];
-
   ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
   ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2F5B43' } };
   ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
   ws.getRow(1).height = 24;
-
   leads.forEach(l => {
-    ws.addRow({
-      id: l.id,
-      date: l.created_at ? new Date(l.created_at).toLocaleString('ru-RU') : '',
-      name: l.name || '',
-      phone: l.phone || '',
-      problem: l.problem || '',
-      source: l.source === 'telegram' ? 'Telegram' : 'Сайт',
-      status: l.status === 'closed' ? 'Закрыта' : (l.status === 'in_progress' ? 'В работе' : 'Новая')
-    });
+    ws.addRow({ id: l.id, date: l.created_at ? new Date(l.created_at).toLocaleString('ru-RU') : '', name: l.name || '', phone: l.phone || '', problem: l.problem || '', source: l.source === 'telegram' ? 'Telegram' : 'Сайт', status: l.status === 'closed' ? 'Закрыта' : (l.status === 'in_progress' ? 'В работе' : 'Новая') });
   });
-
   ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
     row.eachCell({ includeEmpty: false }, (cell) => {
-      cell.border = {
-        top: { style: 'thin', color: { argb: 'FFDDDDDD' } },
-        left: { style: 'thin', color: { argb: 'FFDDDDDD' } },
-        bottom: { style: 'thin', color: { argb: 'FFDDDDDD' } },
-        right: { style: 'thin', color: { argb: 'FFDDDDDD' } }
-      };
+      cell.border = { top: { style: 'thin', color: { argb: 'FFDDDDDD' } }, left: { style: 'thin', color: { argb: 'FFDDDDDD' } }, bottom: { style: 'thin', color: { argb: 'FFDDDDDD' } }, right: { style: 'thin', color: { argb: 'FFDDDDDD' } } };
       cell.alignment = { vertical: 'top', wrapText: true };
-      if (rowNumber > 1) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowNumber % 2 === 0 ? 'FFF7F9F8' : 'FFFFFFFF' } };
-      }
+      if (rowNumber > 1) { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowNumber % 2 === 0 ? 'FFF7F9F8' : 'FFFFFFFF' } }; }
     });
   });
-
   return await wb.xlsx.writeBuffer();
 }
-
 async function fetchLeads(sinceIso = null) {
   let url = `${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`;
   if (sinceIso) url += `&created_at=gte.${encodeURIComponent(sinceIso)}`;
-  const r = await fetch(url, {
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-  });
+  const r = await fetch(url, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
   let leads = await r.json();
   if (!Array.isArray(leads)) leads = [];
   return leads.filter(l => isValidLead(l.name, l.phone));
 }
-
 function statsBlock(leads, periodLabel) {
   const total = leads.length;
   const closed = leads.filter(l => l.status === 'closed').length;
@@ -456,38 +428,20 @@ function statsBlock(leads, periodLabel) {
   const newOnes = total - closed - inProgress;
   const conversion = total > 0 ? Math.round((closed / total) * 100) : 0;
   const sum = total * PRICE_PER_LEAD;
-
-  return `📊 <b>${periodLabel}</b>\n\n` +
-    `📥 Всего заявок: <b>${total}</b>\n` +
-    `🆕 Новых: <b>${newOnes}</b>\n` +
-    `🔄 В работе: <b>${inProgress}</b>\n` +
-    `✅ Закрыто: <b>${closed}</b>\n` +
-    `📈 Конверсия: <b>${conversion}%</b>\n\n` +
-    `💰 По тарифу «за результат»: <b>${total} × ${PRICE_PER_LEAD} ₽ = ${sum} ₽</b>`;
+  return `📊 <b>${periodLabel}</b>\n\n📥 Всего заявок: <b>${total}</b>\n🆕 Новых: <b>${newOnes}</b>\n🔄 В работе: <b>${inProgress}</b>\n✅ Закрыто: <b>${closed}</b>\n📈 Конверсия: <b>${conversion}%</b>\n\n💰 По тарифу «за результат»: <b>${total} × ${PRICE_PER_LEAD} ₽ = ${sum} ₽</b>`;
 }
 
 // ========== HEALTH ==========
-
-app.get('/health', (req, res) => {
-  res.json({ ok: true, time: new Date().toISOString(), uptime: process.uptime(), client_id: CLIENT_ID });
-});
-
-app.get('/', (req, res) => {
-  res.json({ ok: true, service: 'AI-Администратор Tilda', client_id: CLIENT_ID, time: new Date().toISOString() });
-});
+app.get('/health', (req, res) => { res.json({ ok: true, time: new Date().toISOString(), uptime: process.uptime(), client_id: CLIENT_ID }); });
+app.get('/', (req, res) => { res.json({ ok: true, service: 'AI-Администратор Tilda', client_id: CLIENT_ID, time: new Date().toISOString() }); });
 
 // ========== ВЕБХУКИ ==========
-
 app.post('/message', async (req, res) => {
   try {
     const { message, session_id } = req.body;
     if (!message || typeof message !== 'string') return res.status(400).json({ error: 'Введите сообщение' });
-
     const client = await getClient(CLIENT_ID);
-    if (!isPaid(client)) {
-      return res.json({ reply: 'Сервис временно приостановлен. Свяжитесь с менеджером.', session_id: session_id || 'default' });
-    }
-
+    if (!isPaid(client)) return res.json({ reply: 'Сервис временно приостановлен. Свяжитесь с менеджером.', session_id: session_id || 'default' });
     const sid = session_id || 'default';
     const session = await getOrCreateSession(sid);
     const history = session.history || [];
@@ -495,438 +449,208 @@ app.post('/message', async (req, res) => {
     const newHistory = [...history, { role: 'user', content: message }, { role: 'assistant', content: reply }];
     await updateSession(sid, { history: newHistory.slice(-20) });
     res.json({ reply, session_id: sid });
-  } catch (error) {
-    console.log('Server error:', error);
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (error) { console.log('Server error:', error); res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
+// ... (остальной код app.post('/telegram-webhook') и app.get('/crawl') без изменений) ...
 app.post('/telegram-webhook', async (req, res) => {
   res.sendStatus(200);
-
   try {
     const updateId = req.body.update_id;
     if (updateId) {
-      if (processedUpdates.has(updateId)) {
-        console.log('♻️ Дубль пропущен:', updateId);
-        return;
-      }
+      if (processedUpdates.has(updateId)) return;
       processedUpdates.add(updateId);
-      if (processedUpdates.size > 500) {
-        const arr = Array.from(processedUpdates);
-        processedUpdates.clear();
-        arr.slice(-200).forEach(id => processedUpdates.add(id));
-      }
+      if (processedUpdates.size > 500) { const arr = Array.from(processedUpdates); processedUpdates.clear(); arr.slice(-200).forEach(id => processedUpdates.add(id)); }
     }
-
     if (req.body.callback_query) {
       const cb = req.body.callback_query;
       const chatId = cb.message.chat.id;
       const messageId = cb.message.message_id;
       const data = cb.data;
-
       if (String(chatId) !== String(MANAGER_CHAT_ID)) { await answerCallback(cb.id, 'Нет доступа'); return; }
-
       if (data.startsWith('status_')) {
-        const parts = data.split('_');
-        const leadId = parts[1];
-        const newStatus = parts.slice(2).join('_');
-
-        await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`, {
-          method: 'PATCH',
-          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() })
-        });
-
+        const parts = data.split('_'); const leadId = parts[1]; const newStatus = parts.slice(2).join('_');
+        await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`, { method: 'PATCH', headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() }) });
         const statusLabel = newStatus === 'closed' ? '✅ Закрыта' : (newStatus === 'in_progress' ? '🔄 В работе' : '🆕 Новая');
         await answerCallback(cb.id, `Статус: ${statusLabel}`);
-
         let newKeyboard = [];
-        if (newStatus === 'in_progress') {
-          newKeyboard = [
-            [{ text: '✅ Закрыть', callback_data: `status_${leadId}_closed` }],
-            [
-              { text: '📞 Позвонить', callback_data: `call_${leadId}` },
-              { text: '✉️ Написать', callback_data: `write_${leadId}` }
-            ]
-          ];
-        } else if (newStatus === 'closed') {
-          newKeyboard = [[{ text: '🔄 Вернуть в работу', callback_data: `status_${leadId}_in_progress` }]];
-        } else {
-          newKeyboard = [
-            [{ text: '🔄 Взять в работу', callback_data: `status_${leadId}_in_progress` }],
-            [
-              { text: '📞 Позвонить', callback_data: `call_${leadId}` },
-              { text: '✉️ Написать', callback_data: `write_${leadId}` }
-            ]
-          ];
-        }
-
+        if (newStatus === 'in_progress') { newKeyboard = [[{ text: '✅ Закрыть', callback_data: `status_${leadId}_closed` }], [{ text: '📞 Позвонить', callback_data: `call_${leadId}` }, { text: '✉️ Написать', callback_data: `write_${leadId}` }]]; } 
+        else if (newStatus === 'closed') { newKeyboard = [[{ text: '🔄 Вернуть в работу', callback_data: `status_${leadId}_in_progress` }]]; } 
+        else { newKeyboard = [[{ text: '🔄 Взять в работу', callback_data: `status_${leadId}_in_progress` }], [{ text: '📞 Позвонить', callback_data: `call_${leadId}` }, { text: '✉️ Написать', callback_data: `write_${leadId}` }]]; }
         const baseText = cb.message.text.replace(/\n\n<i>Статус:.*<\/i>$/, '');
         await editMessage(chatId, messageId, `${baseText}\n\n<i>Статус: ${statusLabel}</i>`, newKeyboard);
         return;
       }
-
       if (data.startsWith('call_')) {
         const leadId = data.split('_')[1];
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}&select=*`, {
-          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-        });
-        const rows = await r.json();
-        if (!Array.isArray(rows) || !rows[0]) { await answerCallback(cb.id, 'Заявка не найдена'); return; }
-        const l = rows[0];
-        await answerCallback(cb.id, `Телефон: ${l.phone}`);
-        await sendContact(chatId, l.phone, l.name);
-        return;
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}&select=*`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
+        const rows = await r.json(); if (!Array.isArray(rows) || !rows[0]) { await answerCallback(cb.id, 'Заявка не найдена'); return; }
+        const l = rows[0]; await answerCallback(cb.id, `Телефон: ${l.phone}`); await sendContact(chatId, l.phone, l.name); return;
       }
-
       if (data.startsWith('write_')) {
         const leadId = data.split('_')[1];
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}&select=*`, {
-          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-        });
-        const rows = await r.json();
-        if (!Array.isArray(rows) || !rows[0]) { await answerCallback(cb.id, 'Заявка не найдена'); return; }
-        const l = rows[0];
-        const digits = (l.phone || '').replace(/\D/g, '');
-        await answerCallback(cb.id, 'Ссылка ниже');
-        await sendTelegram(chatId, `👤 ${l.name || '—'}\n📞 ${l.phone || '—'}\n💬 ${l.problem || '—'}\n\n🔗 https://t.me/+${digits}`);
-        return;
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}&select=*`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
+        const rows = await r.json(); if (!Array.isArray(rows) || !rows[0]) { await answerCallback(cb.id, 'Заявка не найдена'); return; }
+        const l = rows[0]; const digits = (l.phone || '').replace(/\D/g, '');
+        await answerCallback(cb.id, 'Ссылка ниже'); await sendTelegram(chatId, `👤 ${l.name || '—'}\n📞 ${l.phone || '—'}\n💬 ${l.problem || '—'}\n\n🔗 https://t.me/+${digits}`); return;
       }
-
       return;
     }
-
     const msg = req.body.message;
     if (!msg) return;
     const chatId = msg.chat.id;
     let text = '';
-
     if (msg.voice) {
-      const fileUrl = await getTelegramFileUrl(msg.voice.file_id);
-      if (!fileUrl) return;
-      const tr = await transcribeVoice(fileUrl);
-      if (!tr) { await sendTelegram(chatId, 'Не удалось распознать. Напишите текстом.'); return; }
+      const fileUrl = await getTelegramFileUrl(msg.voice.file_id); if (!fileUrl) return;
+      const tr = await transcribeVoice(fileUrl); if (!tr) { await sendTelegram(chatId, 'Не удалось распознать. Напишите текстом.'); return; }
       text = tr.trim();
-    } else if (msg.text) {
-      text = msg.text.trim();
-    } else return;
-
+    } else if (msg.text) { text = msg.text.trim(); } else return;
     const isManager = String(chatId) === String(MANAGER_CHAT_ID);
-
     if (text.startsWith('/start')) {
-      const parts = text.split(' ');
-      const siteSessionId = parts[1];
-      if (siteSessionId && siteSessionId.startsWith('sess_')) {
-        await getOrCreateSession(siteSessionId);
-        await updateSession(siteSessionId, { telegram_chat_id: chatId });
-        await sendTelegram(chatId, '👋 Продолжаем диалог с сайта. Чем помочь?');
-      } else {
-        await sendTelegram(chatId, '👋 Здравствуйте! Я AI-Администратор. Задайте вопрос.');
-      }
+      const parts = text.split(' '); const siteSessionId = parts[1];
+      if (siteSessionId && siteSessionId.startsWith('sess_')) { await getOrCreateSession(siteSessionId); await updateSession(siteSessionId, { telegram_chat_id: chatId }); await sendTelegram(chatId, '👋 Продолжаем диалог с сайта. Чем помочь?'); } 
+      else { await sendTelegram(chatId, '👋 Здравствуйте! Я AI-Администратор. Задайте вопрос.'); }
       return;
     }
-
     if (isManager && text === '/leads') {
       const leads = (await fetchLeads()).slice(0, 10);
       if (leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
-      const lines = leads.map((l, i) => {
-        const s = l.status === 'closed' ? '✅' : (l.status === 'in_progress' ? '🔄' : '🆕');
-        return `${s} <b>${i+1}. ${l.name || '—'}</b> | ${l.phone || '—'}\n💬 ${l.problem || '—'}`;
-      });
-      await sendTelegram(chatId, '📋 <b>Последние заявки</b>\n\n' + lines.join('\n\n'));
-      return;
+      const lines = leads.map((l, i) => { const s = l.status === 'closed' ? '✅' : (l.status === 'in_progress' ? '🔄' : '🆕'); return `${s} <b>${i+1}. ${l.name || '—'}</b> | ${l.phone || '—'}\n💬 ${l.problem || '—'}`; });
+      await sendTelegram(chatId, '📋 <b>Последние заявки</b>\n\n' + lines.join('\n\n')); return;
     }
-
     if (isManager && text === '/export') {
-      const leads = await fetchLeads();
-      if (leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
+      const leads = await fetchLeads(); if (leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
       const buffer = await buildXlsx(leads, 'Все заявки');
-      await sendTelegramDoc(chatId, buffer, `leads_${new Date().toISOString().slice(0,10)}.xlsx`, `📊 Выгрузка заявок (${leads.length} шт.)`);
-      return;
+      await sendTelegramDoc(chatId, buffer, `leads_${new Date().toISOString().slice(0,10)}.xlsx`, `📊 Выгрузка заявок (${leads.length} шт.)`); return;
     }
-
     if (isManager && text === '/stats') {
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const leads = await fetchLeads(today.toISOString());
-      await sendTelegram(chatId, statsBlock(leads, `Итоги за сегодня (${today.toLocaleDateString('ru-RU')})`));
-      return;
+      await sendTelegram(chatId, statsBlock(leads, `Итоги за сегодня (${today.toLocaleDateString('ru-RU')})`)); return;
     }
-
     if (isManager && text === '/bill') {
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const leads = await fetchLeads(monthStart.toISOString());
-      const total = leads.length;
-      const sum = total * PRICE_PER_LEAD;
+      const now = new Date(); const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const leads = await fetchLeads(monthStart.toISOString()); const total = leads.length; const sum = total * PRICE_PER_LEAD;
       const monthLabel = now.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
-      await sendTelegram(chatId, `🧾 <b>Счёт за ${monthLabel}</b>\n\n📥 Заявок: <b>${total}</b>\n💵 Цена: <b>${PRICE_PER_LEAD} ₽</b>\n💰 Итого: <b>${sum} ₽</b>`);
-      return;
+      await sendTelegram(chatId, `🧾 <b>Счёт за ${monthLabel}</b>\n\n📥 Заявок: <b>${total}</b>\n💵 Цена: <b>${PRICE_PER_LEAD} ₽</b>\n💰 Итого: <b>${sum} ₽</b>`); return;
     }
-
     if (isManager && text === '/clients') {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/clients?select=*&order=id.desc`, {
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-      });
-      const rows = await r.json();
-      if (!Array.isArray(rows) || rows.length === 0) { await sendTelegram(chatId, 'Клиентов нет.'); return; }
-      const lines = rows.map(c => {
-        const paid = isPaid(c);
-        const until = c.paid_until ? new Date(c.paid_until).toLocaleDateString('ru-RU') : '—';
-        const tz = c.timezone || 'Europe/Moscow';
-        return `${paid ? '✅' : '⛔️'} <b>${c.client_id}</b> — ${c.business_name || '—'}\nОплачено до: ${until}\nЧасовой пояс: ${tz}`;
-      });
-      await sendTelegram(chatId, '👥 <b>Клиенты</b>\n\n' + lines.join('\n\n') + '\n\n<i>Команды:\n/add id | название | chat_id | пояс\n/view id\n/remove id\n/paid id месяцев\n/unpaid id</i>');
-      return;
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/clients?select=*&order=id.desc`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
+      const rows = await r.json(); if (!Array.isArray(rows) || rows.length === 0) { await sendTelegram(chatId, 'Клиентов нет.'); return; }
+      const lines = rows.map(c => { const paid = isPaid(c); const until = c.paid_until ? new Date(c.paid_until).toLocaleDateString('ru-RU') : '—'; const tz = c.timezone || 'Europe/Moscow'; return `${paid ? '✅' : '⛔️'} <b>${c.client_id}</b> — ${c.business_name || '—'}\nОплачено до: ${until}\nЧасовой пояс: ${tz}`; });
+      await sendTelegram(chatId, '👥 <b>Клиенты</b>\n\n' + lines.join('\n\n') + '\n\n<i>Команды:\n/add id | название | chat_id | пояс\n/view id\n/remove id\n/paid id месяцев\n/unpaid id</i>'); return;
     }
-
     if (isManager && text.startsWith('/paid ')) {
-      const parts = text.split(' ');
-      const cid = parts[1];
-      const months = parseInt(parts[2] || '1', 10);
-      if (!cid || isNaN(months) || months < 1) {
-        await sendTelegram(chatId, 'Формат: /paid client_id количество_месяцев\nПример: /paid tilda 1');
-        return;
-      }
-      const newDate = await extendPayment(cid, months);
-      if (!newDate) { await sendTelegram(chatId, `Клиент «${cid}» не найден.`); return; }
-      await sendTelegram(chatId, `✅ Клиенту «${cid}» оплата продлена на ${months} мес.\nНовая дата: ${newDate.toLocaleDateString('ru-RU')}`);
-      return;
+      const parts = text.split(' '); const cid = parts[1]; const months = parseInt(parts[2] || '1', 10);
+      if (!cid || isNaN(months) || months < 1) { await sendTelegram(chatId, 'Формат: /paid client_id количество_месяцев\nПример: /paid tilda 1'); return; }
+      const newDate = await extendPayment(cid, months); if (!newDate) { await sendTelegram(chatId, `Клиент «${cid}» не найден.`); return; }
+      await sendTelegram(chatId, `✅ Клиенту «${cid}» оплата продлена на ${months} мес.\nНовая дата: ${newDate.toLocaleDateString('ru-RU')}`); return;
     }
-
     if (isManager && text.startsWith('/unpaid ')) {
-      const cid = text.split(' ')[1];
-      if (!cid) { await sendTelegram(chatId, 'Формат: /unpaid client_id'); return; }
-      await disablePayment(cid);
-      await sendTelegram(chatId, `⛔️ Клиенту «${cid}» оплата отключена.`);
-      return;
+      const cid = text.split(' ')[1]; if (!cid) { await sendTelegram(chatId, 'Формат: /unpaid client_id'); return; }
+      await disablePayment(cid); await sendTelegram(chatId, `⛔️ Клиенту «${cid}» оплата отключена.`); return;
     }
-
     if (isManager && text.startsWith('/add ')) {
-      const raw = text.slice(5).trim();
-      const parts = raw.split('|').map(s => s.trim());
-      if (parts.length < 3) {
-        await sendTelegram(chatId, 'Формат:\n/add client_id | название | chat_id | часовой_пояс\n\nПример:\n/add salon-1 | Салон Красоты | 5818548555 | Europe/Moscow');
-        return;
-      }
+      const raw = text.slice(5).trim(); const parts = raw.split('|').map(s => s.trim());
+      if (parts.length < 3) { await sendTelegram(chatId, 'Формат:\n/add client_id | название | chat_id | часовой_пояс\n\nПример:\n/add salon-1 | Салон Красоты | 5818548555 | Europe/Moscow'); return; }
       const [cid, bname, cchat, ctz] = [parts[0], parts[1], parts[2], parts[3] || 'Europe/Moscow'];
-
       const existing = await getClient(cid);
-      if (existing) {
-        await sendTelegram(chatId, `⚠️ Клиент «${cid}» уже существует.\nИспользуй /paid для продления или /remove для удаления.`);
-        return;
-      }
-
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/clients`, {
-        method: 'POST',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-        body: JSON.stringify({
-          client_id: cid,
-          business_name: bname,
-          chat_id: parseInt(cchat, 10) || null,
-          paid_until: new Date(Date.now() + 7 * 86400000).toISOString(),
-          timezone: ctz
-        })
-      });
-      if (!r.ok) {
-        const err = await r.text();
-        await sendTelegram(chatId, `❌ Ошибка: ${err.slice(0, 200)}`);
-        return;
-      }
-      await sendTelegram(chatId, `✅ Клиент «${cid}» добавлен.\n\n` +
-        `Название: ${bname}\n` +
-        `Chat ID: ${cchat}\n` +
-        `Часовой пояс: ${ctz}\n` +
-        `Оплачено до: ${new Date(Date.now() + 7 * 86400000).toLocaleDateString('ru-RU')} (+7 дней теста)`);
-      return;
+      if (existing) { await sendTelegram(chatId, `⚠️ Клиент «${cid}» уже существует.\nИспользуй /paid для продления или /remove для удаления.`); return; }
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/clients`, { method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }, body: JSON.stringify({ client_id: cid, business_name: bname, chat_id: parseInt(cchat, 10) || null, paid_until: new Date(Date.now() + 7 * 86400000).toISOString(), timezone: ctz }) });
+      if (!r.ok) { const err = await r.text(); await sendTelegram(chatId, `❌ Ошибка: ${err.slice(0, 200)}`); return; }
+      await sendTelegram(chatId, `✅ Клиент «${cid}» добавлен.\n\nНазвание: ${bname}\nChat ID: ${cchat}\nЧасовой пояс: ${ctz}\nОплачено до: ${new Date(Date.now() + 7 * 86400000).toLocaleDateString('ru-RU')} (+7 дней теста)`); return;
     }
-
     if (isManager && text.startsWith('/view ')) {
-      const cid = text.slice(6).trim();
-      const client = await getClient(cid);
+      const cid = text.slice(6).trim(); const client = await getClient(cid);
       if (!client) { await sendTelegram(chatId, `Клиент «${cid}» не найден.`); return; }
-      const paid = isPaid(client);
-      const until = client.paid_until ? new Date(client.paid_until).toLocaleDateString('ru-RU') : '—';
+      const paid = isPaid(client); const until = client.paid_until ? new Date(client.paid_until).toLocaleDateString('ru-RU') : '—';
       const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
-      const leadsMonth = await fetchLeads(monthStart.toISOString());
-      const sum = leadsMonth.length * PRICE_PER_LEAD;
-
-      await sendTelegram(chatId, `👤 <b>Клиент: ${client.client_id}</b>\n\n` +
-        `🏢 Название: ${client.business_name || '—'}\n` +
-        `💬 Chat ID: ${client.chat_id || '—'}\n` +
-        `🌍 Часовой пояс: ${client.timezone || 'Europe/Moscow'}\n` +
-        `💳 Статус: ${paid ? '✅ оплачено' : '⛔️ не оплачено'}\n` +
-        `📅 Оплачено до: ${until}\n\n` +
-        `📊 <b>За текущий месяц</b>\n` +
-        `📥 Заявок: ${leadsMonth.length}\n` +
-        `💰 По тарифу «за результат»: ${sum} ₽`);
-      return;
+      const leadsMonth = await fetchLeads(monthStart.toISOString()); const sum = leadsMonth.length * PRICE_PER_LEAD;
+      await sendTelegram(chatId, `👤 <b>Клиент: ${client.client_id}</b>\n\n🏢 Название: ${client.business_name || '—'}\n💬 Chat ID: ${client.chat_id || '—'}\n🌍 Часовой пояс: ${client.timezone || 'Europe/Moscow'}\n💳 Статус: ${paid ? '✅ оплачено' : '⛔️ не оплачено'}\n📅 Оплачено до: ${until}\n\n📊 <b>За текущий месяц</b>\n📥 Заявок: ${leadsMonth.length}\n💰 По тарифу «за результат»: ${sum} ₽`); return;
     }
-
     if (isManager && text.startsWith('/remove ')) {
-      const cid = text.slice(8).trim();
-      const client = await getClient(cid);
+      const cid = text.slice(8).trim(); const client = await getClient(cid);
       if (!client) { await sendTelegram(chatId, `Клиент «${cid}» не найден.`); return; }
-      await fetch(`${SUPABASE_URL}/rest/v1/clients?client_id=eq.${cid}`, {
-        method: 'DELETE',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-      });
-      await sendTelegram(chatId, `🗑 Клиент «${cid}» удалён.\n⚠️ Данные заявок не тронуты.`);
-      return;
+      await fetch(`${SUPABASE_URL}/rest/v1/clients?client_id=eq.${cid}`, { method: 'DELETE', headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
+      await sendTelegram(chatId, `🗑 Клиент «${cid}» удалён.\n⚠️ Данные заявок не тронуты.`); return;
     }
-
     let session = await getSessionByTelegram(chatId);
-    if (!session) {
-      const newSid = 'tg_' + chatId;
-      await getOrCreateSession(newSid);
-      await updateSession(newSid, { telegram_chat_id: chatId });
-      session = await getSessionByTelegram(chatId);
-    }
+    if (!session) { const newSid = 'tg_' + chatId; await getOrCreateSession(newSid); await updateSession(newSid, { telegram_chat_id: chatId }); session = await getSessionByTelegram(chatId); }
     if (!session) session = { session_id: 'tg_' + chatId, history: [] };
-
-    if (!isManager) {
-      const client = await getClient(CLIENT_ID);
-      if (!isPaid(client)) {
-        await sendTelegram(chatId, '⛔️ Сервис временно приостановлен. Свяжитесь с менеджером.');
-        return;
-      }
-    }
-
+    if (!isManager) { const client = await getClient(CLIENT_ID); if (!isPaid(client)) { await sendTelegram(chatId, '⛔️ Сервис временно приостановлен. Свяжитесь с менеджером.'); return; } }
     const history = session.history || [];
     const reply = await askAI(text, history, session.session_id);
     const newHistory = [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }];
     await updateSession(session.session_id, { history: newHistory.slice(-20) });
     await sendTelegram(chatId, reply);
-  } catch (error) {
-    console.log('Telegram error:', error);
-  }
+  } catch (error) { console.log('Telegram error:', error); }
 });
 
 app.get('/crawl', async (req, res) => {
   try {
-    const scrape = await fetch('https://api.firecrawl.dev/v2/scrape', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${FIRECRAWL_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: SITE_TO_CRAWL, formats: ['markdown'] })
-    });
-    const scrapeData = await scrape.json();
-    if (!scrape.ok) return res.status(500).json({ error: 'Firecrawl error' });
-    const text = scrapeData.data?.markdown || '';
-    const chunks = [];
+    const scrape = await fetch('https://api.firecrawl.dev/v2/scrape', { method: 'POST', headers: { 'Authorization': `Bearer ${FIRECRAWL_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ url: SITE_TO_CRAWL, formats: ['markdown'] }) });
+    const scrapeData = await scrape.json(); if (!scrape.ok) return res.status(500).json({ error: 'Firecrawl error' });
+    const text = scrapeData.data?.markdown || ''; const chunks = [];
     for (let i = 0; i < text.length; i += 1000) chunks.push(text.slice(i, i + 1000));
-
     let saved = 0;
-    for (const chunk of chunks) {
-      try {
-        const embedding = await getEmbedding(chunk);
-        await saveDocument(chunk, embedding, SITE_TO_CRAWL);
-        saved++;
-      } catch (e) {}
-    }
+    for (const chunk of chunks) { try { const embedding = await getEmbedding(chunk); await saveDocument(chunk, embedding, SITE_TO_CRAWL); saved++; } catch (e) {} }
     res.json({ ok: true, saved, total: chunks.length });
-  } catch (error) {
-    res.status(500).json({ error: 'Ошибка кроулинга' });
-  }
+  } catch (error) { res.status(500).json({ error: 'Ошибка кроулинга' }); }
 });
 
-// ========== АВТОСВОДКИ С ЧАСОВЫМ ПОЯСОМ ==========
-
+// ========== АВТОСВОДКИ ==========
 function getLocalTime(timezone) {
   try {
     const now = new Date();
-    const fmt = new Intl.DateTimeFormat('ru-RU', {
-      timeZone: timezone || 'Europe/Moscow',
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', hour12: false
-    });
-    const parts = fmt.formatToParts(now);
-    const get = (t) => parts.find(p => p.type === t)?.value;
-    return {
-      hour: parseInt(get('hour'), 10),
-      minute: parseInt(get('minute'), 10),
-      dateStr: `${get('year')}-${get('month')}-${get('day')}`
-    };
-  } catch (e) {
-    return { hour: 20, minute: 0, dateStr: '' };
-  }
+    const fmt = new Intl.DateTimeFormat('ru-RU', { timeZone: timezone || 'Europe/Moscow', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+    const parts = fmt.formatToParts(now); const get = (t) => parts.find(p => p.type === t)?.value;
+    return { hour: parseInt(get('hour'), 10), minute: parseInt(get('minute'), 10), dateStr: `${get('year')}-${get('month')}-${get('day')}` };
+  } catch (e) { return { hour: 20, minute: 0, dateStr: '' }; }
 }
-
 async function sendDailyReportForClient(client) {
   try {
-    const tz = client.timezone || 'Europe/Moscow';
-    const local = getLocalTime(tz);
-
-    const since = new Date();
-    since.setUTCHours(0, 0, 0, 0);
-
-    const leads = await fetchLeads(since.toISOString());
-    if (leads.length === 0) return;
-
-    const chatId = client.chat_id || MANAGER_CHAT_ID;
-    if (!chatId) return;
-
+    const tz = client.timezone || 'Europe/Moscow'; const local = getLocalTime(tz);
+    const since = new Date(); since.setUTCHours(0, 0, 0, 0);
+    const leads = await fetchLeads(since.toISOString()); if (leads.length === 0) return;
+    const chatId = client.chat_id || MANAGER_CHAT_ID; if (!chatId) return;
     await sendTelegram(chatId, statsBlock(leads, `Итоги за сегодня (${local.dateStr})`));
     const buffer = await buildXlsx(leads, 'День');
     await sendTelegramDoc(chatId, buffer, `leads_day_${local.dateStr}.xlsx`, `📥 Заявки за день (${leads.length} шт.)`);
     console.log(`✅ Сводка отправлена клиенту ${client.client_id} (${tz})`);
-  } catch (e) {
-    console.log('sendDailyReportForClient error:', e.message);
-  }
+  } catch (e) { console.log('sendDailyReportForClient error:', e.message); }
 }
-
 cron.schedule('*/15 * * * *', async () => {
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/clients?select=*`, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-    });
-    const clients = await r.json();
-    if (!Array.isArray(clients)) return;
-
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/clients?select=*`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
+    const clients = await r.json(); if (!Array.isArray(clients)) return;
     for (const client of clients) {
       if (!isPaid(client)) continue;
-      const tz = client.timezone || 'Europe/Moscow';
-      const local = getLocalTime(tz);
-      if (local.hour === 20 && local.minute >= 0 && local.minute < 15) {
-        await sendDailyReportForClient(client);
-      }
+      const tz = client.timezone || 'Europe/Moscow'; const local = getLocalTime(tz);
+      if (local.hour === 20 && local.minute >= 0 && local.minute < 15) { await sendDailyReportForClient(client); }
     }
   } catch (e) { console.log('cron 15min error:', e.message); }
 });
-
 cron.schedule('0 7 * * 1', async () => {
   try {
     if (!MANAGER_CHAT_ID) return;
     const since = new Date(); since.setDate(since.getDate() - 7); since.setHours(0, 0, 0, 0);
-    const leads = await fetchLeads(since.toISOString());
-    console.log('⏰ cron week сработал, заявок:', leads.length);
-    if (leads.length === 0) return;
+    const leads = await fetchLeads(since.toISOString()); if (leads.length === 0) return;
     await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за неделю (${since.toLocaleDateString('ru-RU')} — ${new Date().toLocaleDateString('ru-RU')})`));
     const buffer = await buildXlsx(leads, 'Неделя');
     await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_week_${new Date().toISOString().slice(0,10)}.xlsx`, `📥 Заявки за неделю (${leads.length} шт.)`);
   } catch (e) { console.log('cron week error:', e.message); }
 });
-
 cron.schedule('0 7 1 * *', async () => {
   try {
     if (!MANAGER_CHAT_ID) return;
-    const now = new Date();
-    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
-    const leads = await fetchLeads(prevMonthStart.toISOString());
-    console.log('⏰ cron month сработал, заявок:', leads.length);
-    if (leads.length === 0) return;
-
-    const total = leads.length;
-    const sum = total * PRICE_PER_LEAD;
-    const monthLabel = prevMonthStart.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
-
+    const now = new Date(); const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
+    const leads = await fetchLeads(prevMonthStart.toISOString()); if (leads.length === 0) return;
+    const total = leads.length; const sum = total * PRICE_PER_LEAD; const monthLabel = prevMonthStart.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
     await sendTelegram(MANAGER_CHAT_ID, statsBlock(leads, `Итоги за ${monthLabel}`));
     await sendTelegram(MANAGER_CHAT_ID, `🧾 <b>Счёт за ${monthLabel}</b>\n\n📥 Заявок: <b>${total}</b>\n💵 Цена: <b>${PRICE_PER_LEAD} ₽</b>\n💰 Итого: <b>${sum} ₽</b>`);
-
     const buffer = await buildXlsx(leads, 'Месяц');
     await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_month_${prevMonthStart.toISOString().slice(0,7)}.xlsx`, `📥 Заявки за ${monthLabel} (${total} шт.)`);
   } catch (e) { console.log('cron month error:', e.message); }
 });
 
-app.listen(PORT, () => {
-  console.log(`Сервер запущен: http://localhost:${PORT}`);
-});
+app.listen(PORT, () => { console.log(`Сервер запущен: http://localhost:${PORT}`); });
