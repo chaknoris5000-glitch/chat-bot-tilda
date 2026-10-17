@@ -375,45 +375,35 @@ ${context || 'Информация временно недоступна.'}`;
 
   // ПРИНУДИТЕЛЬНЫЙ СКРОЛЛ И ССЫЛКИ НА БЛОКИ
   const lowerMsg = message.toLowerCase();
+  const BASE_URL = 'https://send-empty-creedite.tilda.ws';
   
   if (lowerMsg.includes('тариф') || lowerMsg.includes('цен') || lowerMsg.includes('стоимост') || lowerMsg.includes('подробн')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:tariffs]';
     if (!reply.includes(BASE_URL)) {
-      reply += `\n\nПосмотреть тарифы: ${BASE_URL}/#tariffs`;
+      // Ссылка без #tariffs для красивого превью в TG
+      reply += `\n\nПосмотреть тарифы: ${BASE_URL}/`;
     }
   }
   
   if (lowerMsg.includes('как работает') || lowerMsg.includes('как это работает')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:how]';
     if (!reply.includes(BASE_URL)) {
-      reply += `\n\nКак это работает: ${BASE_URL}/#how`;
+      reply += `\n\nКак это работает: ${BASE_URL}/`;
     }
   }
   
   if (lowerMsg.includes('пример') || lowerMsg.includes('демо')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:demos]';
     if (!reply.includes(BASE_URL)) {
-      reply += `\n\nПримеры работ: ${BASE_URL}/#demos`;
+      reply += `\n\nПримеры работ: ${BASE_URL}/`;
     }
   }
 
   if (lowerMsg.includes('гаранти')) {
     if (!reply.includes(BASE_URL)) {
-      reply += `\n\nО гарантиях: ${BASE_URL}/#guarantee`;
+      reply += `\n\nО гарантиях: ${BASE_URL}/`;
     }
   }
-
-  const leadData = extractLeadData(reply);
-  if (leadData.save && isValidLead(leadData.name, leadData.phone)) {
-    try {
-      const leadId = await saveLead(sessionId, leadData.name, leadData.phone, leadData.problem);
-      await notifyManager(leadData, leadId);
-    } catch (e) { console.log('lead save/notify error:', e.message); }
-  }
-
-  return cleanReply(reply);
-}
-
 // ========== ЭКСПОРТ XLSX ==========
 
 async function buildXlsx(leads, title = 'Заявки') {
