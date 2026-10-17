@@ -25,7 +25,6 @@ const YOOKASSA_SHOP_ID = process.env.YOOKASSA_SHOP_ID || '';
 const YOOKASSA_SECRET_KEY = process.env.YOOKASSA_SECRET_KEY || '';
 const YOOKASSA_RETURN_URL = process.env.YOOKASSA_RETURN_URL || 'https://t.me/vadim602_bot';
 
-// Сетка тарифов: месячная и годовая (годовая с хорошей скидкой)
 const TARIFFS = {
   'start': { name: 'Старт', amountMonth: 1990, amountYear: 14900 },
   'business': { name: 'Бизнес', amountMonth: 2490, amountYear: 19900 },
@@ -74,7 +73,6 @@ async function disablePayment(clientId) {
   });
 }
 
-// Функция создания платежа в ЮKassa (принимает tariffKey и period: 'month' или 'year')
 async function createYookassaPayment(chatId, tariffKey, period = 'month') {
   const tariff = TARIFFS[tariffKey];
   if (!tariff) return null;
@@ -383,6 +381,7 @@ async function askAI(message, history, sessionId) {
 Если спрашивает про прибыль или выгоду — добавь [SCROLL:profit].
 Если спрашивает "кому подходит" или про сферы бизнеса — добавь [SCROLL:for-whom].
 Если просит оферту или договор — добавь [SCROLL:oferta].
+Если просит отзывы — добавь [SCROLL:reviews].
 
 ТВОИ ЗНАНИЯ О ПРОДУКТЕ:
 - Бот работает 24/7, отвечает мгновенно.
@@ -470,6 +469,16 @@ ${context || 'Информация временно недоступна.'}`;
   if (lowerMsg.includes('оферт') || lowerMsg.includes('договор')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:oferta]';
     if (!reply.includes(BASE_URL)) reply += `\n\nПубличная оферта: ${BASE_URL}/?go=oferta`;
+  }
+
+  if (lowerMsg.includes('отзыв')) {
+    if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:reviews]';
+    if (!reply.includes(BASE_URL)) reply += `\n\nОтзывы клиентов: ${BASE_URL}/?go=reviews`;
+  }
+
+  if (lowerMsg.includes('выгод')) { // Для якоря benefits
+    if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:benefits]';
+    if (!reply.includes(BASE_URL)) reply += `\n\nВыгоды: ${BASE_URL}/?go=benefits`;
   }
 
   const leadData = extractLeadData(reply);
@@ -575,7 +584,6 @@ app.get('/', (req, res) => {
 
 // ========== ВЕБХУКИ ==========
 
-// Вебхук для уведомлений от ЮKassa
 app.post('/yookassa-webhook', async (req, res) => {
   res.sendStatus(200);
 
@@ -586,12 +594,10 @@ app.post('/yookassa-webhook', async (req, res) => {
       const payment = event.object;
       const chatId = payment.metadata.chat_id;
       const tariffKey = payment.metadata.tariff;
-      const period = payment.metadata.period || 'month'; // month или year
+      const period = payment.metadata.period || 'month';
 
       if (chatId && tariffKey) {
-        // Если оплатили за год — добавляем 12 месяцев, если за месяц — 1 месяц
         const monthsToAdd = period === 'year' ? 12 : 1;
-        
         await extendPayment(chatId.toString(), monthsToAdd); 
         
         const tariffName = TARIFFS[tariffKey]?.name || 'AI-Администратор';
@@ -782,7 +788,6 @@ app.post('/telegram-webhook', async (req, res) => {
       }
 
       if (payload.startsWith('pay_')) {
-        // Ожидаем формат: pay_business_month или pay_business_year
         const payParts = payload.split('_');
         const tariffKey = payParts[1];
         const period = payParts[2] || 'month';
