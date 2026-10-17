@@ -21,6 +21,17 @@ const CLIENT_ID = process.env.CLIENT_ID || 'tilda';
 const PRICE_PER_LEAD = 25;
 const BASE_URL = 'https://send-empty-creedite.tilda.ws';
 
+const YOOKASSA_SHOP_ID = process.env.YOOKASSA_SHOP_ID || '';
+const YOOKASSA_SECRET_KEY = process.env.YOOKASSA_SECRET_KEY || '';
+const YOOKASSA_RETURN_URL = process.env.YOOKASSA_RETURN_URL || 'https://t.me/vadim602_bot';
+
+// Сетка тарифов: месячная и годовая (годовая с хорошей скидкой)
+const TARIFFS = {
+  'start': { name: 'Старт', amountMonth: 1990, amountYear: 14900 },
+  'business': { name: 'Бизнес', amountMonth: 2490, amountYear: 19900 },
+  'unlimited': { name: 'Безлимит', amountMonth: 4990, amountYear: 39900 }
+};
+
 const processedUpdates = new Set();
 
 // ========== КЛИЕНТЫ И ОПЛАТА ==========
@@ -61,6 +72,46 @@ async function disablePayment(clientId) {
     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
     body: JSON.stringify({ paid_until: new Date(Date.now() - 86400000).toISOString(), updated_at: new Date().toISOString() })
   });
+}
+
+// Функция создания платежа в ЮKassa (принимает tariffKey и period: 'month' или 'year')
+async function createYookassaPayment(chatId, tariffKey, period = 'month') {
+  const tariff = TARIFFS[tariffKey];
+  if (!tariff) return null;
+
+  const amount = period === 'year' ? tariff.amountYear : tariff.amountMonth;
+  const desc = period === 'year' ? `Годовая подписка ${tariff.name}` : `Месячная подписка ${tariff.name}`;
+
+  const idempotenceKey = `pay_${chatId}_${tariffKey}_${period}_${Date.now()}`;
+  const auth = Buffer.from(`${YOOKASSA_SHOP_ID}:${YOOKASSA_SECRET_KEY}`).toString('base64');
+
+  try {
+    const r = await fetch('https://api.yookassa.ru/v3/payments', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Idempotence-Key': idempotenceKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        amount: { value: amount.toFixed(2), currency: 'RUB' },
+        capture: true,
+        confirmation: { type: 'redirect', return_url: YOOKASSA_RETURN_URL },
+        description: `AI-Администратор: ${desc}`,
+        metadata: { chat_id: chatId.toString(), tariff: tariffKey, period: period }
+      })
+    });
+    
+    const data = await r.json();
+    if (r.ok && data.confirmation && data.confirmation.confirmation_url) {
+      return data.confirmation.confirmation_url;
+    }
+    console.log('Ошибка ЮKassa:', data);
+    return null;
+  } catch (e) {
+    console.log('Ошибка запроса к ЮKassa:', e.message);
+    return null;
+  }
 }
 
 // ========== БАЗОВЫЕ ФУНКЦИИ ==========
@@ -343,9 +394,9 @@ async function askAI(message, history, sessionId) {
 - Отключить можно в любой момент (без штрафов).
 
 ТАРИФЫ И ЦЕНЫ (ЗНАЙ ИХ НАИЗУСТЬ):
-1. Тариф «Старт» — 1 990 ₽/мес (до 100 заявок, свыше — 25 ₽/заявка). При годовой оплате — 1 490 ₽/мес.
-2. Тариф «Бизнес» — 2 490 ₽/мес (до 300 заявок, свыше — 25 ₽/заявка). При годовой оплате — 1 990 ₽/мес.
-3. Тариф «Безлимит» — 4 990 ₽/мес (без ограничений). При годовой оплате — 3 990 ₽/мес.
+1. Тариф «Старт» — 1 990 ₽/мес (до 100 заявок, свыше — 25 ₽/заявка). При годовой оплате — 14 900 ₽/год.
+2. Тариф «Бизнес» — 2 490 ₽/мес (до 300 заявок, свыше — 25 ₽/заявка). При годовой оплате — 19 900 ₽/год.
+3. Тариф «Безлимит» — 4 990 ₽/мес (без ограничений). При годовой оплате — 39 900 ₽/год.
 4. Тариф «За результат» — 25 ₽ за заявку (платит в конце месяца).
 
 ПРАВИЛА ПРОДАЖ (ВОРОНКА):
@@ -524,6 +575,51 @@ app.get('/', (req, res) => {
 
 // ========== ВЕБХУКИ ==========
 
+// Вебхук для уведомлений от ЮKassa
+app.post('/yookassa-webhook', async (req, res) => {
+  res.sendStatus(200);
+
+  try {
+    const event = req.body;
+    
+    if (event.event === 'payment.succeeded') {
+      const payment = event.object;
+      const chatId = payment.metadata.chat_id;
+      const tariffKey = payment.metadata.tariff;
+      const period = payment.metadata.period || 'month'; // month или year
+
+      if (chatId && tariffKey) {
+        // Если оплатили за год — добавляем 12 месяцев, если за месяц — 1 месяц
+        const monthsToAdd = period === 'year' ? 12 : 1;
+        
+        await extendPayment(chatId.toString(), monthsToAdd); 
+        
+        const tariffName = TARIFFS[tariffKey]?.name || 'AI-Администратор';
+        const periodLabel = period === 'year' ? '1 год' : '1 месяц';
+
+        await sendTelegram(chatId, 
+          `✅ <b>Оплата прошла успешно!</b>\n\n` +
+          `Сумма: ${payment.amount.value} ₽\n` +
+          `Ваша подписка на тариф «${tariffName}» активирована на ${periodLabel}.\n\n` +
+          `Спасибо за доверие!`
+        );
+        
+        if (MANAGER_CHAT_ID) {
+          await sendTelegram(MANAGER_CHAT_ID, 
+            `💰 <b>Новая оплата!</b>\n` +
+            `Клиент: ${chatId}\n` +
+            `Тариф: ${tariffName}\n` +
+            `Период: ${periodLabel}\n` +
+            `Сумма: ${payment.amount.value} ₽`
+          );
+        }
+      }
+    }
+  } catch (e) {
+    console.log('Ошибка вебхука ЮKassa:', e.message);
+  }
+});
+
 app.post('/message', async (req, res) => {
   try {
     const { message, session_id } = req.body;
@@ -676,31 +772,62 @@ app.post('/telegram-webhook', async (req, res) => {
 
     if (text.startsWith('/start')) {
       const parts = text.split(' ');
-      const siteSessionId = parts[1];
-      if (siteSessionId && siteSessionId.startsWith('sess_')) {
-        await getOrCreateSession(siteSessionId);
-        await updateSession(siteSessionId, { telegram_chat_id: chatId });
+      const payload = parts[1] || '';
+
+      if (payload.startsWith('sess_')) {
+        await getOrCreateSession(payload);
+        await updateSession(payload, { telegram_chat_id: chatId });
         await sendTelegram(chatId, '👋 Продолжаем диалог с сайта. Чем помочь?');
-      } else {
-        const startText = `<b>👋 Добро пожаловать!</b>\n\n` +
-          `Я — AI-Администратор. Отвечаю клиентам 24/7, собираю заявки и присылаю их вам в Telegram.\n\n` +
-          `<b>Что я умею:</b>\n` +
-          `📥 Собирать заявки (имя, телефон, запрос)\n` +
-          `💼 Работать как CRM (все заявки в одном месте)\n` +
-          `📊 Выгружать данные в Excel\n` +
-          `🎙 Понимать голосовые сообщения\n\n` +
-          `<b>Условия:</b>\n` +
-          `🎁 Настройка и первая неделя — бесплатно\n` +
-          `🚀 Запуск за 2 дня\n\n` +
-          `Нажмите на кнопку ниже, чтобы посмотреть тарифы, или просто напишите мне свой вопрос.`;
-
-        const startKeyboard = [
-          [{ text: '💳 Посмотреть тарифы', callback_data: 'menu_bill' }],
-          [{ text: '🌐 Открыть сайт', url: BASE_URL }]
-        ];
-
-        await sendTelegram(chatId, startText, startKeyboard);
+        return;
       }
+
+      if (payload.startsWith('pay_')) {
+        // Ожидаем формат: pay_business_month или pay_business_year
+        const payParts = payload.split('_');
+        const tariffKey = payParts[1];
+        const period = payParts[2] || 'month';
+        
+        if (TARIFFS[tariffKey]) {
+          await sendTelegram(chatId, '⏳ Создаю ссылку на оплату...');
+          const payUrl = await createYookassaPayment(chatId, tariffKey, period);
+          
+          if (payUrl) {
+            const tariff = TARIFFS[tariffKey];
+            const amount = period === 'year' ? tariff.amountYear : tariff.amountMonth;
+            const periodLabel = period === 'year' ? 'год' : 'месяц';
+
+            await sendTelegram(chatId, 
+              `💳 <b>Счёт на оплату тарифа «${tariff.name}»</b>\n\n` +
+              `Период: ${periodLabel}\n` +
+              `Сумма: ${amount} ₽.\n\n` +
+              `Перейдите по ссылке ниже, чтобы оплатить. После оплаты подписка активируется автоматически.`,
+              [[{ text: '💸 Перейти к оплате', url: payUrl }]]
+            );
+          } else {
+            await sendTelegram(chatId, '❌ Ошибка при создании счёта. Попробуйте позже.');
+          }
+          return;
+        }
+      }
+
+      const startText = `<b>👋 Добро пожаловать!</b>\n\n` +
+        `Я — AI-Администратор. Отвечаю клиентам 24/7, собираю заявки и присылаю их вам в Telegram.\n\n` +
+        `<b>Что я умею:</b>\n` +
+        `📥 Собирать заявки (имя, телефон, запрос)\n` +
+        `💼 Работать как CRM (все заявки в одном месте)\n` +
+        `📊 Выгружать данные в Excel\n` +
+        `🎙 Понимать голосовые сообщения\n\n` +
+        `<b>Условия:</b>\n` +
+        `🎁 Настройка и первая неделя — бесплатно\n` +
+        `🚀 Запуск за 2 дня\n\n` +
+        `Нажмите на кнопку ниже, чтобы посмотреть тарифы, или просто напишите мне свой вопрос.`;
+
+      const startKeyboard = [
+        [{ text: '💳 Посмотреть тарифы', callback_data: 'menu_bill' }],
+        [{ text: '🌐 Открыть сайт', url: BASE_URL }]
+      ];
+
+      await sendTelegram(chatId, startText, startKeyboard);
       return;
     }
 
