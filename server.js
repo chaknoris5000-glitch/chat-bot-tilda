@@ -322,7 +322,7 @@ async function askAI(message, history, sessionId) {
 5. Задавай ОДИН наводящий вопрос за раз.
 6. НИКОГДА не пиши маркеры [LEAD_SAVE] в обычных сообщениях.
 
-УМНАЯ НАВИГАЦИЯ ПО САЙТУ:
+УМНАЯ НАВИГАЦИЯ ПО САЙТУ (КРИТИЧЕСКИ ВАЖНО):
 Если клиент спрашивает про цены/тарифы или "где посмотреть подробности" — в ответе ОБЯЗАТЕЛЬНО добавь тег [SCROLL:tariffs]. 
 Если клиент спрашивает "как это работает" — добавь [SCROLL:how].
 Если клиент просит показать примеры/демо — добавь [SCROLL:demos].
@@ -372,10 +372,11 @@ ${context || 'Информация временно недоступна.'}`;
   if (!r.ok) throw new Error('OpenRouter error');
   let reply = data.choices?.[0]?.message?.content || 'Нет ответа';
 
-  // ПРИНУДИТЕЛЬНЫЙ СКРОЛЛ, ЕСЛИ ИИ ЗАБЫЛ
+  // ПРИНУДИТЕЛЬНЫЙ СКРОЛЛ И ССЫЛКА, ЕСЛИ ИИ ЗАБЫЛ
   const lowerMsg = message.toLowerCase();
   if (lowerMsg.includes('тариф') || lowerMsg.includes('цен') || lowerMsg.includes('стоимост') || lowerMsg.includes('подробн')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:tariffs]';
+    if (!reply.includes('tilda.ws')) reply += ` Подробнее: https://send-empty-creedite.tilda.ws/#tariffs`;
   }
   if (lowerMsg.includes('как работает') || lowerMsg.includes('как это работает')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:how]';
@@ -384,13 +385,7 @@ ${context || 'Информация временно недоступна.'}`;
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:demos]';
   }
 
-  // ДОБАВЛЯЕМ ССЫЛКУ, ЕСЛИ НУЖНО
-  if ((lowerMsg.includes('подробн') || lowerMsg.includes('где посмотреть')) && !reply.includes('tilda.ws')) {
-    reply += ` Подробнее: https://send-empty-creedite.tilda.ws/#tariffs`;
-  }
-
   const leadData = extractLeadData(reply);
-  console.log('🔍 extractLeadData:', JSON.stringify(leadData));
   if (leadData.save && isValidLead(leadData.name, leadData.phone)) {
     try {
       const leadId = await saveLead(sessionId, leadData.name, leadData.phone, leadData.problem);
