@@ -1,0 +1,42 @@
+name: Create New Client
+on:
+  workflow_dispatch:
+    inputs:
+      client_id:
+        description: 'ID клиента (например: test12)'
+        required: true
+      business_name:
+        description: 'Название бизнеса'
+        required: true
+      site_url:
+        description: 'Ссылка на сайт'
+        required: true
+      timezone:
+        description: 'Часовой пояс'
+        default: 'Europe/Moscow'
+      manager_chat_id:
+        description: 'Chat ID менеджера'
+        required: true
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install axios
+
+      - name: Run Creation Script
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SUPABASE_TOKEN: ${{ secrets.SUPABASE_TOKEN }}
+        run: |
+          node create-client.js "${{ github.event.inputs.client_id }}" "${{ github.event.inputs.business_name }}" "${{ github.event.inputs.site_url }}" "${{ github.event.inputs.timezone }}" "${{ github.event.inputs.manager_chat_id }}"
