@@ -850,54 +850,56 @@ app.post('/telegram-webhook', async (req, res) => {
       return;
     }
 
-        if (isManager && text === '/newclient') {
-      await sendTelegram(chatId, 'Шаг 1 из 4. Введи ID клиента (латиницей, без пробелов, например: salon1):');
-      // Устанавливаем состояние ожидания
-      await fetch(`${SUPABASE_URL}/rest/v1/clients?id=eq.${chatId}`, {
-        method: 'DELETE', headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-      }); // Чистим старое, если было
-      await fetch(`${SUPABASE_URL}/rest/v1/clients`, {
-        method: 'POST',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ client_id: 'temp_new_client', business_name: 'Ожидание ввода', chat_id: chatId, timezone: 'step_1' })
-      });
+    // --- ПОШАГОВОЕ СОЗДАНИЕ КЛИЕНТА ---
+    let session = await getSessionByTelegram(chatId);
+    const sessionState = session && session.history && session.history[0] ? session.history[0] : {};
+
+    if (isManager && text === '/newclient') {
+      await sendTelegram(chatId, 'Шаг 1 из 4. Напиши ID клиента (латиницей, без пробелов, например: salon1):');
+      await updateSession('tg_' + chatId, { history: [{ role: 'system', content: 'waiting_for_id' }] });
       return;
     }
-      const cid = parts[0], bname = parts[1], site = parts[2], tz = parts[3] || 'Europe/Moscow';
+
+    if (sessionState.content === 'waiting_for_id') {
+      await sendTelegram(chatId, `Шаг 2 из 4. Напиши название бизнеса (например: Салон Красоты):`);
+      await updateSession('tg_' + chatId, { history: [{ role: 'system', content: 'waiting_for_name', client_id: text }] });
+      return;
+    }
+
+    if (sessionState.content === 'waiting_for_name') {
+      await sendTelegram(chatId, `Шаг 3 из 4. Напиши ссылку на сайт (например: https://salon.tilda.ws):`);
+      await updateSession('tg_' + chatId, { history: [{ role: 'system', content: 'waiting_for_url', client_id: sessionState.client_id, business_name: text }] });
+      return;
+    }
+
+    if (sessionState.content === 'waiting_for_url') {
+      await sendTelegram(chatId, `Шаг 4 из 4. Напиши часовой пояс (например: Europe/Moscow):`);
+      await updateSession('tg_' + chatId, { history: [{ role: 'system', content: 'waiting_for_tz', client_id: sessionState.client_id, business_name: sessionState.business_name, site_url: text }] });
+      return;
+    }
+
+    if (sessionState.content === 'waiting_for_tz') {
+      const cid = sessionState.client_id;
+      const bname = sessionState.business_name;
+      const site = sessionState.site_url;
+      const tz = text || 'Europe/Moscow';
       
-      await sendTelegram(chatId, `⏳ Отправляю запрос на GitHub (создаю клиента)...`);
+      await updateSession('tg_' + chatId, { history: [] });
+      await sendTelegram(chatId, `⏳ Отправляю запрос на GitHub...`);
       
       try {
         const res = await fetch(`https://api.github.com/repos/chaknoris5000-glitch/chat-bot-tilda/actions/workflows/create-client.yml/dispatches`, {
           method: 'POST',
-          headers: {
-            'Authorization': `token ${process.env.MY_GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            ref: 'main',
-            inputs: {
-              client_id: cid,
-              business_name: bname,
-              site_url: site,
-              timezone: tz,
-              manager_chat_id: chatId.toString()
-            }
-          })
+          headers: { 'Authorization': `token ${process.env.MY_GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ref: 'main', inputs: { client_id: cid, business_name: bname, site_url: site, timezone: tz, manager_chat_id: chatId.toString() } })
         });
-        if (res.ok) {
-          await sendTelegram(chatId, `🚀 Задача запущена на серверах GitHub! Проверь папку "Действия" (Actions) на Гитхабе через пару минут.`);
-        } else {
-          const err = await res.text();
-          await sendTelegram(chatId, `❌ Ошибка GitHub: ${err}`);
-        }
-      } catch (e) {
-        await sendTelegram(chatId, `❌ Ошибка связи с GitHub: ${e.message}`);
-      }
+        if (res.ok) await sendTelegram(chatId, `🚀 Задача запущена на серверах GitHub! Проверь папку "Действия" (Actions).`);
+        else await sendTelegram(chatId, `❌ Ошибка GitHub: ${await res.text()}`);
+      } catch (e) { await sendTelegram(chatId, `❌ Ошибка связи: ${e.message}`); }
       return;
     }
 
+    // --- ОСТАЛЬНЫЕ КОМАНДЫ ---
     if (isManager && text === '/leads') {
       const leads = (await fetchLeads()).slice(0, 10);
       if (leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
@@ -1046,14 +1048,14 @@ app.post('/telegram-webhook', async (req, res) => {
       return;
     }
 
-    let session = await getSessionByTelegram(chatId);
-    if (!session) {
+    let chatSession = await getSessionByTelegram(chatId);
+    if (!chatSession) {
       const newSid = 'tg_' + chatId;
       await getOrCreateSession(newSid);
       await updateSession(newSid, { telegram_chat_id: chatId });
-      session = await getSessionByTelegram(chatId);
+      chatSession = await getSessionByTelegram(chatId);
     }
-    if (!session) session = { session_id: 'tg_' + chatId, history: [] };
+    if (!chatSession) chatSession = { session_id: 'tg_' + chatId, history: [] };
 
     if (!isManager) {
       const client = await getClient(CLIENT_ID);
@@ -1063,10 +1065,10 @@ app.post('/telegram-webhook', async (req, res) => {
       }
     }
 
-    const history = session.history || [];
-    const reply = await askAI(text, history, session.session_id);
+    const history = chatSession.history || [];
+    const reply = await askAI(text, history, chatSession.session_id);
     const newHistory = [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }];
-    await updateSession(session.session_id, { history: newHistory.slice(-20) });
+    await updateSession(chatSession.session_id, { history: newHistory.slice(-20) });
     await sendTelegram(chatId, reply);
   } catch (error) {
     console.log('Telegram error:', error);
