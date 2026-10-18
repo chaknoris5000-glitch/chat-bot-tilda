@@ -35,7 +35,7 @@ jobs:
 
       - name: Run Creation Script
         env:
-          GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+          MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           SUPABASE_TOKEN: ${{ secrets.SUPABASE_TOKEN }}
         run: |
