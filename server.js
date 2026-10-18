@@ -850,53 +850,58 @@ app.post('/telegram-webhook', async (req, res) => {
       return;
     }
 
-    // --- ПОШАГОВОЕ СОЗДАНИЕ КЛИЕНТА ---
-    let session = await getSessionByTelegram(chatId);
-    const sessionState = session && session.history && session.history[0] ? session.history[0] : {};
-
+      // --- ПОШАГОВОЕ СОЗДАНИЕ КЛИЕНТА ---
     if (isManager && text === '/newclient') {
+      newClientStates[chatId] = { step: 'waiting_for_id' };
       await sendTelegram(chatId, 'Шаг 1 из 4. Напиши ID клиента (латиницей, без пробелов, например: salon1):');
-      await updateSession('tg_' + chatId, { history: [{ role: 'system', content: 'waiting_for_id' }] });
       return;
     }
 
-    if (sessionState.content === 'waiting_for_id') {
-      await sendTelegram(chatId, `Шаг 2 из 4. Напиши название бизнеса (например: Салон Красоты):`);
-      await updateSession('tg_' + chatId, { history: [{ role: 'system', content: 'waiting_for_name', client_id: text }] });
-      return;
-    }
-
-    if (sessionState.content === 'waiting_for_name') {
-      await sendTelegram(chatId, `Шаг 3 из 4. Напиши ссылку на сайт (например: https://salon.tilda.ws):`);
-      await updateSession('tg_' + chatId, { history: [{ role: 'system', content: 'waiting_for_url', client_id: sessionState.client_id, business_name: text }] });
-      return;
-    }
-
-    if (sessionState.content === 'waiting_for_url') {
-      await sendTelegram(chatId, `Шаг 4 из 4. Напиши часовой пояс (например: Europe/Moscow):`);
-      await updateSession('tg_' + chatId, { history: [{ role: 'system', content: 'waiting_for_tz', client_id: sessionState.client_id, business_name: sessionState.business_name, site_url: text }] });
-      return;
-    }
-
-    if (sessionState.content === 'waiting_for_tz') {
-      const cid = sessionState.client_id;
-      const bname = sessionState.business_name;
-      const site = sessionState.site_url;
-      const tz = text || 'Europe/Moscow';
+    if (isManager && newClientStates[chatId]) {
+      const state = newClientStates[chatId];
       
-      await updateSession('tg_' + chatId, { history: [] });
-      await sendTelegram(chatId, `⏳ Отправляю запрос на GitHub...`);
-      
-      try {
-        const res = await fetch(`https://api.github.com/repos/chaknoris5000-glitch/chat-bot-tilda/actions/workflows/create-client.yml/dispatches`, {
-          method: 'POST',
-          headers: { 'Authorization': `token ${process.env.MY_GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ref: 'main', inputs: { client_id: cid, business_name: bname, site_url: site, timezone: tz, manager_chat_id: chatId.toString() } })
-        });
-        if (res.ok) await sendTelegram(chatId, `🚀 Задача запущена на серверах GitHub! Проверь папку "Действия" (Actions).`);
-        else await sendTelegram(chatId, `❌ Ошибка GitHub: ${await res.text()}`);
-      } catch (e) { await sendTelegram(chatId, `❌ Ошибка связи: ${e.message}`); }
-      return;
+      if (state.step === 'waiting_for_id') {
+        state.client_id = text;
+        state.step = 'waiting_for_name';
+        await sendTelegram(chatId, `Шаг 2 из 4. Напиши название бизнеса (например: Салон Красоты):`);
+        return;
+      }
+
+      if (state.step === 'waiting_for_name') {
+        state.business_name = text;
+        state.step = 'waiting_for_url';
+        await sendTelegram(chatId, `Шаг 3 из 4. Напиши ссылку на сайт (например: https://salon.tilda.ws):`);
+        return;
+      }
+
+      if (state.step === 'waiting_for_url') {
+        state.site_url = text;
+        state.step = 'waiting_for_tz';
+        await sendTelegram(chatId, `Шаг 4 из 4. Напиши часовой пояс (например: Europe/Moscow):`);
+        return;
+      }
+
+      if (state.step === 'waiting_for_tz') {
+        const tz = text || 'Europe/Moscow';
+        const cid = state.client_id;
+        const bname = state.business_name;
+        const site = state.site_url;
+        
+        delete newClientStates[chatId]; // Очищаем состояние
+        
+        await sendTelegram(chatId, `⏳ Отправляю запрос на GitHub...`);
+        
+        try {
+          const res = await fetch(`https://api.github.com/repos/chaknoris5000-glitch/chat-bot-tilda/actions/workflows/create-client.yml/dispatches`, {
+            method: 'POST',
+            headers: { 'Authorization': `token ${process.env.MY_GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ref: 'main', inputs: { client_id: cid, business_name: bname, site_url: site, timezone: tz, manager_chat_id: chatId.toString() } })
+          });
+          if (res.ok) await sendTelegram(chatId, `🚀 Задача запущена на серверах GitHub! Проверь папку "Действия" (Actions).`);
+          else await sendTelegram(chatId, `❌ Ошибка GitHub: ${await res.text()}`);
+        } catch (e) { await sendTelegram(chatId, `❌ Ошибка связи: ${e.message}`); }
+        return;
+      }
     }
 
     // --- ОСТАЛЬНЫЕ КОМАНДЫ ---
