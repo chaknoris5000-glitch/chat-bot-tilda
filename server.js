@@ -48,7 +48,8 @@ const TARIFFS = {
 };
 
 const processedUpdates = new Set();
-const newClientStates = {};
+const newClientStates = {}; // Память для пошагового создания
+
 // ========== КЛИЕНТЫ И ОПЛАТА ==========
 
 async function getClient(clientId) {
@@ -112,6 +113,17 @@ async function createYookassaPayment(chatId, tariffKey, period = 'month') {
         capture: true,
         confirmation: { type: 'redirect', return_url: YOOKASSA_RETURN_URL },
         description: `AI-Администратор: ${desc}`,
+        receipt: {
+          customer: { email: 'chaknoris5000@gmail.com' },
+          items: [{
+            description: `Подписка ${tariff.name}`,
+            quantity: '1.00',
+            amount: { value: amount.toFixed(2), currency: 'RUB' },
+            vat_code: 1,
+            payment_mode: 'full_payment',
+            payment_subject: 'service'
+          }]
+        },
         metadata: { chat_id: chatId.toString(), tariff: tariffKey, period: period }
       })
     });
