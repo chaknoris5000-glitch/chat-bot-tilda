@@ -48,7 +48,6 @@ const TARIFFS = {
 };
 
 const processedUpdates = new Set();
-const newClientStates = {}; // Память для пошагового создания
 
 // ========== КЛИЕНТЫ И ОПЛАТА ==========
 
