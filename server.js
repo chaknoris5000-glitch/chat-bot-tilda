@@ -48,6 +48,7 @@ const TARIFFS = {
 };
 
 const processedUpdates = new Set();
+const newClientStates = {}; // Память для пошагового создания
 
 // ========== КЛИЕНТЫ И ОПЛАТА ==========
 
@@ -850,7 +851,7 @@ app.post('/telegram-webhook', async (req, res) => {
       return;
     }
 
-      // --- ПОШАГОВОЕ СОЗДАНИЕ КЛИЕНТА ---
+    // --- ПОШАГОВОЕ СОЗДАНИЕ КЛИЕНТА ---
     if (isManager && text === '/newclient') {
       newClientStates[chatId] = { step: 'waiting_for_id' };
       await sendTelegram(chatId, 'Шаг 1 из 4. Напиши ID клиента (латиницей, без пробелов, например: salon1):');
