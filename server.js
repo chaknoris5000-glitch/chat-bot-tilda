@@ -849,23 +849,49 @@ app.post('/telegram-webhook', async (req, res) => {
       await sendTelegram(chatId, startText, startKeyboard);
       return;
     }
+
     if (isManager && text.startsWith('/newclient ')) {
       const parts = text.match(/"([^"]+)"|(\S+)/g).map(s => s.replace(/"/g, ''));
-      parts.shift(); // убираем саму команду
+      parts.shift(); 
       if (parts.length < 3) {
         await sendTelegram(chatId, 'Формат:\n/newclient id "Название" https://сайт.com');
         return;
       }
       const cid = parts[0], bname = parts[1], site = parts[2], tz = parts[3] || 'Europe/Moscow';
       
-      await sendTelegram(chatId, `⏳ Создаю клиента "${bname}"...`);
-      const { exec } = require('child_process');
-      exec(`node create-client.js ${cid} "${bname}" ${site} ${tz} ${chatId}`, (error, stdout) => {
-        if (error) return sendTelegram(chatId, `❌ Ошибка: ${error.message}`);
-        sendTelegram(chatId, `✅ Готово!\n${stdout.slice(-500)}`);
-      });
+      await sendTelegram(chatId, `⏳ Отправляю запрос на GitHub (создаю клиента)...`);
+      
+      try {
+        const res = await fetch(`https://api.github.com/repos/chaknoris5000-glitch/chat-bot-tilda/actions/workflows/create-client.yml/dispatches`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `token ${process.env.MY_GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ref: 'main',
+            inputs: {
+              client_id: cid,
+              business_name: bname,
+              site_url: site,
+              timezone: tz,
+              manager_chat_id: chatId.toString()
+            }
+          })
+        });
+        if (res.ok) {
+          await sendTelegram(chatId, `🚀 Задача запущена на серверах GitHub! Проверь папку "Действия" (Actions) на Гитхабе через пару минут.`);
+        } else {
+          const err = await res.text();
+          await sendTelegram(chatId, `❌ Ошибка GitHub: ${err}`);
+        }
+      } catch (e) {
+        await sendTelegram(chatId, `❌ Ошибка связи с GitHub: ${e.message}`);
+      }
       return;
     }
+
     if (isManager && text === '/leads') {
       const leads = (await fetchLeads()).slice(0, 10);
       if (leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
