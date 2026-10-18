@@ -1261,7 +1261,13 @@ cron.schedule('0 7 1 * *', async () => {
     await sendTelegramDoc(MANAGER_CHAT_ID, buffer, `leads_month_${prevMonthStart.toISOString().slice(0,7)}.xlsx`, `📥 Заявки за ${monthLabel} (${total} шт.)`);
   } catch (e) { console.log('cron month error:', e.message); }
 });
-
+// Автоматическая привязка вебхука при старте
+if (TELEGRAM_TOKEN && BASE_URL) {
+  fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/setWebhook?url=${BASE_URL}/telegram-webhook`)
+    .then(res => res.json())
+    .then(data => console.log('Webhook set:', data))
+    .catch(e => console.log('Webhook error:', e.message));
+}
 app.listen(PORT, () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
 });
