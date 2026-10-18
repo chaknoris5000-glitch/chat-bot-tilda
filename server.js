@@ -8,7 +8,63 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '25mb' }));
+        // --- ПОШАГОВОЕ СОЗДАНИЕ КЛИЕНТА ---
+    if (isManager && text === '/newclient') {
+      newClientStates[chatId] = { step: 'waiting_for_id' };
+      await sendTelegram(chatId, 'Шаг 1 из 4. Напиши ID клиента (латиницей, без пробелов, например: salon1):');
+      return;
+    }
 
+    if (isManager && newClientStates[chatId]) {
+      const state = newClientStates[chatId];
+      
+      if (state.step === 'waiting_for_id') {
+        state.client_id = text;
+        state.step = 'waiting_for_name';
+        await sendTelegram(chatId, `Шаг 2 из 4. Напиши название бизнеса (например: Салон Красоты):`);
+        return;
+      }
+
+      if (state.step === 'waiting_for_name') {
+        state.business_name = text;
+        state.step = 'waiting_for_url';
+        await sendTelegram(chatId, `Шаг 3 из 4. Напиши ссылку на сайт (например: https://salon.tilda.ws):`);
+        return;
+      }
+
+      if (state.step === 'waiting_for_url') {
+        state.site_url = text;
+        state.step = 'waiting_for_tz';
+        await sendTelegram(chatId, `Шаг 4 из 4. Напиши часовой пояс (например: Europe/Moscow):`);
+        return;
+      }
+
+      if (state.step === 'waiting_for_tz') {
+        const tz = text || 'Europe/Moscow';
+        const cid = state.client_id;
+        const bname = state.business_name;
+        const site = state.site_url;
+        
+        delete newClientStates[chatId]; 
+        
+        await sendTelegram(chatId, `⏳ Отправляю запрос на GitHub (создаю клиента)...`);
+        
+        try {
+          const res = await fetch(`https://api.github.com/repos/chaknoris5000-glitch/chat-bot-tilda/actions/workflows/create-client.yml/dispatches`, {
+            method: 'POST',
+            headers: { 'Authorization': `token ${process.env.MY_GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ref: 'main', inputs: { client_id: cid, business_name: bname, site_url: site, timezone: tz, manager_chat_id: chatId.toString() } })
+          });
+          
+          if (res.ok) {
+            await sendTelegram(chatId, `🚀 Клиент "${bname}" создается на серверах GitHub!\n\n⚠️ Осталось 2 ручных шага:\n1. Создай бота в BotFather и скопируй токен.\n2. Зайди в новый сервер на Render и вставь этот токен + ключ OpenRouter в переменные.\n\nВебхук и база настроятся сами.`);
+          } else {
+            await sendTelegram(chatId, `❌ Ошибка GitHub: ${await res.text()}`);
+          }
+        } catch (e) { await sendTelegram(chatId, `❌ Ошибка связи: ${e.message}`); }
+        return;
+      }
+    }
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || '';
 const MANAGER_CHAT_ID = process.env.MANAGER_CHAT_ID || '';
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
