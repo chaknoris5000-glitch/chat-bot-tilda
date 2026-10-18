@@ -1217,6 +1217,46 @@ cron.schedule('0 7 1 * *', async () => {
   } catch (e) { console.log('cron month error:', e.message); }
 });
 
+// ========== НАПОМИНАНИЯ ОБ ОПЛАТЕ ==========
+cron.schedule('0 10 * * *', async () => { // Каждый день в 10:00
+  try {
+    // Получаем всех клиентов из базы
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/clients?select=*`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    const clients = await r.json();
+    if (!Array.isArray(clients)) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Обнуляем время для точного сравнения дней
+
+    for (const client of clients) {
+      if (!client.paid_until) continue;
+
+      const paidDate = new Date(client.paid_until);
+      paidDate.setHours(0, 0, 0, 0);
+
+      // Вычисляем разницу в днях
+      const diffTime = paidDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      // Если оплата заканчивается завтра (diffDays === 1)
+      if (diffDays === 1) {
+        const chatId = client.chat_id || MANAGER_CHAT_ID;
+        if (chatId) {
+          await sendTelegram(chatId, 
+            `⚠️ <b>Напоминание об оплате</b>\n\n` +
+            `У клиента «${client.business_name || client.client_id}» завтра заканчивается подписка.\n` +
+            `Не забудьте продлить оплату, чтобы бот не перестал работать!`
+          );
+        }
+      }
+    }
+  } catch (e) {
+    console.log('Ошибка при проверке напоминаний:', e.message);
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
 });
