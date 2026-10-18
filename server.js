@@ -48,7 +48,7 @@ const TARIFFS = {
 };
 
 const processedUpdates = new Set();
-
+const newClientStates = {};
 // ========== КЛИЕНТЫ И ОПЛАТА ==========
 
 async function getClient(clientId) {
