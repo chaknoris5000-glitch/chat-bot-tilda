@@ -18,17 +18,33 @@ const FIRECRAWL_KEY = process.env.FIRECRAWL_KEY || '';
 const SITE_TO_CRAWL = process.env.SITE_TO_CRAWL || 'https://send-empty-creedite.tilda.ws';
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'AI-Администратор';
 const CLIENT_ID = process.env.CLIENT_ID || 'tilda';
-const PRICE_PER_LEAD = 25;
-const BASE_URL = 'https://send-empty-creedite.tilda.ws';
+const PRICE_PER_LEAD = Number(process.env.PRICE_PER_LEAD) || 25;
+const BASE_URL = process.env.BASE_URL || 'https://send-empty-creedite.tilda.ws';
+const REPORT_HOUR = Number(process.env.REPORT_HOUR) || 20;
+const AI_MODEL_CHAT = process.env.AI_MODEL_CHAT || 'deepseek/deepseek-chat';
+const AI_MODEL_EMBED = process.env.AI_MODEL_EMBED || 'openai/text-embedding-3-small';
+const AI_MODEL_VOICE = process.env.AI_MODEL_VOICE || 'openai/whisper-large-v3';
 
 const YOOKASSA_SHOP_ID = process.env.YOOKASSA_SHOP_ID || '';
 const YOOKASSA_SECRET_KEY = process.env.YOOKASSA_SECRET_KEY || '';
 const YOOKASSA_RETURN_URL = process.env.YOOKASSA_RETURN_URL || 'https://t.me/vadim602_bot';
 
 const TARIFFS = {
-  'start': { name: 'Старт', amountMonth: 1990, amountYear: 14900 },
-  'business': { name: 'Бизнес', amountMonth: 2490, amountYear: 19900 },
-  'unlimited': { name: 'Безлимит', amountMonth: 4990, amountYear: 39900 }
+  'start': { 
+    name: 'Старт', 
+    amountMonth: Number(process.env.TARIFF_START_MONTH) || 1990, 
+    amountYear: Number(process.env.TARIFF_START_YEAR) || 14900 
+  },
+  'business': { 
+    name: 'Бизнес', 
+    amountMonth: Number(process.env.TARIFF_BUSINESS_MONTH) || 2490, 
+    amountYear: Number(process.env.TARIFF_BUSINESS_YEAR) || 19900 
+  },
+  'unlimited': { 
+    name: 'Безлимит', 
+    amountMonth: Number(process.env.TARIFF_UNLIMITED_MONTH) || 4990, 
+    amountYear: Number(process.env.TARIFF_UNLIMITED_YEAR) || 39900 
+  }
 };
 
 const processedUpdates = new Set();
@@ -118,7 +134,7 @@ async function getEmbedding(text) {
   const r = await fetch('https://openrouter.ai/api/v1/embeddings', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${OPENROUTER_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'openai/text-embedding-3-small', input: text })
+    body: JSON.stringify({ model: AI_MODEL_EMBED, input: text })
   });
   const data = await r.json();
   if (!r.ok) throw new Error('embedding error');
@@ -132,7 +148,7 @@ async function transcribeVoice(fileUrl) {
     const buf = await fileResp.arrayBuffer();
     const fd = new FormData();
     fd.append('file', new Blob([buf], { type: 'audio/ogg' }), 'voice.ogg');
-    fd.append('model', 'openai/whisper-large-v3');
+    fd.append('model', AI_MODEL_VOICE);
     const r = await fetch('https://openrouter.ai/api/v1/audio/transcriptions', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${OPENROUTER_KEY}` },
@@ -392,10 +408,10 @@ async function askAI(message, history, sessionId) {
 - Отключить можно в любой момент (без штрафов).
 
 ТАРИФЫ И ЦЕНЫ (ЗНАЙ ИХ НАИЗУСТЬ):
-1. Тариф «Старт» — 1 990 ₽/мес (до 100 заявок, свыше — 25 ₽/заявка). При годовой оплате — 14 900 ₽/год.
-2. Тариф «Бизнес» — 2 490 ₽/мес (до 300 заявок, свыше — 25 ₽/заявка). При годовой оплате — 19 900 ₽/год.
-3. Тариф «Безлимит» — 4 990 ₽/мес (без ограничений). При годовой оплате — 39 900 ₽/год.
-4. Тариф «За результат» — 25 ₽ за заявку (платит в конце месяца).
+1. Тариф «Старт» — ${TARIFFS.start.amountMonth} ₽/мес (до 100 заявок, свыше — ${PRICE_PER_LEAD} ₽/заявка). При годовой оплате — ${TARIFFS.start.amountYear} ₽/год.
+2. Тариф «Бизнес» — ${TARIFFS.business.amountMonth} ₽/мес (до 300 заявок, свыше — ${PRICE_PER_LEAD} ₽/заявка). При годовой оплате — ${TARIFFS.business.amountYear} ₽/год.
+3. Тариф «Безлимит» — ${TARIFFS.unlimited.amountMonth} ₽/мес (без ограничений). При годовой оплате — ${TARIFFS.unlimited.amountYear} ₽/год.
+4. Тариф «За результат» — ${PRICE_PER_LEAD} ₽ за заявку (платит в конце месяца).
 
 ПРАВИЛА ПРОДАЖ (ВОРОНКА):
 1. Поздоровайся и спроси, чем занимается бизнес.
@@ -421,13 +437,12 @@ ${context || 'Информация временно недоступна.'}`;
   const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${OPENROUTER_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'deepseek/deepseek-chat', messages, temperature: 0.6, max_tokens: 400 })
+    body: JSON.stringify({ model: AI_MODEL_CHAT, messages, temperature: 0.6, max_tokens: 400 })
   });
   const data = await r.json();
   if (!r.ok) throw new Error('OpenRouter error');
   let reply = data.choices?.[0]?.message?.content || 'Нет ответа';
 
-  // ПРИНУДИТЕЛЬНЫЙ СКРОЛЛ И ССЫЛКИ НА БЛОКИ
   const lowerMsg = message.toLowerCase();
   
   if (lowerMsg.includes('тариф') || lowerMsg.includes('цен') || lowerMsg.includes('стоимост') || lowerMsg.includes('подробн')) {
@@ -455,13 +470,11 @@ ${context || 'Информация временно недоступна.'}`;
     if (!reply.includes(BASE_URL)) reply += `\n\nПочему стоит выбрать нас: ${BASE_URL}/?go=why-me`;
   }
 
-  // СНАЧАЛА ПРОВЕРЯЕМ ВЫГОДЫ (чтобы не улетело в прибыль)
   if (lowerMsg.includes('выгод')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:benefits]';
     if (!reply.includes(BASE_URL)) reply += `\n\nВыгоды: ${BASE_URL}/?go=benefits`;
   }
 
-  // ПОТОМ ПРИБЫЛЬ
   if (lowerMsg.includes('прибыл') || lowerMsg.includes('заработ')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:profit]';
     if (!reply.includes(BASE_URL)) reply += `\n\nО прибыли: ${BASE_URL}/?go=profit`;
@@ -678,10 +691,10 @@ app.post('/telegram-webhook', async (req, res) => {
 
       if (data === 'menu_bill') {
         const billText = `<b>Наши тарифы:</b>\n\n` +
-          `1. <b>Старт</b> — 1 990 ₽/мес (до 100 заявок, далее 25 ₽/заявка).\n` +
-          `2. <b>Бизнес</b> — 2 490 ₽/мес (до 300 заявок, далее 25 ₽/заявка).\n` +
-          `3. <b>Безлимит</b> — 4 990 ₽/мес (без ограничений).\n` +
-          `4. <b>За результат</b> — 25 ₽ за заявку.\n\n` +
+          `1. <b>Старт</b> — ${TARIFFS.start.amountMonth} ₽/мес (до 100 заявок, далее ${PRICE_PER_LEAD} ₽/заявка).\n` +
+          `2. <b>Бизнес</b> — ${TARIFFS.business.amountMonth} ₽/мес (до 300 заявок, далее ${PRICE_PER_LEAD} ₽/заявка).\n` +
+          `3. <b>Безлимит</b> — ${TARIFFS.unlimited.amountMonth} ₽/мес (без ограничений).\n` +
+          `4. <b>За результат</b> — ${PRICE_PER_LEAD} ₽ за заявку.\n\n` +
           `<i>При оплате за год скидка! Первая неделя бесплатно.</i>`;
         
         await answerCallback(cb.id, 'Загружаю тарифы...');
@@ -1096,7 +1109,7 @@ cron.schedule('*/15 * * * *', async () => {
       if (!isPaid(client)) continue;
       const tz = client.timezone || 'Europe/Moscow';
       const local = getLocalTime(tz);
-      if (local.hour === 20 && local.minute >= 0 && local.minute < 15) {
+      if (local.hour === REPORT_HOUR && local.minute >= 0 && local.minute < 15) {
         await sendDailyReportForClient(client);
       }
     }
