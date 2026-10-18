@@ -850,13 +850,19 @@ app.post('/telegram-webhook', async (req, res) => {
       return;
     }
 
-    if (isManager && text.startsWith('/newclient ')) {
-      const parts = text.match(/"([^"]+)"|(\S+)/g).map(s => s.replace(/"/g, ''));
-      parts.shift(); 
-      if (parts.length < 3) {
-        await sendTelegram(chatId, 'Формат:\n/newclient id "Название" https://сайт.com');
-        return;
-      }
+        if (isManager && text === '/newclient') {
+      await sendTelegram(chatId, 'Шаг 1 из 4. Введи ID клиента (латиницей, без пробелов, например: salon1):');
+      // Устанавливаем состояние ожидания
+      await fetch(`${SUPABASE_URL}/rest/v1/clients?id=eq.${chatId}`, {
+        method: 'DELETE', headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      }); // Чистим старое, если было
+      await fetch(`${SUPABASE_URL}/rest/v1/clients`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: 'temp_new_client', business_name: 'Ожидание ввода', chat_id: chatId, timezone: 'step_1' })
+      });
+      return;
+    }
       const cid = parts[0], bname = parts[1], site = parts[2], tz = parts[3] || 'Europe/Moscow';
       
       await sendTelegram(chatId, `⏳ Отправляю запрос на GitHub (создаю клиента)...`);
