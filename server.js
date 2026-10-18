@@ -849,7 +849,23 @@ app.post('/telegram-webhook', async (req, res) => {
       await sendTelegram(chatId, startText, startKeyboard);
       return;
     }
-
+    if (isManager && text.startsWith('/newclient ')) {
+      const parts = text.match(/"([^"]+)"|(\S+)/g).map(s => s.replace(/"/g, ''));
+      parts.shift(); // убираем саму команду
+      if (parts.length < 3) {
+        await sendTelegram(chatId, 'Формат:\n/newclient id "Название" https://сайт.com');
+        return;
+      }
+      const cid = parts[0], bname = parts[1], site = parts[2], tz = parts[3] || 'Europe/Moscow';
+      
+      await sendTelegram(chatId, `⏳ Создаю клиента "${bname}"...`);
+      const { exec } = require('child_process');
+      exec(`node create-client.js ${cid} "${bname}" ${site} ${tz} ${chatId}`, (error, stdout) => {
+        if (error) return sendTelegram(chatId, `❌ Ошибка: ${error.message}`);
+        sendTelegram(chatId, `✅ Готово!\n${stdout.slice(-500)}`);
+      });
+      return;
+    }
     if (isManager && text === '/leads') {
       const leads = (await fetchLeads()).slice(0, 10);
       if (leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
