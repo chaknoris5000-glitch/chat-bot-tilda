@@ -44,8 +44,13 @@
         <div id="auth-container">
             <h2>Вход в CRM</h2>
             <p>Пожалуйста, авторизуйтесь через Telegram.</p>
+            <!-- Этот блок будет виден только в браузере -->
             <div id="telegram-login-btn">
                 <script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="vadim602_bot" data-size="large" data-onauth="onTelegramAuth(user)" data-request-access="write"></script>
+            </div>
+            <!-- Этот блок будет виден только в Mini App -->
+            <div id="loading-text" style="display:none; margin-top: 20px; font-size: 16px; color: #777;">
+                Загрузка ваших данных...
             </div>
         </div>
 
@@ -93,24 +98,13 @@
     </div>
 
     <script>
-        // 1. ПРОВЕРКА НА TELEGRAM MINI APP (срабатывает при открытии из бота)
-        if (window.Telegram && window.Telegram.WebApp) {
-            const tg = window.Telegram.WebApp;
-            tg.expand();
-            const user = tg.initDataUnsafe?.user;
-            
-            if (user) {
-                // Если мы внутри Mini App, сразу перекидываем с ID
-                window.location.href = `/crm?auth_success=1&telegram_id=${user.id}`;
-            }
-        }
-
         const SUPABASE_URL = 'https://ozutjnwextahorvzdbpl.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96dXRqbndleHRhaG9ydnpkYnBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MTQ3MzUsImV4cCI6MjEwNzE5MDczNX0.8L3adhQ9gUR5iSly1afSQN6HeEhkj9QQ4NtUyZUQx28';
         const ADMIN_TELEGRAM_ID = 5818548555; 
 
         let allLeads = []; 
 
+        // Функция для входа через виджет (браузер)
         function onTelegramAuth(user) {
             fetch('/auth/telegram', {
                 method: 'POST',
@@ -127,25 +121,36 @@
             });
         }
 
+        // Проверяем, как мы зашли (через Mini App или через браузер)
         function checkAuth() {
             const urlParams = new URLSearchParams(window.location.search);
+            
+            // 1. Если это Telegram Mini App
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user) {
+                const user = window.Telegram.WebApp.initDataUnsafe.user;
+                // Прячем кнопку, показываем загрузку
+                document.getElementById('telegram-login-btn').style.display = 'none';
+                document.getElementById('loading-text').style.display = 'block';
+                // Запускаем вход
+                window.location.href = `/crm?auth_success=1&telegram_id=${user.id}`;
+                return;
+            }
+
+            // 2. Если мы вернулись после успешного входа (через браузер)
             if (urlParams.get('auth_success') === '1') {
                 const tgId = Number(urlParams.get('telegram_id'));
+                document.getElementById('auth-container').style.display = 'none';
+                document.getElementById('crm-container').style.display = 'block';
                 
                 if (tgId === ADMIN_TELEGRAM_ID) {
-                    document.getElementById('auth-container').style.display = 'none';
-                    document.getElementById('crm-container').style.display = 'block';
                     document.getElementById('crm-container').querySelector('h1').innerText = 'Панель управления (Админ)';
                     loadLeads(ADMIN_TELEGRAM_ID);
-                    window.history.replaceState({}, document.title, "/crm");
                 } else {
-                    document.getElementById('auth-container').style.display = 'none';
-                    document.getElementById('crm-container').style.display = 'block';
                     document.getElementById('crm-container').querySelector('h1').innerText = 'Мои заявки';
                     document.querySelector('.btn-create').style.display = 'none'; 
                     loadLeads(tgId);
-                    window.history.replaceState({}, document.title, "/crm");
                 }
+                window.history.replaceState({}, document.title, "/crm");
             }
         }
 
