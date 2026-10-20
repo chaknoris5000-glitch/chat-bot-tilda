@@ -14,56 +14,69 @@
             --primary-light: #2F5B43;
             --border: #e2e8f0;
             --card-bg: var(--tg-theme-secondary-bg-color, #ffffff);
+            --success: #10b981;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 80px; }
         
-        /* --- Header --- */
+        /* Header */
         .header { padding: 24px 20px 16px; }
         .header h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
         .header p { font-size: 13px; color: var(--hint); margin-top: 4px; }
 
-        /* --- Content --- */
+        /* Content */
         .content { padding: 0 20px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.2s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- Client Profile Card --- */
-        .profile-card { background: var(--card-bg); border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 20px; border: 1px solid var(--border); }
+        /* Cards */
+        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 16px; border: 1px solid var(--border); }
+        .card-title { font-size: 12px; color: var(--hint); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+        
+        /* Profile Header */
+        .profile-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
         .avatar { width: 56px; height: 56px; border-radius: 50%; background: #e8f0ec; color: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; }
         .profile-info h2 { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
         .profile-info p { font-size: 13px; color: var(--hint); }
 
-        /* --- Stats Grid --- */
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-        .stat-card { background: var(--card-bg); border-radius: 16px; padding: 16px; text-align: center; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
-        .stat-card .num { font-size: 28px; font-weight: 800; color: var(--primary); }
-        .stat-card .lbl { font-size: 12px; color: var(--hint); margin-top: 4px; font-weight: 500; }
+        /* Quick Actions (Home) */
+        .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+        .action-btn { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 16px; text-align: center; cursor: pointer; transition: 0.2s; text-decoration: none; color: var(--text); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .action-btn:active { background: #f1f5f9; }
+        .action-btn svg { width: 28px; height: 28px; stroke: var(--primary-light); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .action-btn span { font-size: 13px; font-weight: 600; }
 
-        /* --- Status Block --- */
-        .status-card { background: var(--card-bg); border-radius: 16px; padding: 20px; border: 1px solid var(--border); margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        /* Business (CRM-lite) */
+        .lead-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .lead-item:last-child { border-bottom: none; }
+        .lead-info h4 { font-size: 15px; font-weight: 600; }
+        .lead-info p { font-size: 12px; color: var(--hint); }
+        .lead-badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+        .badge-new { background: #eff6ff; color: #1d4ed8; }
+        .badge-progress { background: #fffbeb; color: #b45309; }
+        
+        /* Account (Billing) */
         .status-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
         .status-row:last-child { margin-bottom: 0; }
         .status-label { color: var(--hint); }
         .status-value { font-weight: 600; }
         .badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; }
         .badge-active { background: #f0fdf4; color: #15803d; }
-        .badge-expired { background: #fef2f2; color: #b91c1c; }
 
-        /* --- Buttons --- */
-        .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
-        .btn-primary { background: var(--primary); color: white; margin-bottom: 12px; }
+        /* Buttons */
+        .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
+        .btn-primary { background: var(--primary); color: white; margin-bottom: 10px; }
         .btn-primary:active { background: var(--primary-light); }
         .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
 
-        /* --- Bottom Navigation --- */
+        /* Bottom Navigation */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--card-bg); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 20px 0; z-index: 100; }
         .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--hint); font-size: 10px; font-weight: 500; cursor: pointer; transition: 0.2s; }
         .nav-item.active { color: var(--primary-light); font-weight: 700; }
         .nav-item svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-        
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.2s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
+        #loading { text-align: center; margin-top: 50px; color: var(--hint); }
     </style>
 </head>
 <body>
@@ -72,13 +85,13 @@
         <p>Личный кабинет</p>
     </div>
 
-    <div id="loading" style="text-align:center; padding: 20px; color: var(--hint);">Загрузка данных...</div>
+    <div id="loading">Загрузка данных...</div>
 
     <div class="content" id="app-content" style="display: none;">
         
-        <!-- Вкладка: ГЛАВНАЯ -->
+        <!-- ================= ГЛАВНАЯ ================= -->
         <div id="tab-home" class="tab-content active">
-            <div class="profile-card">
+            <div class="profile-header">
                 <div class="avatar" id="user-avatar">?</div>
                 <div class="profile-info">
                     <h2 id="user-name">Пользователь</h2>
@@ -86,80 +99,97 @@
                 </div>
             </div>
 
-            <!-- Админ блок -->
-            <div id="admin-view" style="display: none;">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="num" id="admin-clients-total">0</div>
-                        <div class="lbl">Клиентов</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="num" id="admin-leads-total">0</div>
-                        <div class="lbl">Всего заявок</div>
-                    </div>
+            <!-- Админ на главной -->
+            <div id="admin-home" style="display: none;">
+                <div class="card">
+                    <div class="card-title">Статистика платформы</div>
+                    <div class="status-row"><span class="status-label">Всего клиентов</span><span class="status-value" id="admin-clients">0</span></div>
+                    <div class="status-row"><span class="status-label">Всего заявок</span><span class="status-value" id="admin-leads">0</span></div>
                 </div>
                 <button class="btn btn-primary" onclick="goToCRM()">Перейти в общую CRM</button>
             </div>
 
-            <!-- Клиент блок -->
-            <div id="client-view" style="display: none;">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="num" id="client-leads-total">0</div>
-                        <div class="lbl">Всего заявок</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="num" id="client-leads-month">0</div>
-                        <div class="lbl">За месяц</div>
+            <!-- Клиент на главной -->
+            <div id="client-home" style="display: none;">
+                <div class="card" style="background: linear-gradient(135deg, #2F5B43, #1e3a2f); color: white; border: none;">
+                    <div style="font-size: 13px; opacity: 0.8; margin-bottom: 8px;">Ваш тариф</div>
+                    <div style="font-size: 24px; font-weight: 800; margin-bottom: 16px;" id="home-tariff-name">—</div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; opacity: 0.9;">
+                        <span>Оплачен до</span>
+                        <span id="home-paid-until">—</span>
                     </div>
                 </div>
-                <button class="btn btn-primary" onclick="goToCRM()">Перейти в мою CRM</button>
+
+                <div class="actions-grid">
+                    <div class="action-btn" onclick="switchTab('business')">
+                        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        <span>Мой бизнес</span>
+                    </div>
+                    <div class="action-btn" onclick="switchTab('account')">
+                        <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                        <span>Аккаунт</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Вкладка: ТАРИФ -->
-        <div id="tab-tariff" class="tab-content">
-            <div class="status-card">
+        <!-- ================= МОЙ БИЗНЕС (CRM-lite) ================= -->
+        <div id="tab-business" class="tab-content">
+            <div class="card">
+                <div class="card-title">Последние заявки</div>
+                <div id="business-leads-list">
+                    <!-- Сюда падают заявки -->
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="goToCRM()" style="margin-top: 10px;">Открыть расширенную CRM</button>
+        </div>
+
+        <!-- ================= АККАУНТ (Биллинг) ================= -->
+        <div id="tab-account" class="tab-content">
+            <div class="card">
+                <div class="card-title">Подписка</div>
                 <div class="status-row">
-                    <span class="status-label">Ваш тариф</span>
-                    <span class="status-value" id="tariff-name">—</span>
+                    <span class="status-label">Тариф</span>
+                    <span class="status-value" id="acc-tariff-name">—</span>
                 </div>
                 <div class="status-row">
                     <span class="status-label">Статус</span>
-                    <span class="badge badge-active" id="tariff-status">Активна</span>
+                    <span class="badge badge-active" id="acc-status">Активна</span>
                 </div>
                 <div class="status-row">
                     <span class="status-label">Оплачено до</span>
-                    <span class="status-value" id="tariff-paid-until">—</span>
+                    <span class="status-value" id="acc-paid-until">—</span>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">Заявок за месяц</span>
+                    <span class="status-value" id="acc-leads-count">0</span>
                 </div>
             </div>
-            <button class="btn btn-primary" onclick="alert('Интеграция с ЮKassa появится здесь')">Продлить подписку</button>
-        </div>
 
-        <!-- Вкладка: НАСТРОЙКИ -->
-        <div id="tab-settings" class="tab-content">
-            <div class="status-card">
-                <div class="status-row"><span class="status-label">Язык</span><span class="status-value">Русский</span></div>
-                <div class="status-row"><span class="status-label">Версия</span><span class="status-value">1.0.0</span></div>
+            <button class="btn btn-primary" onclick="alert('Интеграция с ЮKassa')">Продлить подписку</button>
+            <button class="btn btn-outline" onclick="alert('Форма отмены')">Отменить подписку</button>
+            
+            <div class="card" style="margin-top: 16px;">
+                <div class="card-title">Поддержка</div>
+                <button class="btn btn-outline" style="margin-top: 0;" onclick="alert('Написать в поддержку')">Связаться с нами</button>
             </div>
-            <button class="btn btn-outline" onclick="alert('Связь с поддержкой')">Связаться с поддержкой</button>
         </div>
 
     </div>
 
-    <!-- Нижнее меню (Bottom Nav) -->
+    <!-- Нижнее меню -->
     <div class="bottom-nav" id="bottom-nav" style="display: none;">
         <div class="nav-item active" onclick="switchTab('home')">
             <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             Главная
         </div>
-        <div class="nav-item" onclick="switchTab('tariff')">
-            <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-            Тариф
+        <div class="nav-item" onclick="switchTab('business')">
+            <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            Мой бизнес
         </div>
-        <div class="nav-item" onclick="switchTab('settings')">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            Настройки
+        <div class="nav-item" onclick="switchTab('account')">
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Аккаунт
         </div>
     </div>
 
@@ -169,16 +199,17 @@
         const ADMIN_TELEGRAM_ID = 5818548555; 
         
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем на весь экран
+        tg.expand();
 
         function switchTab(tab) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             
             document.getElementById(`tab-${tab}`).classList.add('active');
-            if(tab === 'home') document.querySelectorAll('.nav-item')[0].classList.add('active');
-            if(tab === 'tariff') document.querySelectorAll('.nav-item')[1].classList.add('active');
-            if(tab === 'settings') document.querySelectorAll('.nav-item')[2].classList.add('active');
+            
+            const tabs = ['home', 'business', 'account'];
+            const index = tabs.indexOf(tab);
+            if(index !== -1) document.querySelectorAll('.nav-item')[index].classList.add('active');
         }
 
         async function init() {
@@ -193,49 +224,83 @@
             document.getElementById('user-avatar').innerText = user.first_name.charAt(0).toUpperCase();
             
             try {
-                const resLeads = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=id,client_id`, {
+                // Загружаем заявки
+                const resLeads = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`, {
                     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
                 });
                 const allLeads = await resLeads.json();
 
+                // Загружаем клиентов
                 const resClients = await fetch(`${SUPABASE_URL}/rest/v1/clients?select=*`, {
                     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
                 });
                 const allClients = await resClients.json();
 
                 if (user.id === ADMIN_TELEGRAM_ID) {
-                    document.getElementById('user-role').innerText = 'Администратор (Владелец)';
-                    document.getElementById('admin-view').style.display = 'block';
-                    document.getElementById('client-view').style.display = 'none';
+                    document.getElementById('user-role').innerText = 'Администратор платформы';
+                    document.getElementById('admin-home').style.display = 'block';
+                    document.getElementById('client-home').style.display = 'none';
                     
-                    document.getElementById('admin-clients-total').innerText = allClients.length;
-                    document.getElementById('admin-leads-total').innerText = allLeads.length;
+                    document.getElementById('admin-clients').innerText = allClients.length;
+                    document.getElementById('admin-leads').innerText = allLeads.length;
+                    
+                    // Для админа скрываем "Мой бизнес" и "Аккаунт" из нижнего меню, оставляем только главную
+                    document.querySelectorAll('.nav-item')[1].style.display = 'none';
+                    document.querySelectorAll('.nav-item')[2].style.display = 'none';
                 } else {
                     document.getElementById('user-role').innerText = 'Кабинет бизнеса';
-                    document.getElementById('admin-view').style.display = 'none';
-                    document.getElementById('client-view').style.display = 'block';
+                    document.getElementById('admin-home').style.display = 'none';
+                    document.getElementById('client-home').style.display = 'block';
 
                     const myClient = allClients.find(c => c.owner_telegram_id === user.id);
 
                     if (myClient) {
                         const paidUntil = new Date(myClient.paid_until);
                         const isActive = paidUntil > new Date();
+                        const dateStr = paidUntil.toLocaleDateString('ru-RU');
                         
-                        document.getElementById('tariff-name').innerText = myClient.business_name || 'Бизнес';
+                        // Главная
+                        document.getElementById('home-tariff-name').innerText = myClient.business_name || 'Бизнес';
+                        document.getElementById('home-paid-until').innerText = dateStr;
                         
-                        const statusBadge = document.getElementById('tariff-status');
-                        statusBadge.innerText = isActive ? 'Активна' : 'Истекла';
-                        statusBadge.className = `badge ${isActive ? 'badge-active' : 'badge-expired'}`;
+                        // Аккаунт
+                        document.getElementById('acc-tariff-name').innerText = myClient.business_name || 'Бизнес';
+                        document.getElementById('acc-paid-until').innerText = dateStr;
                         
-                        document.getElementById('tariff-paid-until').innerText = paidUntil.toLocaleDateString('ru-RU');
+                        const badge = document.getElementById('acc-status');
+                        badge.innerText = isActive ? 'Активна' : 'Истекла';
+                        badge.className = `badge ${isActive ? 'badge-active' : 'badge-expired'}`;
 
+                        // Заявки для бизнеса
                         const myLeads = allLeads.filter(l => l.client_id === myClient.client_id);
-                        document.getElementById('client-leads-total').innerText = myLeads.length;
-                        document.getElementById('client-leads-month').innerText = myLeads.length;
+                        document.getElementById('acc-leads-count').innerText = myLeads.length;
+
+                        // Рендерим последние 3 заявки в "Мой бизнес"
+                        const list = document.getElementById('business-leads-list');
+                        list.innerHTML = '';
+                        const latestLeads = myLeads.slice(0, 3);
+                        
+                        if(latestLeads.length === 0) {
+                            list.innerHTML = '<p style="font-size:13px; color:var(--hint);">Заявок пока нет</p>';
+                        } else {
+                            latestLeads.forEach(lead => {
+                                const el = document.createElement('div');
+                                el.className = 'lead-item';
+                                el.innerHTML = `
+                                    <div class="lead-info">
+                                        <h4>${lead.name || 'Без имени'}</h4>
+                                        <p>${lead.phone || '—'}</p>
+                                    </div>
+                                    <div class="lead-badge ${lead.status === 'new' ? 'badge-new' : 'badge-progress'}">
+                                        ${lead.status === 'new' ? 'Новая' : 'В работе'}
+                                    </div>
+                                `;
+                                list.appendChild(el);
+                            });
+                        }
                     } else {
-                        document.getElementById('tariff-name').innerText = 'Нет активной подписки';
-                        document.getElementById('tariff-status').innerText = 'Нет доступа';
-                        document.getElementById('tariff-status').className = 'badge badge-expired';
+                        document.getElementById('home-tariff-name').innerText = 'Нет тарифа';
+                        document.getElementById('home-paid-until').innerText = '—';
                     }
                 }
 
