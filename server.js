@@ -1384,8 +1384,8 @@ app.post('/api/support', async (req, res) => {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
-app.listen(PORT, () => {
-  // 1. Создание платежа ЮKassa
+
+ // 1. Создание платежа ЮKassa
 app.post('/api/create-payment', async (req, res) => {
   try {
     const { chat_id, tariff, period } = req.body;
@@ -1413,4 +1413,9 @@ app.post('/api/connect-result', async (req, res) => {
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+// А ВОТ ТЕПЕРЬ ДОЛЖЕН ИДТИ ЗАПУСК СЕРВЕРА
+app.listen(PORT, () => {
+  console.log(`Сервер запущен: http://localhost:${PORT}`);
 });
