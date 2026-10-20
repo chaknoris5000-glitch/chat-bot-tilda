@@ -475,27 +475,53 @@
         function openSupportModal() { document.getElementById('supportModal').style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-        function payPlan(period) {
+        async function payPlan(period) {
             const t = TARIFFS[currentPlanKey];
             const amount = period === 'year' ? t.year : t.month;
+            const user = tg.initDataUnsafe?.user;
             
-            // Имитация перехода к оплате в ЮKassa
-            alert(`Переход к оплате ЮKassa: ${amount} ₽`);
-            
-            // В реальности здесь должен быть запрос на сервер для создания платежа, 
-            // получение ссылки и window.location.href = payment_url;
-            
-            closeModal('planModal');
+            try {
+                const res = await fetch('/api/create-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        chat_id: user.id, 
+                        tariff: currentPlanKey, 
+                        period: period 
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.ok && data.url) {
+                    tg.openLink(data.url);
+                    closeModal('planModal');
+                } else {
+                    alert('Ошибка при создании платежа: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            } catch (e) {
+                alert('Ошибка сети при создании платежа');
+            }
         }
 
-        function connectResultPlan() {
-            // Подключение тарифа "За результат" без оплаты
-            alert('Тариф "За результат" подключен! Оплата будет формироваться по факту заявок в конце месяца.');
+        async function connectResultPlan() {
+            const user = tg.initDataUnsafe?.user;
             
-            // Тут в реальности должен быть запрос к Supabase для обновления тарифа клиента
-            // на 'result', чтобы он начал работу.
-            
-            closeModal('planModal');
+            try {
+                const res = await fetch('/api/connect-result', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: user.id, name: user.first_name })
+                });
+                
+                if (res.ok) {
+                    alert('Тариф "За результат" подключен! Владелец получил уведомление.');
+                    closeModal('planModal');
+                } else {
+                    alert('Ошибка при подключении тарифа');
+                }
+            } catch (e) {
+                alert('Ошибка сети');
+            }
         }
 
         function submitCancel() { alert('Отменено'); closeModal('cancelModal'); }
