@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CRM - AI-Администратор</title>
-    <!-- Подключаем библиотеку SheetJS для создания настоящих Excel-файлов -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; color: #333; }
@@ -40,12 +39,13 @@
                     <th>Имя</th>
                     <th>Телефон</th>
                     <th>Задача</th>
+                    <th>Источник</th>
                     <th>Статус</th>
                     <th>Действие</th>
                 </tr>
             </thead>
             <tbody id="leadsBody">
-                <tr><td colspan="7" style="text-align:center;">Загрузка...</td></tr>
+                <tr><td colspan="8" style="text-align:center;">Загрузка...</td></tr>
             </tbody>
         </table>
     </div>
@@ -54,7 +54,7 @@
         const SUPABASE_URL = 'https://ozutjnwextahorvzdbpl.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96dXRqbndleHRhaG9ydnpkYnBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MTQ3MzUsImV4cCI6MjEwNzE5MDczNX0.8L3adhQ9gUR5iSly1afSQN6HeEhkj9QQ4NtUyZUQx28';
 
-        let allLeads = []; // Храним данные для экспорта
+        let allLeads = []; 
 
         async function loadLeads() {
             try {
@@ -62,12 +62,12 @@
                     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
                 });
                 const data = await res.json();
-                allLeads = data; // Сохраняем в память
+                allLeads = data; 
                 const tbody = document.getElementById('leadsBody');
                 tbody.innerHTML = '';
 
                 if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Заявок пока нет</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Заявок пока нет</td></tr>';
                     return;
                 }
 
@@ -76,6 +76,8 @@
                     let statusText = 'Новая';
                     if (lead.status === 'in_progress') { statusClass = 'status-in_progress'; statusText = 'В работе'; }
                     if (lead.status === 'closed') { statusClass = 'status-closed'; statusText = 'Закрыта'; }
+                    
+                    let sourceText = lead.source === 'telegram' ? 'Telegram' : 'Сайт';
 
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
@@ -84,6 +86,7 @@
                         <td>${lead.name || '—'}</td>
                         <td>${lead.phone || '—'}</td>
                         <td>${lead.problem || '—'}</td>
+                        <td>${sourceText}</td>
                         <td><span id="status-badge-${lead.id}" class="status ${statusClass}">${statusText}</span></td>
                         <td><button id="btn-${lead.id}" class="btn-status" onclick="changeStatus(${lead.id}, '${lead.status}')">Изменить</button></td>
                     `;
@@ -91,7 +94,7 @@
                 });
             } catch (e) {
                 console.error(e);
-                document.getElementById('leadsBody').innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Ошибка загрузки данных</td></tr>';
+                document.getElementById('leadsBody').innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Ошибка загрузки данных</td></tr>';
             }
         }
 
@@ -129,41 +132,44 @@
                 return;
             }
 
-            // Формируем данные для Excel
+            // 1. Формируем массив данных
             const ws_data = [
-                ["ID", "Дата", "Имя", "Телефон", "Задача", "Статус"] // Заголовки
+                ["ID", "Дата", "Имя", "Телефон", "Задача", "Источник", "Статус"]
             ];
 
             allLeads.forEach(lead => {
                 let status = lead.status === 'closed' ? 'Закрыта' : (lead.status === 'in_progress' ? 'В работе' : 'Новая');
+                let source = lead.source === 'telegram' ? 'Telegram' : 'Сайт';
                 ws_data.push([
                     lead.id,
-                    new Date(lead.created_at).toLocaleDateString('ru-RU'),
+                    new Date(lead.created_at).toLocaleString('ru-RU'),
                     lead.name || '',
                     lead.phone || '',
                     lead.problem || '',
+                    source,
                     status
                 ]);
             });
 
-            // Создаем лист Excel
+            // 2. Создаем лист
             const ws = XLSX.utils.aoa_to_sheet(ws_data);
 
-            // Настраиваем ширину колонок
+            // 3. Настраиваем ширину колонок
             ws['!cols'] = [
-                { wch: 6 },  // ID
-                { wch: 12 }, // Дата
-                { wch: 20 }, // Имя
-                { wch: 18 }, // Телефон
-                { wch: 50 }, // Задача
-                { wch: 12 }  // Статус
+                { wch: 6 }, { wch: 20 }, { wch: 18 }, { wch: 18 }, { wch: 45 }, { wch: 12 }, { wch: 14 }
             ];
 
-            // Создаем книгу и добавляем лист
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Заявки");
+            // 4. Применяем стили (библиотека SheetJS требует подключения стилей, если мы хотим цвета, 
+            // но в бесплатной версии это работает частично. Мы зададим базовые стили через xlsx-js-style, 
+            // либо просто оставим аккуратные данные).
+            
+            // Чтобы сделать красиво как в Telegram, нам нужна библиотека xlsx-js-style.
+            // Но так как мы используем базовую, мы просто сделаем аккуратный файл.
 
-            // Скачиваем файл
+            // 5. Создаем книгу и сохраняем
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Все заявки");
+
             XLSX.writeFile(wb, "leads_export.xlsx");
         }
 
