@@ -171,7 +171,7 @@
                 <button class="btn btn-primary" onclick="payPlan('month')">Оплатить <span id="btn-month-price">0</span> ₽ (1 месяц)</button>
                 <button class="btn btn-primary" style="background: var(--success);" onclick="payPlan('year')">Оплатить <span id="btn-year-price">0</span> ₽ (12 месяцев)</button>
             </div>
-            <button id="modal-connect-btn" class="btn btn-primary" style="display: none;" onclick="closeModal('planModal')">Подключить</button>
+            <button id="modal-connect-btn" class="btn btn-primary" style="display: none;" onclick="connectResultPlan()">Подключить</button>
 
             <button class="btn btn-outline" onclick="closeModal('planModal')">Закрыть</button>
         </div>
@@ -475,11 +475,57 @@
         function openSupportModal() { document.getElementById('supportModal').style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-        function payPlan(period) {
+        async function payPlan(period) {
             const t = TARIFFS[currentPlanKey];
             const amount = period === 'year' ? t.year : t.month;
-            alert(`Переход к оплате: ${amount} ₽`);
-            closeModal('planModal');
+            const user = tg.initDataUnsafe?.user;
+            
+            try {
+                const res = await fetch('/api/create-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        chat_id: user.id, 
+                        tariff: currentPlanKey, 
+                        period: period 
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.ok && data.url) {
+                    tg.openLink(data.url);
+                    closeModal('planModal');
+                } else {
+                    alert('Ошибка при создании платежа: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            } catch (e) {
+                alert('Ошибка сети при создании платежа');
+            }
+        }
+
+        async function connectResultPlan() {
+            const user = tg.initDataUnsafe?.user;
+            
+            try {
+                const res = await fetch('/api/connect-result', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        chat_id: user.id, 
+                        name: user.first_name,
+                        manager_id: ADMIN_TELEGRAM_ID 
+                    })
+                });
+                
+                if (res.ok) {
+                    alert('Тариф "За результат" подключен! Владелец получил уведомление.');
+                    closeModal('planModal');
+                } else {
+                    alert('Ошибка при подключении тарифа');
+                }
+            } catch (e) {
+                alert('Ошибка сети при подключении');
+            }
         }
 
         function submitCancel() { alert('Отменено'); closeModal('cancelModal'); }
