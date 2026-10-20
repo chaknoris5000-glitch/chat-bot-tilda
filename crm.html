@@ -114,36 +114,43 @@
                 const tgId = Number(urlParams.get('telegram_id'));
                 
                 // Если ID совпадает с твоим — пускаем
-                if (tgId === ADMIN_TELEGRAM_ID) {
+                               if (tgId === ADMIN_TELEGRAM_ID) {
+                    // Это ты (Админ)
                     document.getElementById('auth-container').style.display = 'none';
                     document.getElementById('crm-container').style.display = 'block';
-                    loadLeads();
-                    // Очищаем URL от лишних параметров
+                    document.getElementById('crm-container').querySelector('h1').innerText = 'Панель управления (Админ)';
+                    loadLeads(ADMIN_TELEGRAM_ID);
                     window.history.replaceState({}, document.title, "/crm");
                 } else {
-                    alert('Доступ запрещен. Вы не администратор.');
+                    // Это клиент
+                    document.getElementById('auth-container').style.display = 'none';
+                    document.getElementById('crm-container').style.display = 'block';
+                    document.getElementById('crm-container').querySelector('h1').innerText = 'Мои заявки';
+                    // Прячем кнопку "Добавить клиента" для клиентов
+                    document.querySelector('.btn-create').style.display = 'none'; 
+                    loadLeads(tgId);
+                    window.history.replaceState({}, document.title, "/crm");
                 }
-            }
-        }
-
         // Запускаем проверку при загрузке страницы
         window.onload = checkAuth;
 
-        async function loadLeads() {
+                async function loadLeads(currentTgId = ADMIN_TELEGRAM_ID) {
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`, {
+                // Если это админ — грузим всё. Если клиент — только его заявки.
+                let url = `${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`;
+                
+                if (currentTgId !== ADMIN_TELEGRAM_ID) {
+                    // Для клиента: сначала узнаем его client_id по telegram_id, а потом грузим заявки
+                    // (Для простоты в этом тесте мы просто имитируем фильтр, 
+                    // но в реальном коде мы сначала делаем запрос в таблицу clients)
+                    url += `&client_id=eq.demo-client`; // Пока ставим хардкод для теста
+                }
+
+                const res = await fetch(url, {
                     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
                 });
                 const data = await res.json();
-                allLeads = data; 
-                const tbody = document.getElementById('leadsBody');
-                tbody.innerHTML = '';
-
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Заявок пока нет</td></tr>';
-                    return;
-                }
-
+                // ... дальше код отрисовки таблицы (он не меняется)
                 data.forEach(lead => {
                     let statusClass = 'status-new';
                     let statusText = 'Новая';
