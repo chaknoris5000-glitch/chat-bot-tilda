@@ -1385,5 +1385,33 @@ app.post('/api/support', async (req, res) => {
   }
 });
 app.listen(PORT, () => {
+  // 1. Создание платежа ЮKassa
+app.post('/api/create-payment', async (req, res) => {
+  try {
+    const { chat_id, tariff, period } = req.body;
+    const payUrl = await createYookassaPayment(chat_id, tariff, period);
+    if (payUrl) {
+      res.json({ ok: true, url: payUrl });
+    } else {
+      res.status(500).json({ ok: false, error: 'Ошибка ЮKassa' });
+    }
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// 2. Уведомление о подключении тарифа "За результат"
+app.post('/api/connect-result', async (req, res) => {
+  try {
+    const { chat_id, name } = req.body;
+    // Отправляем уведомление Админу
+    if (MANAGER_CHAT_ID) {
+      await sendTelegram(MANAGER_CHAT_ID, `🔥 <b>Новое подключение!</b>\n\nКлиент: ${name} (ID: ${chat_id})\nТариф: За результат (25 ₽/заявка)\n\n<i>Оплата будет формироваться по факту заявок.</i>`);
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
   console.log(`Сервер запущен: http://localhost:${PORT}`);
 });
