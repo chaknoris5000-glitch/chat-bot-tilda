@@ -1340,7 +1340,38 @@ app.all('/auth/telegram', async (req, res) => {
     res.status(401).send('Ошибка авторизации. Попробуйте вернуться и войти снова.');
   }
 });
+// ========== СОЗДАНИЕ КЛИЕНТА ИЗ CRM ==========
+app.post('/api/create-client', async (req, res) => {
+  try {
+    const { client_id, business_name, site_url, timezone, manager_chat_id } = req.body;
+    
+    // Проверка, что запрос пришел от тебя (по ID)
+    // (Для простоты мы доверяем запросу, так как страница CRM защищена входом)
+    
+    const ghRes = await fetch(`https://api.github.com/repos/chaknoris5000-glitch/chat-bot-tilda/actions/workflows/create-client.yml/dispatches`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `token ${process.env.MY_GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ref: 'main',
+        inputs: { client_id, business_name, site_url, timezone, manager_chat_id }
+      })
+    });
 
+    if (!ghRes.ok) {
+      const errText = await ghRes.text();
+      throw new Error(`GitHub API: ${errText}`);
+    }
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Ошибка создания клиента:', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 app.listen(PORT, () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
 });
