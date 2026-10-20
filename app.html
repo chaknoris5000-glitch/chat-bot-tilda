@@ -14,18 +14,15 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
         
-        /* Header */
         .top-header { padding: 20px; background: #fff; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; z-index: 10; }
         .header-left h1 { font-size: 22px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
         .header-left p { font-size: 13px; color: var(--hint); margin-top: 4px; }
         .btn-support { background: #f1f5f9; color: var(--primary); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
 
-        /* Контейнер для свайпа */
         .swipe-container { flex: 1; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; }
         .swipe-container::-webkit-scrollbar { display: none; }
         .page { min-width: 100vw; height: 100%; scroll-snap-align: start; overflow-y: auto; padding: 20px 20px 100px 20px; display: flex; flex-direction: column; }
 
-        /* --- СТРАНИЦА 1: АККАУНТ --- */
         .card { background: var(--card-bg); border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 16px; border: 1px solid var(--border); flex-shrink: 0; }
         .card-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; color: var(--primary); }
         .info-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
@@ -49,7 +46,6 @@
 
         .btn-cancel-sub { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid var(--border); background: #f1f5f9; color: var(--hint); font-size: 14px; font-weight: 600; margin-top: 24px; cursor: pointer; flex-shrink: 0; }
 
-        /* --- СТРАНИЦА 2: БИЗНЕС --- */
         .filters-wrapper { display: flex; justify-content: center; width: 100%; flex-shrink: 0; margin-bottom: 12px; overflow: hidden; }
         .filters { display: flex; gap: 6px; padding: 0 10px 10px 10px; justify-content: center; width: 100%; }
         .filter-btn { padding: 7px 10px; border-radius: 20px; border: 1px solid var(--border); background: #fff; color: var(--hint); font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; flex-shrink: 0; }
@@ -70,13 +66,11 @@
 
         .sticky-bottom-btn { position: absolute; bottom: 80px; left: 20px; right: 20px; z-index: 50; }
 
-        /* Нижнее меню */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 20px 0; z-index: 100; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); }
         .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--hint); font-size: 11px; font-weight: 600; cursor: pointer; }
         .nav-item.active { color: var(--primary-light); font-weight: 800; }
         .nav-item svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-        /* Модалки */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
         .modal-box { background: #fff; border-radius: 16px; padding: 24px; width: 100%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
         .modal-title { font-size: 20px; font-weight: 800; margin-bottom: 16px; color: var(--primary); }
@@ -103,7 +97,6 @@
 
     <div class="swipe-container" id="swipeContainer">
         
-        <!-- ================= СТРАНИЦА 1: МОЙ АККАУНТ ================= -->
         <div class="page" id="page-account">
             <div class="card">
                 <div class="card-title">Мой аккаунт</div>
@@ -123,7 +116,6 @@
             <button class="btn-cancel-sub" onclick="openCancelModal()">Отменить подписку</button>
         </div>
 
-        <!-- ================= СТРАНИЦА 2: МОЙ БИЗНЕС ================= -->
         <div class="page" id="page-business" style="position: relative;">
             <div class="filters-wrapper">
                 <div class="filters">
@@ -152,7 +144,6 @@
 
     </div>
 
-    <!-- Нижнее меню -->
     <div class="bottom-nav" id="bottom-nav">
         <div class="nav-item active" onclick="scrollToPage(0)">
             <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -164,7 +155,6 @@
         </div>
     </div>
 
-    <!-- Модалки -->
     <div id="planModal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-title" id="modal-plan-name">Тариф</div>
@@ -181,7 +171,7 @@
                 <button class="btn btn-primary" onclick="payPlan('month')">Оплатить <span id="btn-month-price">0</span> ₽ (1 месяц)</button>
                 <button class="btn btn-primary" style="background: var(--success);" onclick="payPlan('year')">Оплатить <span id="btn-year-price">0</span> ₽ (12 месяцев)</button>
             </div>
-            <button id="modal-connect-btn" class="btn btn-primary" style="display: none;" onclick="payPlan('result')">Подключить</button>
+            <button id="modal-connect-btn" class="btn btn-primary" style="display: none;" onclick="connectResultPlan()">Подключить</button>
 
             <button class="btn btn-outline" onclick="closeModal('planModal')">Закрыть</button>
         </div>
@@ -231,53 +221,10 @@
         tg.expand();
 
         const TARIFFS = {
-            'start': { 
-                name: 'Старт', month: 1990, year: 17900, monthIfYear: 1490, limit: 100,
-                features: [
-                    'До 100 заявок в месяц (автоматический сбор)',
-                    'Работает 24/7 без выходных',
-                    'Уведомления о новых заявках в Telegram',
-                    'Встроенная мини-CRM для управления заявками',
-                    'До обучения на ваших материалах: услуги, цены, адреса',
-                    'Автоматическая ежедневная, еженедельная и месячная отчетность в Excel',
-                    'Подключение ваших внешних систем по API'
-                ] 
-            },
-            'business': { 
-                name: 'Бизнес', month: 2490, year: 23900, monthIfYear: 1990, limit: 300,
-                features: [
-                    'До 300 заявок в месяц (автоматический сбор)',
-                    'Работает 24/7 без выходных',
-                    'Встроенная мини-CRM для управления заявками',
-                    'До обучения на ваших материалах: услуги, цены, адреса',
-                    'Автоматическая ежедневная, еженедельная и месячная отчетность в Excel',
-                    'Подключение ваших внешних систем по API'
-                ] 
-            },
-            'unlimited': { 
-                name: 'Безлимит', month: 4990, year: 47900, monthIfYear: 3990, limit: 99999,
-                features: [
-                    'Неограниченное количество заявок (автоматический сбор)',
-                    'Работает 24/7 без выходных',
-                    'Приоритетная поддержка (отвечаем быстрее всех)',
-                    'Встроенная мини-CRM для управления заявками',
-                    'До обучения на ваших материалах: услуги, цены, адреса',
-                    'Автоматическая ежедневная, еженедельная и месячная отчетность в Excel',
-                    'Подключение ваших внешних систем по API'
-                ] 
-            },
-            'result': { 
-                name: 'За результат', month: 25, year: 0, monthIfYear: 25, limit: 99999,
-                features: [
-                    'Оплата только за реальные заявки (25 ₽ за штуку, автоматический сбор)',
-                    'Работает 24/7 без выходных',
-                    'Прозрачный отчет в конце месяца',
-                    'Встроенная мини-CRM для управления заявками',
-                    'До обучения на ваших материалах: услуги, цены, адреса',
-                    'Автоматическая ежедневная, еженедельная и месячная отчетность в Excel',
-                    'Подключение ваших внешних систем по API'
-                ] 
-            }
+            'start': { name: 'Старт', month: 1990, year: 17900, monthIfYear: 1490, limit: 100, features: ['До 100 заявок в месяц', 'Работает 24/7', 'Мини-CRM', 'Отчеты в Excel'] },
+            'business': { name: 'Бизнес', month: 2490, year: 23900, monthIfYear: 1990, limit: 300, features: ['До 300 заявок в месяц', 'Работает 24/7', 'Мини-CRM', 'Отчеты в Excel'] },
+            'unlimited': { name: 'Безлимит', month: 4990, year: 47900, monthIfYear: 3990, limit: 99999, features: ['Безлимит заявок', 'Приоритетная поддержка', 'Мини-CRM', 'Отчеты в Excel'] },
+            'result': { name: 'За результат', month: 25, year: 0, monthIfYear: 25, limit: 99999, features: ['Оплата за заявки', 'Отчет в конце месяца'] }
         };
 
         let myClient = null;
@@ -285,7 +232,6 @@
         let currentPlanKey = null;
         let filterTime = 'today'; 
         let filterStatus = 'all';
-        let currentUserRole = 'client';
 
         function scrollToPage(index) {
             const container = document.getElementById('swipeContainer');
@@ -322,12 +268,10 @@
                 myClient = allClients.find(c => c.owner_telegram_id === user.id);
 
                 if (user.id === ADMIN_TELEGRAM_ID) {
-                    currentUserRole = 'admin';
-                    myLeads = allLeads; // Админ видит все заявки
+                    myLeads = allLeads; 
                     setupAdminUI(allClients);
                 } else if (myClient) {
-                    currentUserRole = 'client';
-                    myLeads = allLeads.filter(l => l.client_id === myClient.client_id); // Клиент видит только свои
+                    myLeads = allLeads.filter(l => l.client_id === myClient.client_id); 
                     setupClientUI(myClient);
                 }
                 renderPlans();
@@ -339,7 +283,6 @@
             document.getElementById('acc-plan-name').innerText = client.business_name || 'Бизнес';
             document.getElementById('acc-date').innerText = paidUntil.toLocaleDateString('ru-RU');
             document.getElementById('acc-status').innerText = (paidUntil > new Date()) ? 'Активен' : 'Истек';
-            
             document.getElementById('acc-total-leads').innerText = myLeads.length;
             
             const currentTariff = TARIFFS['business']; 
@@ -421,7 +364,7 @@
 
                 el.innerHTML = `
                     <div class="lead-top">
-                        <div class="lead-name">${lead.name || 'Без имени'} ${currentUserRole === 'admin' ? `<span style="font-size:10px; color:#94a3b8; font-weight:normal;">(${lead.client_id || 'tilda'})</span>` : ''}</div>
+                        <div class="lead-name">${lead.name || 'Без имени'}</div>
                         <div style="background:${statusColor}; color:${statusTextColor}; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:bold;">${statusText}</div>
                     </div>
                     <div class="lead-phone">📞 ${lead.phone || '—'}</div>
@@ -535,7 +478,23 @@
         function payPlan(period) {
             const t = TARIFFS[currentPlanKey];
             const amount = period === 'year' ? t.year : t.month;
-            alert(`Переход к оплате: ${amount} ₽`);
+            
+            // Имитация перехода к оплате в ЮKassa
+            alert(`Переход к оплате ЮKassa: ${amount} ₽`);
+            
+            // В реальности здесь должен быть запрос на сервер для создания платежа, 
+            // получение ссылки и window.location.href = payment_url;
+            
+            closeModal('planModal');
+        }
+
+        function connectResultPlan() {
+            // Подключение тарифа "За результат" без оплаты
+            alert('Тариф "За результат" подключен! Оплата будет формироваться по факту заявок в конце месяца.');
+            
+            // Тут в реальности должен быть запрос к Supabase для обновления тарифа клиента
+            // на 'result', чтобы он начал работу.
+            
             closeModal('planModal');
         }
 
