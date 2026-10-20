@@ -44,6 +44,11 @@ const TARIFFS = {
     name: 'Безлимит', 
     amountMonth: Number(process.env.TARIFF_UNLIMITED_MONTH) || 4990, 
     amountYear: Number(process.env.TARIFF_UNLIMITED_YEAR) || 39900 
+  },
+  'result': { 
+    name: 'За результат', 
+    amountMonth: 25, 
+    amountYear: 25 
   }
 };
 
