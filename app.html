@@ -50,7 +50,6 @@
         .btn-cancel-sub { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid var(--border); background: #f1f5f9; color: var(--hint); font-size: 14px; font-weight: 600; margin-top: 24px; cursor: pointer; flex-shrink: 0; }
 
         /* --- СТРАНИЦА 2: БИЗНЕС --- */
-                /* Центрируем фильтры (средний размер) */
         .filters-wrapper { display: flex; justify-content: center; width: 100%; flex-shrink: 0; margin-bottom: 12px; overflow: hidden; }
         .filters { display: flex; gap: 6px; padding: 0 10px 10px 10px; justify-content: center; width: 100%; }
         .filter-btn { padding: 7px 10px; border-radius: 20px; border: 1px solid var(--border); background: #fff; color: var(--hint); font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; flex-shrink: 0; }
@@ -60,7 +59,6 @@
         .status-tab { flex: 1; text-align: center; padding: 10px 5px; background: #fff; border: 1px solid var(--border); border-radius: 10px; font-size: 12px; font-weight: 700; color: var(--hint); cursor: pointer; }
         .status-tab.active { background: #e8f0ec; color: var(--primary); border-color: var(--primary-light); }
 
-        /* Список заявок (скроллится) */
         .lead-list-container { flex: 1; overflow-y: auto; margin-bottom: 70px; }
         .lead-list { display: flex; flex-direction: column; gap: 10px; }
         .lead-card { background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.02); cursor: pointer; }
@@ -70,7 +68,6 @@
         .lead-phone { font-size: 13px; color: var(--hint); }
         .lead-service { display: inline-block; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-top: 8px; }
 
-        /* Фиксированная кнопка внизу */
         .sticky-bottom-btn { position: absolute; bottom: 80px; left: 20px; right: 20px; z-index: 50; }
 
         /* Нижнее меню */
@@ -128,20 +125,15 @@
 
         <!-- ================= СТРАНИЦА 2: МОЙ БИЗНЕС ================= -->
         <div class="page" id="page-business" style="position: relative;">
-            <div class="filters-wrapper">
-                <div class="filters">
-                    <button class="filter-btn active" id="filter-btn-today" onclick="setTimeFilter('today', this)">Сегодня (0)</button>
-                    <button class="filter-btn" id="filter-btn-yesterday" onclick="setTimeFilter('yesterday', this)">Вчера (0)</button>
-                    <button class="filter-btn" id="filter-btn-week" onclick="setTimeFilter('week', this)">За неделю (0)</button>
-                    <button class="filter-btn" id="filter-btn-month" onclick="setTimeFilter('month', this)">За месяц (0)</button>
+            <!-- Фильтры (они будут меняться в зависимости от роли) -->
+            <div class="filters-wrapper" id="biz-filters-wrapper">
+                <div class="filters" id="biz-filters">
+                    <!-- Сюда JS вставит нужные кнопки -->
                 </div>
             </div>
 
-            <div class="tabs-status">
-                <div class="status-tab active" onclick="setStatusFilter('all', this)">Все</div>
-                <div class="status-tab" onclick="setStatusFilter('new', this)">Новые</div>
-                <div class="status-tab" onclick="setStatusFilter('in_progress', this)">В работе</div>
-                <div class="status-tab" onclick="setStatusFilter('closed', this)">Выполнено</div>
+            <div class="tabs-status" id="biz-tabs-status">
+                <!-- Сюда JS вставит нужные кнопки -->
             </div>
             
             <div class="lead-list-container">
@@ -234,60 +226,19 @@
         tg.expand();
 
         const TARIFFS = {
-            'start': { 
-                name: 'Старт', month: 1990, year: 17900, monthIfYear: 1490, limit: 100,
-                features: [
-                    'До 100 заявок в месяц (автоматический сбор)',
-                    'Работает 24/7 без выходных',
-                    'Уведомления о новых заявках в Telegram',
-                    'Встроенная мини-CRM для управления заявками',
-                    'До обучения на ваших материалах: услуги, цены, адреса',
-                    'Автоматическая ежедневная, еженедельная и месячная отчетность в Excel',
-                    'Подключение ваших внешних систем по API'
-                ] 
-            },
-            'business': { 
-                name: 'Бизнес', month: 2490, year: 23900, monthIfYear: 1990, limit: 300,
-                features: [
-                    'До 300 заявок в месяц (автоматический сбор)',
-                    'Работает 24/7 без выходных',
-                    'Встроенная мини-CRM для управления заявками',
-                    'До обучения на ваших материалах: услуги, цены, адреса',
-                    'Автоматическая ежедневная, еженедельная и месячная отчетность в Excel',
-                    'Подключение ваших внешних систем по API'
-                ] 
-            },
-            'unlimited': { 
-                name: 'Безлимит', month: 4990, year: 47900, monthIfYear: 3990, limit: 99999,
-                features: [
-                    'Неограниченное количество заявок (автоматический сбор)',
-                    'Работает 24/7 без выходных',
-                    'Приоритетная поддержка (отвечаем быстрее всех)',
-                    'Встроенная мини-CRM для управления заявками',
-                    'До обучения на ваших материалах: услуги, цены, адреса',
-                    'Автоматическая ежедневная, еженедельная и месячная отчетность в Excel',
-                    'Подключение ваших внешних систем по API'
-                ] 
-            },
-            'result': { 
-                name: 'За результат', month: 25, year: 0, monthIfYear: 25, limit: 99999,
-                features: [
-                    'Оплата только за реальные заявки (25 ₽ за штуку, автоматический сбор)',
-                    'Работает 24/7 без выходных',
-                    'Прозрачный отчет в конце месяца',
-                    'Встроенная мини-CRM для управления заявками',
-                    'До обучения на ваших материалах: услуги, цены, адреса',
-                    'Автоматическая ежедневная, еженедельная и месячная отчетность в Excel',
-                    'Подключение ваших внешних систем по API'
-                ] 
-            }
+            'start': { name: 'Старт', month: 1990, year: 17900, monthIfYear: 1490, limit: 100, features: ['До 100 заявок в месяц', 'Работает 24/7', 'Мини-CRM', 'Отчеты в Excel'] },
+            'business': { name: 'Бизнес', month: 2490, year: 23900, monthIfYear: 1990, limit: 300, features: ['До 300 заявок в месяц', 'Работает 24/7', 'Мини-CRM', 'Отчеты в Excel'] },
+            'unlimited': { name: 'Безлимит', month: 4990, year: 47900, monthIfYear: 3990, limit: 99999, features: ['Безлимит заявок', 'Приоритетная поддержка', 'Мини-CRM', 'Отчеты в Excel'] },
+            'result': { name: 'За результат', month: 25, year: 0, monthIfYear: 25, limit: 99999, features: ['Оплата за заявки', 'Отчет в конце месяца'] }
         };
 
         let myClient = null;
         let myLeads = [];
+        let allClientsList = []; // Для Админа
         let currentPlanKey = null;
         let filterTime = 'today'; 
         let filterStatus = 'all';
+        let currentUserRole = 'client';
 
         function scrollToPage(index) {
             const container = document.getElementById('swipeContainer');
@@ -320,36 +271,202 @@
                 ]);
 
                 const allLeads = await resLeads.json();
-                const allClients = await resClients.json();
-                myClient = allClients.find(c => c.owner_telegram_id === user.id);
+                allClientsList = await resClients.json();
+                myClient = allClientsList.find(c => c.owner_telegram_id === user.id);
 
-                if (user.id !== ADMIN_TELEGRAM_ID && myClient) {
-                    const paidUntil = new Date(myClient.paid_until);
-                    document.getElementById('acc-plan-name').innerText = myClient.business_name || 'Бизнес';
-                    document.getElementById('acc-date').innerText = paidUntil.toLocaleDateString('ru-RU');
-                    document.getElementById('acc-status').innerText = (paidUntil > new Date()) ? 'Активен' : 'Истек';
-                    
-                    myLeads = allLeads.filter(l => l.client_id === myClient.client_id);
-                    document.getElementById('acc-total-leads').innerText = myLeads.length;
-                    
-                    const currentTariff = TARIFFS['business']; 
-                    if (currentTariff.limit >= 99999) {
-                        document.getElementById('limit-label').innerText = 'Накоплено заявок:';
-                        document.getElementById('acc-limit-text').innerText = myLeads.length;
-                        document.getElementById('acc-progress').style.width = '100%';
-                    } else {
-                        document.getElementById('limit-label').innerText = 'Лимит заявок:';
-                        document.getElementById('acc-limit-text').innerText = `${myLeads.length} / ${currentTariff.limit}`;
-                        document.getElementById('acc-progress').style.width = Math.min((myLeads.length/currentTariff.limit)*100, 100) + '%';
-                    }
-
-                    updateFilterCounts();
-                    renderLeads();
+                if (user.id === ADMIN_TELEGRAM_ID) {
+                    currentUserRole = 'admin';
+                    setupAdminUI();
+                } else if (myClient) {
+                    currentUserRole = 'client';
+                    setupClientUI(myClient, allLeads);
                 }
                 renderPlans();
             } catch (e) { console.error(e); }
         }
 
+        // --- НАСТРОЙКА ИНТЕРФЕЙСА ДЛЯ КЛИЕНТА ---
+        function setupClientUI(client, allLeads) {
+            const paidUntil = new Date(client.paid_until);
+            document.getElementById('acc-plan-name').innerText = client.business_name || 'Бизнес';
+            document.getElementById('acc-date').innerText = paidUntil.toLocaleDateString('ru-RU');
+            document.getElementById('acc-status').innerText = (paidUntil > new Date()) ? 'Активен' : 'Истек';
+            
+            myLeads = allLeads.filter(l => l.client_id === client.client_id);
+            document.getElementById('acc-total-leads').innerText = myLeads.length;
+            
+            // Лимит
+            const currentTariff = TARIFFS['business']; 
+            document.getElementById('acc-limit-text').innerText = `${myLeads.length} / ${currentTariff.limit}`;
+            document.getElementById('acc-progress').style.width = Math.min((myLeads.length/currentTariff.limit)*100, 100) + '%';
+
+            // Настройка фильтров для заявок
+            document.getElementById('biz-filters').innerHTML = `
+                <button class="filter-btn active" id="filter-btn-today" onclick="setTimeFilter('today', this)">Сегодня</button>
+                <button class="filter-btn" id="filter-btn-yesterday" onclick="setTimeFilter('yesterday', this)">Вчера</button>
+                <button class="filter-btn" id="filter-btn-week" onclick="setTimeFilter('week', this)">За неделю</button>
+                <button class="filter-btn" id="filter-btn-month" onclick="setTimeFilter('month', this)">За месяц</button>
+            `;
+            document.getElementById('biz-tabs-status').innerHTML = `
+                <div class="status-tab active" onclick="setStatusFilter('all', this)">Все</div>
+                <div class="status-tab" onclick="setStatusFilter('new', this)">Новые</div>
+                <div class="status-tab" onclick="setStatusFilter('in_progress', this)">В работе</div>
+                <div class="status-tab" onclick="setStatusFilter('closed', this)">Выполнено</div>
+            `;
+            updateFilterCounts();
+            renderLeads();
+        }
+
+        // --- НАСТРОЙКА ИНТЕРФЕЙСА ДЛЯ АДМИНА ---
+        function setupAdminUI() {
+            document.getElementById('acc-plan-name').innerText = 'Админ';
+            document.getElementById('acc-status').innerText = 'Платформа';
+            document.getElementById('acc-date').innerText = 'Бессрочно';
+            
+            // Для админа в аккаунте ставим заглушки
+            document.getElementById('acc-total-leads').innerText = allClientsList.length;
+            document.getElementById('limit-label').innerText = 'Всего клиентов:';
+            document.getElementById('acc-limit-text').innerText = allClientsList.length;
+            document.getElementById('acc-progress').style.width = '100%';
+
+            // Настройка фильтров для КЛИЕНТОВ
+            document.getElementById('biz-filters').innerHTML = `
+                <button class="filter-btn active" onclick="setClientFilter('all', this)">Все</button>
+                <button class="filter-btn" onclick="setClientFilter('active', this)">Активные</button>
+                <button class="filter-btn" onclick="setClientFilter('expired', this)">Неоплаченные</button>
+            `;
+            document.getElementById('biz-tabs-status').innerHTML = ''; // Убираем статусы заявок
+            renderClients();
+        }
+
+        // --- РЕНДЕР ЗАЯВОК (Для клиента) ---
+        function renderLeads() {
+            const list = document.getElementById('business-leads-list');
+            list.innerHTML = '';
+            
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+            const week = new Date(today); week.setDate(week.getDate() - 7);
+            const month = new Date(today); month.setMonth(month.getMonth() - 1);
+
+            let filtered = myLeads.filter(lead => {
+                if (filterStatus !== 'all' && lead.status !== filterStatus) return false;
+                const d = new Date(lead.created_at);
+                if (filterTime === 'today' && d < today) return false;
+                if (filterTime === 'yesterday' && (d < yesterday || d >= today)) return false;
+                if (filterTime === 'week' && d < week) return false;
+                if (filterTime === 'month' && d < month) return false;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<p style="color:var(--hint); text-align:center; padding:20px;">Нет заявок</p>';
+                return;
+            }
+
+            filtered.forEach(lead => {
+                const el = document.createElement('div');
+                el.className = 'lead-card';
+                el.onclick = () => openLeadModal(lead.id);
+                
+                let statusColor = lead.status === 'new' ? '#eff6ff' : (lead.status === 'in_progress' ? '#fffbeb' : '#f0fdf4');
+                let statusTextColor = lead.status === 'new' ? '#1d4ed8' : (lead.status === 'in_progress' ? '#b45309' : '#15803d');
+                let statusText = lead.status === 'new' ? 'Новая' : (lead.status === 'in_progress' ? 'В работе' : 'Выполнено');
+
+                el.innerHTML = `
+                    <div class="lead-top">
+                        <div class="lead-name">${lead.name || 'Без имени'}</div>
+                        <div style="background:${statusColor}; color:${statusTextColor}; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:bold;">${statusText}</div>
+                    </div>
+                    <div class="lead-phone">📞 ${lead.phone || '—'}</div>
+                    <div class="lead-service">${lead.service || 'Услуга не указана'}</div>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        // --- РЕНДЕР КЛИЕНТОВ (Для Админа) ---
+        function renderClients(filterType = 'all') {
+            const list = document.getElementById('business-leads-list');
+            list.innerHTML = '';
+
+            let filtered = allClientsList.filter(c => {
+                if (filterType === 'active') return new Date(c.paid_until) > new Date();
+                if (filterType === 'expired') return new Date(c.paid_until) <= new Date();
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<p style="color:var(--hint); text-align:center; padding:20px;">Нет клиентов</p>';
+                return;
+            }
+
+            filtered.forEach(client => {
+                const el = document.createElement('div');
+                el.className = 'lead-card';
+                // При клике на клиента админом, можно открыть его карточку (пока просто заглушка)
+                el.onclick = () => alert(`Клиент: ${client.business_name}\nID: ${client.client_id}\nОплачен до: ${new Date(client.paid_until).toLocaleDateString('ru-RU')}`);
+                
+                const isActive = new Date(client.paid_until) > new Date();
+
+                el.innerHTML = `
+                    <div class="lead-top">
+                        <div class="lead-name">${client.business_name || 'Без названия'}</div>
+                        <div style="background:${isActive ? '#f0fdf4' : '#fef2f2'}; color:${isActive ? '#15803d' : '#b91c1c'}; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:bold;">${isActive ? 'Активен' : 'Истек'}</div>
+                    </div>
+                    <div class="lead-phone">ID: ${client.client_id}</div>
+                    <div class="lead-service">Оплачен до: ${new Date(client.paid_until).toLocaleDateString('ru-RU')}</div>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
+        function updateFilterCounts() {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+            const week = new Date(today); week.setDate(week.getDate() - 7);
+            const month = new Date(today); month.setMonth(month.getMonth() - 1);
+
+            let counts = { today: 0, yesterday: 0, week: 0, month: 0 };
+
+            myLeads.forEach(lead => {
+                const d = new Date(lead.created_at);
+                if (d >= today) counts.today++;
+                if (d >= yesterday && d < today) counts.yesterday++;
+                if (d >= week) counts.week++;
+                if (d >= month) counts.month++;
+            });
+
+            document.getElementById('filter-btn-today').innerText = `Сегодня (${counts.today})`;
+            document.getElementById('filter-btn-yesterday').innerText = `Вчера (${counts.yesterday})`;
+            document.getElementById('filter-btn-week').innerText = `За неделю (${counts.week})`;
+            document.getElementById('filter-btn-month').innerText = `За месяц (${counts.month})`;
+        }
+
+        function setTimeFilter(time, btn) {
+            filterTime = time;
+            document.querySelectorAll('.filters .filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderLeads();
+        }
+
+        function setStatusFilter(status, btn) {
+            filterStatus = status;
+            document.querySelectorAll('.status-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderLeads();
+        }
+
+        function setClientFilter(type, btn) {
+            document.querySelectorAll('.filters .filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderClients(type);
+        }
+
+        // Модалки
         function renderPlans() {
             const container = document.getElementById('plans-container');
             container.innerHTML = '';
@@ -383,91 +500,6 @@
                 `;
                 container.appendChild(card);
             });
-        }
-
-        function updateFilterCounts() {
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-            const week = new Date(today); week.setDate(week.getDate() - 7);
-            const month = new Date(today); month.setMonth(month.getMonth() - 1);
-
-            let counts = { today: 0, yesterday: 0, week: 0, month: 0 };
-
-            myLeads.forEach(lead => {
-                const d = new Date(lead.created_at);
-                if (d >= today) counts.today++;
-                if (d >= yesterday && d < today) counts.yesterday++;
-                if (d >= week) counts.week++;
-                if (d >= month) counts.month++;
-            });
-
-            document.getElementById('filter-btn-today').innerText = `Сегодня (${counts.today})`;
-            document.getElementById('filter-btn-yesterday').innerText = `Вчера (${counts.yesterday})`;
-            document.getElementById('filter-btn-week').innerText = `За неделю (${counts.week})`;
-            document.getElementById('filter-btn-month').innerText = `За месяц (${counts.month})`;
-        }
-
-        function renderLeads() {
-            const list = document.getElementById('business-leads-list');
-            list.innerHTML = '';
-            
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-            const week = new Date(today); week.setDate(week.getDate() - 7);
-            const month = new Date(today); month.setMonth(month.getMonth() - 1);
-
-            let filtered = myLeads.filter(lead => {
-                if (filterStatus !== 'all' && lead.status !== filterStatus) return false;
-                
-                const d = new Date(lead.created_at);
-                if (filterTime === 'today' && d < today) return false;
-                if (filterTime === 'yesterday' && (d < yesterday || d >= today)) return false;
-                if (filterTime === 'week' && d < week) return false;
-                if (filterTime === 'month' && d < month) return false;
-
-                return true;
-            });
-
-            if (filtered.length === 0) {
-                list.innerHTML = '<p style="color:var(--hint); text-align:center; padding:20px;">Нет заявок</p>';
-                return;
-            }
-
-            filtered.forEach(lead => {
-                const el = document.createElement('div');
-                el.className = 'lead-card';
-                el.onclick = () => openLeadModal(lead.id);
-                
-                let statusColor = lead.status === 'new' ? '#eff6ff' : (lead.status === 'in_progress' ? '#fffbeb' : '#f0fdf4');
-                let statusTextColor = lead.status === 'new' ? '#1d4ed8' : (lead.status === 'in_progress' ? '#b45309' : '#15803d');
-                let statusText = lead.status === 'new' ? 'Новая' : (lead.status === 'in_progress' ? 'В работе' : 'Выполнено');
-
-                el.innerHTML = `
-                    <div class="lead-top">
-                        <div class="lead-name">${lead.name || 'Без имени'}</div>
-                        <div style="background:${statusColor}; color:${statusTextColor}; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:bold;">${statusText}</div>
-                    </div>
-                    <div class="lead-phone">📞 ${lead.phone || '—'}</div>
-                    <div class="lead-service">${lead.service || 'Услуга не указана'}</div>
-                `;
-                list.appendChild(el);
-            });
-        }
-
-        function setTimeFilter(time, btn) {
-            filterTime = time;
-            document.querySelectorAll('.filters .filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderLeads();
-        }
-
-        function setStatusFilter(status, btn) {
-            filterStatus = status;
-            document.querySelectorAll('.status-tab').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderLeads();
         }
 
         function openPlanModal(key) {
