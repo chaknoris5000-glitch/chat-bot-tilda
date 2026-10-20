@@ -1307,19 +1307,21 @@ app.get('/crm', (req, res) => {
   res.sendFile(path.join(__dirname, 'crm.html'));
 });
 // ========== АВТОРИЗАЦИЯ ЧЕРЕЗ TELEGRAM ==========
-app.post('/auth/telegram', async (req, res) => {
+app.all('/auth/telegram', async (req, res) => {
   try {
     const validator = new AuthDataValidator({ botToken: TELEGRAM_TOKEN });
-    const data = urlStrToAuthDataMap('?' + new URLSearchParams(req.body).toString());
     
-    // Проверяем подпись (защита от подделки)
+    // Берем данные из query (для GET) или из body (для POST)
+    const params = req.method === 'GET' ? req.query : req.body;
+    const data = urlStrToAuthDataMap('?' + new URLSearchParams(params).toString());
+    
     const user = await validator.validate(data);
     
-    // Если проверка прошла, отдаем ID пользователя
-    res.json({ ok: true, telegram_id: user.id, first_name: user.first_name });
+    // Перенаправляем обратно в CRM с параметром успеха и твоим ID
+    res.redirect(`/crm?auth_success=1&telegram_id=${user.id}`);
   } catch (e) {
     console.error('Ошибка авторизации Telegram:', e.message);
-    res.status(401).json({ ok: false, error: 'Неверная подпись' });
+    res.status(401).send('Ошибка авторизации. Попробуйте вернуться и войти снова.');
   }
 });
 
