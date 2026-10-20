@@ -61,7 +61,7 @@
         .status-tab.active { background: #e8f0ec; color: var(--primary); border-color: var(--primary-light); }
 
         /* Список заявок (скроллится) */
-        .lead-list-container { flex: 1; overflow-y: auto; margin-bottom: 70px; /* отступ под фиксированную кнопку */ }
+        .lead-list-container { flex: 1; overflow-y: auto; margin-bottom: 70px; /* Отступ под фиксированную кнопку */ }
         .lead-list { display: flex; flex-direction: column; gap: 10px; }
         .lead-card { background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.02); cursor: pointer; }
         .lead-card:active { background: #f8fafc; }
@@ -71,7 +71,7 @@
         .lead-service { display: inline-block; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-top: 8px; }
 
         /* Фиксированная кнопка внизу */
-        .sticky-bottom-btn { position: absolute; bottom: 20px; left: 20px; right: 20px; z-index: 50; }
+        .sticky-bottom-btn { position: absolute; bottom: 80px; left: 20px; right: 20px; z-index: 50; }
 
         /* Нижнее меню */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 20px 0; z-index: 100; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); }
@@ -93,6 +93,9 @@
 
         .lead-info-row { font-size: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;}
         .lead-info-desc { font-size: 14px; background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 20px; color: var(--text); line-height: 1.4; }
+        
+        /* Стили для блока примера */
+        .example-block { background: #f0fdf4; padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #bbf7d0; display: none; }
     </style>
 </head>
 <body>
@@ -148,7 +151,7 @@
                 <div class="lead-list" id="business-leads-list"></div>
             </div>
             
-            <!-- Фиксированная кнопка -->
+            <!-- Кнопка теперь с отступом -->
             <div class="sticky-bottom-btn">
                 <button class="btn btn-primary" onclick="goToCRM()">Открыть расширенную CRM</button>
             </div>
@@ -168,12 +171,20 @@
         </div>
     </div>
 
-    <!-- Модалки (без изменений, только обновил контент для тарифов) -->
+    <!-- Модалки -->
     <div id="planModal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-title" id="modal-plan-name">Тариф</div>
             <div style="margin-bottom: 20px;">
                 <div class="price-main" id="modal-price-main">—</div>
+                
+                <!-- Блок с примером для "За результат" -->
+                <div class="example-block" id="result-example">
+                    <div style="font-size:14px; font-weight:600; color:var(--text); margin-bottom:4px;">Пример расчета:</div>
+                    <div style="font-size:14px;">4 заявки = 100 ₽</div>
+                    <div style="font-size:14px;">5 заявок = 125 ₽</div>
+                </div>
+
                 <div id="modal-year-block" style="display: none;">
                     <div class="price-year" id="modal-price-year">—</div>
                     <div class="price-note" id="modal-year-note">—</div>
@@ -181,7 +192,6 @@
             </div>
             <ul id="modal-plan-features" style="margin-bottom: 24px; list-style: none; padding-left: 0;"></ul>
             
-            <!-- Кнопки оплаты (скрываем для За результат) -->
             <div id="modal-pay-buttons">
                 <button class="btn btn-primary" onclick="payPlan('month')">Оплатить <span id="btn-month-price">0</span> ₽ (1 месяц)</button>
                 <button class="btn btn-primary" style="background: var(--success);" onclick="payPlan('year')">Оплатить <span id="btn-year-price">0</span> ₽ (12 месяцев)</button>
@@ -334,8 +344,7 @@
                     myLeads = allLeads.filter(l => l.client_id === myClient.client_id);
                     document.getElementById('acc-total-leads').innerText = myLeads.length;
                     
-                    // Динамический лимит
-                    const currentTariff = TARIFFS['business']; // Упрощенно, тут можно брать реальный тариф
+                    const currentTariff = TARIFFS['business']; 
                     if (currentTariff.limit >= 99999) {
                         document.getElementById('limit-label').innerText = 'Накоплено заявок:';
                         document.getElementById('acc-limit-text').innerText = myLeads.length;
@@ -481,24 +490,18 @@
             const payButtons = document.getElementById('modal-pay-buttons');
             const connectBtn = document.getElementById('modal-connect-btn');
             const yearBlock = document.getElementById('modal-year-block');
+            const exampleBlock = document.getElementById('result-example');
 
             if (key === 'result') {
                 // Особый случай для "За результат"
                 document.getElementById('modal-price-main').innerText = `25 ₽ / заявка`;
                 yearBlock.style.display = 'none';
+                exampleBlock.style.display = 'block'; // Показываем пример
                 payButtons.style.display = 'none';
                 connectBtn.style.display = 'flex';
-                
-                // Пример расчета
-                const exampleHtml = `<div style="background:#f0fdf4; padding:12px; border-radius:8px; margin-bottom:16px; border:1px solid #bbf7d0;">
-                    <b>Пример:</b> 4 заявки = 100 ₽<br>
-                    <b>Пример:</b> 5 заявок = 125 ₽
-                </div>`;
-                document.getElementById('modal-price-main').insertAdjacentHTML('afterend', exampleHtml);
             } else {
                 // Обычные тарифы
-                const existingExample = document.querySelector('.example-calc');
-                if(existingExample) existingExample.remove();
+                exampleBlock.style.display = 'none'; // Скрываем пример
 
                 document.getElementById('modal-price-main').innerText = `${t.month} ₽ / мес`;
                 yearBlock.style.display = 'block';
