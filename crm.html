@@ -121,24 +121,24 @@
             });
         }
 
-        // Проверяем, как мы зашли (через Mini App или через браузер)
+                // Проверяем, как мы зашли (через Mini App или через браузер)
         function checkAuth() {
             const urlParams = new URLSearchParams(window.location.search);
-            
+            let tgId = null;
+
             // 1. Если это Telegram Mini App
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user) {
-                const user = window.Telegram.WebApp.initDataUnsafe.user;
-                // Прячем кнопку, показываем загрузку
+                tgId = window.Telegram.WebApp.initDataUnsafe.user.id;
                 document.getElementById('telegram-login-btn').style.display = 'none';
                 document.getElementById('loading-text').style.display = 'block';
-                // Запускаем вход
-                window.location.href = `/crm?auth_success=1&telegram_id=${user.id}`;
-                return;
+            } 
+            // 2. Если мы вернулись после входа через браузер
+            else if (urlParams.get('auth_success') === '1') {
+                tgId = Number(urlParams.get('telegram_id'));
             }
 
-            // 2. Если мы вернулись после успешного входа (через браузер)
-            if (urlParams.get('auth_success') === '1') {
-                const tgId = Number(urlParams.get('telegram_id'));
+            // Если мы поняли, кто это — показываем панель
+            if (tgId) {
                 document.getElementById('auth-container').style.display = 'none';
                 document.getElementById('crm-container').style.display = 'block';
                 
@@ -153,6 +153,8 @@
                 window.history.replaceState({}, document.title, "/crm");
             }
         }
+
+        window.onload = checkAuth;
 
         window.onload = checkAuth;
 
