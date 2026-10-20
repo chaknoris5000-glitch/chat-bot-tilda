@@ -40,7 +40,7 @@
         .profile-info h2 { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
         .profile-info p { font-size: 13px; color: var(--hint); }
 
-        /* Quick Actions (Home) */
+        /* Actions Grid (Home) */
         .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
         .action-btn { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 16px; text-align: center; cursor: pointer; transition: 0.2s; text-decoration: none; color: var(--text); display: flex; flex-direction: column; align-items: center; gap: 8px; }
         .action-btn:active { background: #f1f5f9; }
@@ -224,18 +224,17 @@
             document.getElementById('user-avatar').innerText = user.first_name.charAt(0).toUpperCase();
             
             try {
-                // Загружаем заявки
                 const resLeads = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`, {
                     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
                 });
                 const allLeads = await resLeads.json();
 
-                // Загружаем клиентов
                 const resClients = await fetch(`${SUPABASE_URL}/rest/v1/clients?select=*`, {
                     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
                 });
                 const allClients = await resClients.json();
 
+                // Проверка: Админ или Клиент
                 if (user.id === ADMIN_TELEGRAM_ID) {
                     document.getElementById('user-role').innerText = 'Администратор платформы';
                     document.getElementById('admin-home').style.display = 'block';
@@ -244,7 +243,7 @@
                     document.getElementById('admin-clients').innerText = allClients.length;
                     document.getElementById('admin-leads').innerText = allLeads.length;
                     
-                    // Для админа скрываем "Мой бизнес" и "Аккаунт" из нижнего меню, оставляем только главную
+                    // Для админа скрываем "Мой бизнес" и "Аккаунт" из нижнего меню
                     document.querySelectorAll('.nav-item')[1].style.display = 'none';
                     document.querySelectorAll('.nav-item')[2].style.display = 'none';
                 } else {
