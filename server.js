@@ -1306,6 +1306,10 @@ cron.schedule('0 10 * * *', async () => {
 app.get('/crm', (req, res) => {
   res.sendFile(path.join(__dirname, 'crm.html'));
 });
+
+app.get('/app', (req, res) => {
+  res.sendFile(path.join(__dirname, 'app.html'));
+});
 app.all('/auth/telegram', async (req, res) => {
   try {
     const params = req.method === 'GET' ? req.query : req.body;
