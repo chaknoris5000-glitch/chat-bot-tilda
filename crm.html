@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM - AI-Администратор</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        h1 { margin-top: 0; color: #2F5B43; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fa; font-weight: bold; color: #555; }
+        tr:hover { background: #f1f1f1; }
+        .status { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .status-new { background: #e3f2fd; color: #0d47a1; }
+        .status-in_progress { background: #fff3e0; color: #e65100; }
+        .status-closed { background: #e8f5e9; color: #1b5e20; }
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; background: #2F5B43; font-size: 12px; }
+        .btn:hover { background: #213f2f; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Панель управления (CRM)</h1>
+        <p>Здесь отображаются все ваши заявки.</p>
+        <table id="leadsTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Дата</th>
+                    <th>Имя</th>
+                    <th>Телефон</th>
+                    <th>Задача</th>
+                    <th>Статус</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody id="leadsBody">
+                <tr><td colspan="7" style="text-align:center;">Загрузка...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Внимание: В реальном проекте лучше брать данные через сервер, 
+        // но для первого шага мы заберем их напрямую из Supabase.
+        const SUPABASE_URL = 'https://ozutjnwextahorvzdbpl.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96dXRqbndleHRhaG9ydnpkYnBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MTQ3MzUsImV4cCI6MjEwNzE5MDczNX0.8L3adhQ9gUR5iSly1afSQN6HeEhkj9QQ4NtUyZUQx28_SUPABASE_ANON_PUBLIC'; // Вставь сюда публичный ключ (anon public), он безопасен для фронтенда
+
+        async function loadLeads() {
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                const data = await res.json();
+                const tbody = document.getElementById('leadsBody');
+                tbody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Заявок пока нет</td></tr>';
+                    return;
+                }
+
+                data.forEach(lead => {
+                    let statusClass = 'status-new';
+                    let statusText = 'Новая';
+                    if (lead.status === 'in_progress') { statusClass = 'status-in_progress'; statusText = 'В работе'; }
+                    if (lead.status === 'closed') { statusClass = 'status-closed'; statusText = 'Закрыта'; }
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${lead.id}</td>
+                        <td>${new Date(lead.created_at).toLocaleDateString('ru-RU')}</td>
+                        <td>${lead.name || '—'}</td>
+                        <td>${lead.phone || '—'}</td>
+                        <td>${lead.problem || '—'}</td>
+                        <td><span class="status ${statusClass}">${statusText}</span></td>
+                        <td><button class="btn" onclick="alert('Управление статусами появится на следующем шаге')">Изменить</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                console.error(e);
+                document.getElementById('leadsBody').innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Ошибка загрузки данных</td></tr>';
+            }
+        }
+
+        loadLeads();
+    </script>
+</body>
+</html>
