@@ -10,25 +10,31 @@
         :root {
             --bg: #f4f6f8; --sidebar-bg: #ffffff; --primary: #1e3a2f; --primary-light: #2F5B43;
             --accent: #3b82f6; --text-main: #0f172a; --text-muted: #64748b; --border: #e2e8f0;
-            --card-shadow: 0 1px 3px rgba(0,0,0,0.05); --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.05); --danger: #ef4444; --success: #10b981;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; background: var(--bg); color: var(--text-main); display: flex; min-height: 100vh; }
 
         /* --- Sidebar --- */
         .sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; position: fixed; height: 100%; left: 0; top: 0; z-index: 100; }
-        .logo { font-size: 20px; font-weight: 800; color: var(--primary); margin-bottom: 30px; letter-spacing: -0.5px; }
-        .menu-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; margin-top: 20px; font-weight: 700; }
+        .logo { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 24px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
+        
+        .sidebar-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+        .sidebar-actions .btn { width: 100%; justify-content: center; }
+
+        .menu-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; margin-top: 10px; font-weight: 700; }
         .menu-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; color: var(--text-muted); font-weight: 500; transition: all 0.2s; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; font-size: 14px; }
         .menu-item:hover { background: #f1f5f9; color: var(--text-main); }
         .menu-item.active { background: #e8f0ec; color: var(--primary-light); font-weight: 600; }
+        .menu-item svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-right: 10px; }
+        .menu-item-left { display: flex; align-items: center; }
         .badge-count { background: var(--danger); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px; font-weight: bold; }
 
         /* --- Main Content --- */
         .main-content { flex: 1; margin-left: 260px; padding: 30px; max-width: 1400px; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
         .header h1 { font-size: 24px; font-weight: 700; }
-        .header-actions { display: flex; gap: 10px; }
+        
         .btn { padding: 8px 14px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-primary:hover { background: var(--primary-light); }
@@ -39,7 +45,7 @@
 
         /* --- Stats --- */
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-        .stat-card { background: white; padding: 16px; border-radius: 10px; border: 1px solid var(--border); box-shadow: var(--card-shadow); cursor: pointer; }
+        .stat-card { background: white; padding: 16px; border-radius: 10px; border: 1px solid var(--border); box-shadow: var(--card-shadow); }
         .stat-title { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
         .stat-value { font-size: 26px; font-weight: 800; }
 
@@ -72,7 +78,6 @@
         .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
         .modal-title { font-size: 20px; font-weight: 700; }
         
-        /* --- Status Action Panel --- */
         .status-panel { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
         .current-status { font-weight: bold; font-size: 14px; padding: 4px 10px; border-radius: 6px; }
         .status-new { background: #eff6ff; color: #1d4ed8; }
@@ -96,18 +101,22 @@
         @media (max-width: 768px) {
             body { flex-direction: column; padding-bottom: 64px; }
             .sidebar { width: 100%; height: 60px; flex-direction: row; bottom: 0; top: auto; padding: 0; justify-content: space-around; }
-            .logo, .menu-label { display: none; }
-            .menu-item { flex-direction: column; font-size: 10px; padding: 8px; margin: 0; }
+            .logo, .menu-label, .sidebar-actions { display: none; }
+            .menu-item { flex-direction: column; font-size: 10px; padding: 8px; margin: 0; gap: 4px; }
+            .menu-item svg { margin: 0; width: 20px; height: 20px; }
             .menu-item.active { background: none; color: var(--primary-light); }
             .main-content { margin-left: 0; padding: 16px; }
             .header { flex-direction: column; align-items: flex-start; gap: 12px; }
-            .header-actions { width: 100%; }
+            .header-actions-mobile { display: flex; gap: 10px; width: 100%; margin-bottom: 16px; }
             .btn { flex: 1; justify-content: center; }
             .stats-grid { grid-template-columns: 1fr 1fr; }
             .kanban-board { flex-direction: column; }
             .kanban-col { min-width: 100%; }
             .form-grid { grid-template-columns: 1fr; }
             .form-group.full { grid-column: span 1; }
+        }
+        @media (min-width: 769px) {
+            .header-actions-mobile { display: none; }
         }
     </style>
 </head>
@@ -123,34 +132,68 @@
     <!-- CRM App -->
     <div id="crm-container" style="display: none; width: 100%;">
         <div class="sidebar">
-            <div class="logo">🤖 AI CRM</div>
+            <div class="logo">AI CRM</div>
             
+            <!-- Кнопки действий в сайдбаре -->
+            <div class="sidebar-actions">
+                <button class="btn btn-primary" onclick="openCreateModal()">+ Добавить клиента</button>
+                <button class="btn btn-outline" onclick="exportToExcel()">Скачать Excel</button>
+            </div>
+
             <div class="menu-label">Рабочее пространство</div>
-            <div class="menu-item active" onclick="switchTab('kanban')">📋 Воронка</div>
-            <div class="menu-item" onclick="switchTab('list')">📑 Все заявки</div>
-            <div class="menu-item" onclick="switchTab('clients')">👥 База клиентов</div>
+            <div class="menu-item active" onclick="switchTab('kanban')">
+                <div class="menu-item-left">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+                    Воронка
+                </div>
+            </div>
+            <div class="menu-item" onclick="switchTab('list')">
+                <div class="menu-item-left">
+                    <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+                    Все заявки
+                </div>
+            </div>
+            <div class="menu-item" onclick="switchTab('clients')">
+                <div class="menu-item-left">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    База клиентов
+                </div>
+            </div>
             <div class="menu-item" onclick="switchTab('tasks')">
-                <span>⏰ Задачи</span>
+                <div class="menu-item-left">
+                    <svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    Задачи
+                </div>
                 <span class="badge-count" id="task-count" style="display:none;">0</span>
             </div>
 
             <div class="menu-label">Настройки</div>
-            <div class="menu-item" onclick="switchTab('settings')">⚙️ Настройки</div>
+            <div class="menu-item" onclick="switchTab('settings')">
+                <div class="menu-item-left">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    Настройки
+                </div>
+            </div>
         </div>
 
         <div class="main-content">
+            <!-- Кнопки для мобильной версии -->
+            <div class="header-actions-mobile">
+                <button class="btn btn-primary" onclick="openCreateModal()">+ Клиент</button>
+                <button class="btn btn-outline" onclick="exportToExcel()">Excel</button>
+            </div>
+
             <div class="header">
                 <h1 id="page-title">Воронка продаж</h1>
-                <div class="header-actions">
-                    <button class="btn btn-outline" onclick="exportToExcel()">📥 Excel</button>
-                    <button class="btn btn-primary" onclick="openCreateModal()">+ Клиент</button>
+                <div class="header-actions" id="header-desktop-buttons">
+                    <!-- Кнопки переехали в сайдбар, тут оставил пустое место -->
                 </div>
             </div>
 
             <div class="stats-grid" id="stats-block">
-                <div class="stat-card" onclick="switchTab('list')"><div class="stat-title">Всего лидов</div><div class="stat-value" id="stat-total">0</div></div>
-                <div class="stat-card" onclick="switchTab('list')"><div class="stat-title">В работе</div><div class="stat-value" id="stat-progress" style="color: #b45309;">0</div></div>
-                <div class="stat-card" onclick="switchTab('list')"><div class="stat-title">Успешно</div><div class="stat-value" id="stat-closed" style="color: #15803d;">0</div></div>
+                <div class="stat-card"><div class="stat-title">Всего лидов</div><div class="stat-value" id="stat-total">0</div></div>
+                <div class="stat-card"><div class="stat-title">В работе</div><div class="stat-value" id="stat-progress" style="color: #b45309;">0</div></div>
+                <div class="stat-card"><div class="stat-title">Успешно</div><div class="stat-value" id="stat-closed" style="color: #15803d;">0</div></div>
                 <div class="stat-card" style="background: #f0fdf4; border-color: #bbf7d0;"><div class="stat-title" style="color: #166534;">Выручка</div><div class="stat-value" id="stat-revenue" style="color: #15803d;">0 ₽</div></div>
             </div>
 
@@ -159,14 +202,6 @@
 
             <!-- LIST VIEW -->
             <div id="list-view" style="display: none;">
-                <div class="filters-bar">
-                    <select id="filter-status" onchange="applyFilters()">
-                        <option value="">Все статусы</option>
-                        <option value="new">Новые</option>
-                        <option value="in_progress">В работе</option>
-                        <option value="closed">Закрытые</option>
-                    </select>
-                </div>
                 <div class="table-container">
                     <table>
                         <thead><tr><th>ID</th><th>Клиент</th><th>Телефон</th><th>Услуга</th><th>Сумма</th><th>Статус</th></tr></thead>
@@ -184,13 +219,10 @@
                         <option value="М">Мужчины</option>
                         <option value="Ж">Женщины</option>
                     </select>
-                    <select id="filter-service" onchange="applyClientFilters()">
-                        <option value="">Все услуги</option>
-                    </select>
                 </div>
                 <div class="table-container">
                     <table>
-                        <thead><tr><th>Имя</th><th>Телефон</th><th>Пол</th><th>Услуга</th><th>Сумма</th><th>Последний визит</th></tr></thead>
+                        <thead><tr><th>Имя</th><th>Телефон</th><th>Пол</th><th>Услуга</th><th>Сумма</th><th>Дата</th></tr></thead>
                         <tbody id="clientsBody"></tbody>
                     </table>
                 </div>
@@ -198,6 +230,9 @@
 
             <!-- TASKS VIEW -->
             <div id="tasks-view" style="display: none;">
+                <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+                    <button class="btn btn-primary" onclick="openTaskModal()">+ Добавить задачу</button>
+                </div>
                 <div class="table-container">
                     <table>
                         <thead><tr><th>Задача</th><th>Клиент</th><th>Когда</th><th>Действие</th></tr></thead>
@@ -216,7 +251,6 @@
                 <div style="cursor:pointer; font-size:24px;" onclick="closeModal()">&times;</div>
             </div>
 
-            <!-- Панель управления статусом -->
             <div class="status-panel" id="status-panel">
                 <div id="current-status-badge" class="current-status"></div>
                 <div class="status-actions" id="status-buttons"></div>
@@ -239,18 +273,39 @@
                 <div class="form-group"><label>Оплачено?</label>
                     <select id="edit-paid"><option value="false">Нет</option><option value="true">Да</option></select>
                 </div>
-                <div class="form-group full"><label>Напоминание (дата и время)</label><input type="datetime-local" id="edit-reminder"></div>
-                <div class="form-group full"><label>Задача / Заметка</label><textarea id="edit-notes" rows="2"></textarea></div>
+                <div class="form-group full"><label>Заметка</label><textarea id="edit-notes" rows="2"></textarea></div>
             </div>
 
             <div style="display:flex; justify-content:space-between; margin-top:20px;">
                 <div>
-                    <button class="btn btn-outline btn-sm" onclick="copyTemplate()">📋 Скопировать шаблон</button>
+                    <button class="btn btn-outline btn-sm" onclick="copyTemplate()">📋 Копировать шаблон</button>
                 </div>
                 <div>
                     <button class="btn btn-danger btn-sm" onclick="deleteLead()">Удалить</button>
                     <button class="btn btn-primary" onclick="saveLead()">Сохранить</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div id="taskModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Новая задача</div>
+                <div style="cursor:pointer; font-size:24px;" onclick="closeTaskModal()">&times;</div>
+            </div>
+            <div class="form-grid">
+                <div class="form-group full">
+                    <label>Клиент</label>
+                    <select id="task-client-id"></select>
+                </div>
+                <div class="form-group full"><label>Что сделать?</label><input type="text" id="task-text" placeholder="Перезвонить..."></div>
+                <div class="form-group full"><label>Когда?</label><input type="datetime-local" id="task-date"></div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button class="btn btn-outline" onclick="closeTaskModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="saveTask()">Создать</button>
             </div>
         </div>
     </div>
@@ -287,8 +342,8 @@
                 document.getElementById('auth-container').style.display = 'none';
                 document.getElementById('crm-container').style.display = 'flex';
                 if (currentUserTgId !== ADMIN_TELEGRAM_ID) {
-                    document.querySelector('.logo').innerHTML = '🤖 Кабинет';
-                    document.getElementById('header-actions').style.display = 'none';
+                    document.querySelector('.logo').innerHTML = 'Кабинет';
+                    document.querySelector('.sidebar-actions').style.display = 'none';
                 }
                 loadLeads();
                 window.history.replaceState({}, document.title, "/crm");
@@ -310,6 +365,7 @@
                 renderClients(data);
                 renderTasks(data);
                 updateStats(data);
+                populateTaskClientSelect(data);
             } catch (e) { console.error(e); }
         }
 
@@ -317,7 +373,7 @@
         function renderKanban(data) {
             const board = document.getElementById('kanban-view');
             board.innerHTML = '';
-            const columns = [{ id: 'new', title: '🆕 Новые' }, { id: 'in_progress', title: '🔄 В работе' }, { id: 'closed', title: '✅ Успешно' }];
+            const columns = [{ id: 'new', title: 'Новые' }, { id: 'in_progress', title: 'В работе' }, { id: 'closed', title: 'Успешно' }];
 
             columns.forEach(col => {
                 const colLeads = data.filter(l => l.status === col.id);
@@ -332,7 +388,7 @@
                     card.onclick = () => openClientModal(lead.id);
                     card.innerHTML = `
                         <div class="k-title"><span>${lead.name || 'Без имени'}</span><span class="k-amount">${lead.amount ? lead.amount + ' ₽' : ''}</span></div>
-                        <div class="k-phone">📞 ${lead.phone || '—'}</div>
+                        <div class="k-phone">${lead.phone || '—'}</div>
                         <div class="k-tags">
                             ${lead.service ? `<span class="k-tag">${lead.service}</span>` : ''}
                             <span class="k-tag">#${lead.id}</span>
@@ -408,7 +464,7 @@
             document.getElementById('stat-revenue').innerText = revenue.toLocaleString() + ' ₽';
         }
 
-        // --- СТАТУСЫ В КАРТОЧКЕ ---
+        // --- СТАТУСЫ ---
         function updateStatusUI(status) {
             const badge = document.getElementById('current-status-badge');
             const buttons = document.getElementById('status-buttons');
@@ -458,17 +514,9 @@
             document.getElementById('edit-service').value = lead.service || '';
             document.getElementById('edit-amount').value = lead.amount || '';
             document.getElementById('edit-paid').value = lead.is_paid ? 'true' : 'false';
-            
-            if(lead.next_contact_date) {
-                const d = new Date(lead.next_contact_date);
-                d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-                document.getElementById('edit-reminder').value = d.toISOString().slice(0,16);
-            } else {
-                document.getElementById('edit-reminder').value = '';
-            }
             document.getElementById('edit-notes').value = lead.notes || lead.problem || '';
 
-            updateStatusUI(lead.status); // Обновляем кнопки статуса
+            updateStatusUI(lead.status);
 
             const cleanPhone = (lead.phone || '').replace(/\D/g, '');
             document.getElementById('btn-call').href = `tel:${lead.phone || ''}`;
@@ -487,8 +535,7 @@
                 service: document.getElementById('edit-service').value.trim(),
                 amount: Number(document.getElementById('edit-amount').value) || 0,
                 is_paid: document.getElementById('edit-paid').value === 'true',
-                notes: document.getElementById('edit-notes').value.trim(),
-                next_contact_date: document.getElementById('edit-reminder').value || null
+                notes: document.getElementById('edit-notes').value.trim()
             };
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${currentLeadId}`, {
                 method: 'PATCH',
@@ -530,7 +577,35 @@
             loadLeads();
         }
 
-        // TABS & FILTERS
+        // TASKS
+        function populateTaskClientSelect(data) {
+            const select = document.getElementById('task-client-id');
+            select.innerHTML = '<option value="">Выберите клиента...</option>';
+            data.forEach(l => {
+                select.innerHTML += `<option value="${l.id}">${l.name || 'Без имени'} (${l.phone || '—'})</option>`;
+            });
+        }
+
+        function openTaskModal() { document.getElementById('taskModal').style.display = 'flex'; }
+        function closeTaskModal() { document.getElementById('taskModal').style.display = 'none'; }
+
+        async function saveTask() {
+            const id = document.getElementById('task-client-id').value;
+            const text = document.getElementById('task-text').value;
+            const date = document.getElementById('task-date').value;
+            if (!id || !text || !date) return alert('Заполните все поля');
+
+            await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
+                method: 'PATCH',
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ next_contact_date: date, notes: text })
+            });
+            closeTaskModal();
+            loadLeads();
+            switchTab('tasks');
+        }
+
+        // TABS
         function switchTab(tab) {
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.main-content > div').forEach(el => el.style.display = 'none');
@@ -562,18 +637,15 @@
         function applyClientFilters() {
             const search = document.getElementById('filter-search').value.toLowerCase();
             const gender = document.getElementById('filter-gender').value;
-            const service = document.getElementById('filter-service').value;
-
             const filtered = allLeads.filter(l => {
                 const matchName = (l.name || '').toLowerCase().includes(search) || (l.phone || '').includes(search);
                 const matchGender = gender ? l.gender === gender : true;
-                const matchService = service ? l.service === service : true;
-                return matchName && matchGender && matchService;
+                return matchName && matchGender;
             });
             renderClients(filtered);
         }
 
-        // EXPORT
+        // EXPORT & CREATE
         function exportToExcel() {
             if (allLeads.length === 0) return alert('Нет данных');
             const ws_data = [["ID", "Дата", "Имя", "Телефон", "Пол", "Услуга", "Сумма", "Оплачено", "Статус"]];
@@ -586,7 +658,6 @@
             XLSX.writeFile(wb, "leads_export.xlsx");
         }
 
-        // CREATE MODAL
         function openCreateModal() { alert('Создание нового клиента-бота (пока в разработке)'); }
     </script>
 </body>
