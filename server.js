@@ -2,6 +2,9 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const cron = require('node-cron');
+// Добавляем библиотеку для проверки Telegram
+const { AuthDataValidator } = require('@telegram-auth/server');
+const { urlStrToAuthDataMap } = require('@telegram-auth/server/utils');
 
 try { require('dotenv').config(); } catch (e) {}
 
@@ -1303,6 +1306,23 @@ cron.schedule('0 10 * * *', async () => {
 app.get('/crm', (req, res) => {
   res.sendFile(path.join(__dirname, 'crm.html'));
 });
+// ========== АВТОРИЗАЦИЯ ЧЕРЕЗ TELEGRAM ==========
+app.post('/auth/telegram', async (req, res) => {
+  try {
+    const validator = new AuthDataValidator({ botToken: TELEGRAM_TOKEN });
+    const data = urlStrToAuthDataMap('?' + new URLSearchParams(req.body).toString());
+    
+    // Проверяем подпись (защита от подделки)
+    const user = await validator.validate(data);
+    
+    // Если проверка прошла, отдаем ID пользователя
+    res.json({ ok: true, telegram_id: user.id, first_name: user.first_name });
+  } catch (e) {
+    console.error('Ошибка авторизации Telegram:', e.message);
+    res.status(401).json({ ok: false, error: 'Неверная подпись' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
 });
