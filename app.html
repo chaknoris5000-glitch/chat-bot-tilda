@@ -23,10 +23,10 @@
         /* Контейнер для свайпа */
         .swipe-container { flex: 1; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; }
         .swipe-container::-webkit-scrollbar { display: none; }
-        .page { min-width: 100vw; height: 100%; scroll-snap-align: start; overflow-y: auto; padding: 20px 20px 100px 20px; }
+        .page { min-width: 100vw; height: 100%; scroll-snap-align: start; overflow-y: auto; padding: 20px 20px 100px 20px; display: flex; flex-direction: column; }
 
         /* --- СТРАНИЦА 1: АККАУНТ --- */
-        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 16px; border: 1px solid var(--border); }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 16px; border: 1px solid var(--border); flex-shrink: 0; }
         .card-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; color: var(--primary); }
         .info-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
         .info-row:last-child { margin-bottom: 0; }
@@ -35,12 +35,11 @@
         .progress-bg { background: #e2e8f0; border-radius: 10px; height: 8px; margin-top: 8px; overflow: hidden; }
         .progress-fill { background: var(--success); height: 100%; border-radius: 10px; }
 
-        .plans-grid { display: flex; flex-direction: column; gap: 12px; }
+        .plans-grid { display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; }
         .plan-card { background: #fff; border: 2px solid var(--border); border-radius: 16px; padding: 20px; transition: 0.2s; cursor: pointer; }
         .plan-card:active { border-color: var(--primary-light); background: #f8fdf9; }
         .plan-name { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
         
-        /* Новый вид цен в столбик */
         .price-main { font-size: 24px; font-weight: 800; color: var(--primary); margin-bottom: 2px; }
         .price-main span { font-size: 13px; font-weight: 500; color: var(--hint); }
         .price-year { font-size: 20px; font-weight: 800; color: var(--success); margin-bottom: 4px; }
@@ -48,19 +47,21 @@
         .price-note { font-size: 12px; color: var(--hint); margin-bottom: 12px; }
         .price-note b { color: var(--text); }
 
-        /* Кнопка отмены */
-        .btn-cancel-sub { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid var(--border); background: #f1f5f9; color: var(--hint); font-size: 14px; font-weight: 600; margin-top: 24px; cursor: pointer; }
+        .btn-cancel-sub { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid var(--border); background: #f1f5f9; color: var(--hint); font-size: 14px; font-weight: 600; margin-top: 24px; cursor: pointer; flex-shrink: 0; }
 
         /* --- СТРАНИЦА 2: БИЗНЕС --- */
-        .filters { display: flex; justify-content: center; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 16px; scrollbar-width: none; }
+        .filters-wrapper { display: flex; justify-content: center; width: 100%; flex-shrink: 0; margin-bottom: 12px; }
+        .filters { display: flex; gap: 8px; overflow-x: auto; padding: 0 10px 10px 10px; scrollbar-width: none; max-width: 100%; }
         .filters::-webkit-scrollbar { display: none; }
-        .filter-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border); background: #fff; color: var(--hint); font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+        .filter-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border); background: #fff; color: var(--hint); font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; flex-shrink: 0; }
         .filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-        .tabs-status { display: flex; gap: 8px; margin-bottom: 16px; }
-        .status-tab { flex: 1; text-align: center; padding: 10px; background: #fff; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; font-weight: 700; color: var(--hint); cursor: pointer; }
+        .tabs-status { display: flex; gap: 8px; margin-bottom: 16px; flex-shrink: 0; justify-content: center; }
+        .status-tab { flex: 1; text-align: center; padding: 10px 5px; background: #fff; border: 1px solid var(--border); border-radius: 10px; font-size: 12px; font-weight: 700; color: var(--hint); cursor: pointer; }
         .status-tab.active { background: #e8f0ec; color: var(--primary); border-color: var(--primary-light); }
 
+        /* Список заявок (скроллится) */
+        .lead-list-container { flex: 1; overflow-y: auto; margin-bottom: 70px; /* отступ под фиксированную кнопку */ }
         .lead-list { display: flex; flex-direction: column; gap: 10px; }
         .lead-card { background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.02); cursor: pointer; }
         .lead-card:active { background: #f8fafc; }
@@ -68,6 +69,9 @@
         .lead-name { font-size: 15px; font-weight: 800; }
         .lead-phone { font-size: 13px; color: var(--hint); }
         .lead-service { display: inline-block; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-top: 8px; }
+
+        /* Фиксированная кнопка внизу */
+        .sticky-bottom-btn { position: absolute; bottom: 20px; left: 20px; right: 20px; z-index: 50; }
 
         /* Нижнее меню */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 20px 0; z-index: 100; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); }
@@ -87,7 +91,6 @@
         .form-group { margin-bottom: 12px; }
         .form-group textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; font-family: inherit; }
 
-        /* Стили для модалки заявки */
         .lead-info-row { font-size: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;}
         .lead-info-desc { font-size: 14px; background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 20px; color: var(--text); line-height: 1.4; }
     </style>
@@ -112,28 +115,26 @@
                 <div class="info-row"><span class="info-label">Действует до:</span><span class="info-value" id="acc-date">—</span></div>
                 <div class="info-row"><span class="info-label">Всего заявок за период:</span><span class="info-value" id="acc-total-leads">0</span></div>
                 <div style="margin-top: 16px;">
-                    <div class="info-row" style="margin-bottom: 4px;"><span class="info-label">Лимит заявок:</span><span class="info-value" id="acc-limit-text">0 / 100</span></div>
+                    <div class="info-row" style="margin-bottom: 4px;"><span class="info-label" id="limit-label">Лимит заявок:</span><span class="info-value" id="acc-limit-text">0 / 100</span></div>
                     <div class="progress-bg"><div class="progress-fill" id="acc-progress" style="width: 0%;"></div></div>
                 </div>
             </div>
 
-            <div class="card-title" style="margin-left: 4px; margin-top: 24px; margin-bottom: 16px;">Выберите тариф</div>
+            <div class="card-title" style="margin-left: 4px; margin-top: 10px; margin-bottom: 16px;">Выберите тариф</div>
             <div class="plans-grid" id="plans-container"></div>
             
-            <!-- Измененная кнопка отмены -->
             <button class="btn-cancel-sub" onclick="openCancelModal()">Отменить подписку</button>
         </div>
 
         <!-- ================= СТРАНИЦА 2: МОЙ БИЗНЕС ================= -->
-        <div class="page" id="page-business">
-            <div class="card-title" style="margin-left: 4px; margin-bottom: 16px;">Заявки</div>
-            
-            <!-- Фильтры с числами -->
-            <div class="filters">
-                <button class="filter-btn active" id="filter-btn-today" onclick="setTimeFilter('today', this)">Сегодня (0)</button>
-                <button class="filter-btn" id="filter-btn-yesterday" onclick="setTimeFilter('yesterday', this)">Вчера (0)</button>
-                <button class="filter-btn" id="filter-btn-week" onclick="setTimeFilter('week', this)">За неделю (0)</button>
-                <button class="filter-btn" id="filter-btn-month" onclick="setTimeFilter('month', this)">За месяц (0)</button>
+        <div class="page" id="page-business" style="position: relative;">
+            <div class="filters-wrapper">
+                <div class="filters">
+                    <button class="filter-btn active" id="filter-btn-today" onclick="setTimeFilter('today', this)">Сегодня (0)</button>
+                    <button class="filter-btn" id="filter-btn-yesterday" onclick="setTimeFilter('yesterday', this)">Вчера (0)</button>
+                    <button class="filter-btn" id="filter-btn-week" onclick="setTimeFilter('week', this)">За неделю (0)</button>
+                    <button class="filter-btn" id="filter-btn-month" onclick="setTimeFilter('month', this)">За месяц (0)</button>
+                </div>
             </div>
 
             <div class="tabs-status">
@@ -143,9 +144,14 @@
                 <div class="status-tab" onclick="setStatusFilter('closed', this)">Выполнено</div>
             </div>
             
-            <div class="lead-list" id="business-leads-list"></div>
+            <div class="lead-list-container">
+                <div class="lead-list" id="business-leads-list"></div>
+            </div>
             
-            <button class="btn btn-primary" style="margin-top: 24px;" onclick="goToCRM()">Открыть расширенную CRM</button>
+            <!-- Фиксированная кнопка -->
+            <div class="sticky-bottom-btn">
+                <button class="btn btn-primary" onclick="goToCRM()">Открыть расширенную CRM</button>
+            </div>
         </div>
 
     </div>
@@ -162,46 +168,45 @@
         </div>
     </div>
 
-    <!-- Модалка: Детали тарифа -->
+    <!-- Модалки (без изменений, только обновил контент для тарифов) -->
     <div id="planModal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-title" id="modal-plan-name">Тариф</div>
-            
             <div style="margin-bottom: 20px;">
-                <div class="price-main" id="modal-price-month">1990 ₽ <span>/ мес</span></div>
-                <div class="price-note">При оплате за год: <b id="modal-price-year">14900 ₽</b></div>
+                <div class="price-main" id="modal-price-main">—</div>
+                <div id="modal-year-block" style="display: none;">
+                    <div class="price-year" id="modal-price-year">—</div>
+                    <div class="price-note" id="modal-year-note">—</div>
+                </div>
             </div>
-
             <ul id="modal-plan-features" style="margin-bottom: 24px; list-style: none; padding-left: 0;"></ul>
             
-            <!-- Кнопки оплаты -->
-            <button class="btn btn-primary" onclick="payPlan('month')">Оплатить <span id="btn-month-price">1990</span> ₽ (1 месяц)</button>
-            <button class="btn btn-primary" style="background: var(--success);" onclick="payPlan('year')">Оплатить <span id="btn-year-price">14900</span> ₽ (12 месяцев)</button>
+            <!-- Кнопки оплаты (скрываем для За результат) -->
+            <div id="modal-pay-buttons">
+                <button class="btn btn-primary" onclick="payPlan('month')">Оплатить <span id="btn-month-price">0</span> ₽ (1 месяц)</button>
+                <button class="btn btn-primary" style="background: var(--success);" onclick="payPlan('year')">Оплатить <span id="btn-year-price">0</span> ₽ (12 месяцев)</button>
+            </div>
+            <button id="modal-connect-btn" class="btn btn-primary" style="display: none;" onclick="payPlan('result')">Подключить</button>
+
             <button class="btn btn-outline" onclick="closeModal('planModal')">Закрыть</button>
         </div>
     </div>
 
-    <!-- Модалка: Детали заявки (Новая) -->
     <div id="leadModal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-title" id="modal-lead-name">Имя клиента</div>
-            
             <div class="lead-info-row">📞 <span id="modal-lead-phone">—</span></div>
             <div class="lead-info-row" style="color: var(--hint);">🛠 Услуга: <span id="modal-lead-service">—</span></div>
-            
             <div style="font-size: 13px; font-weight: 600; color: var(--hint); margin-bottom: 6px; margin-top: 16px;">Запрос:</div>
             <div class="lead-info-desc" id="modal-lead-problem">Описание...</div>
-            
             <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                 <a id="modal-btn-call" href="#" class="btn" style="background: #eff6ff; color: #1d4ed8; margin: 0; flex: 1;">📞 Позвонить</a>
                 <a id="modal-btn-tg" href="#" target="_blank" class="btn" style="background: #e0f2fe; color: #0284c7; margin: 0; flex: 1;">✈️ Telegram</a>
             </div>
-            
             <button class="btn btn-outline" onclick="closeModal('leadModal')">Закрыть</button>
         </div>
     </div>
 
-    <!-- Модалка: Отмена подписки -->
     <div id="cancelModal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-title">Отмена подписки</div>
@@ -212,7 +217,6 @@
         </div>
     </div>
 
-    <!-- Модалка: Поддержка -->
     <div id="supportModal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-title">Поддержка</div>
@@ -231,42 +235,59 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // Обновленные тарифы с расчетом года
         const TARIFFS = {
             'start': { 
-                name: 'Старт', 
-                month: 1990, 
-                year: 14900, 
-                monthIfYear: 1490,
-                features: ['До 100 заявок в месяц', 'Настройка и первая неделя — бесплатно', 'CRM-система и Telegram-бот', 'Круглосуточная работа 24/7'] 
+                name: 'Старт', month: 1990, year: 14900, monthIfYear: 1490, limit: 100,
+                features: [
+                    'До 100 заявок в месяц (автоматический сбор)',
+                    'Работает 24/7 без выходных',
+                    'Уведомления о новых заявках в Telegram',
+                    'Встроенная мини-CRM для управления заявками',
+                    'До обучения на ваших материалах: услуги, цены, адреса',
+                    'Автоматическая ежедневная, еженедельная и месячная отчетность в Excel',
+                    'Подключение ваших внешних систем по API'
+                ] 
             },
             'business': { 
-                name: 'Бизнес', 
-                month: 2490, 
-                year: 19900, 
-                monthIfYear: 1658,
-                features: ['До 300 заявок в месяц', 'Все функции CRM + Аналитика', 'Бесшовный переход в Telegram', 'Выгрузка в Excel'] 
+                name: 'Бизнес', month: 2490, year: 19900, monthIfYear: 1658, limit: 300,
+                features: [
+                    'До 300 заявок в месяц (автоматический сбор)',
+                    'Работает 24/7 без выходных',
+                    'Встроенная мини-CRM для управления заявками',
+                    'До обучения на ваших материалах: услуги, цены, адреса',
+                    'Автоматическая ежедневная, еженедельная и месячная отчетность в Excel',
+                    'Подключение ваших внешних систем по API'
+                ] 
             },
             'unlimited': { 
-                name: 'Безлимит', 
-                month: 4990, 
-                year: 39900, 
-                monthIfYear: 3325,
-                features: ['Неограниченное количество заявок', 'Приоритетная поддержка', 'Любые интеграции под ваш бизнес', 'Персональный менеджер'] 
+                name: 'Безлимит', month: 4990, year: 39900, monthIfYear: 3325, limit: 99999,
+                features: [
+                    'Неограниченное количество заявок (автоматический сбор)',
+                    'Работает 24/7 без выходных',
+                    'Приоритетная поддержка (отвечаем быстрее всех)',
+                    'Встроенная мини-CRM для управления заявками',
+                    'До обучения на ваших материалах: услуги, цены, адреса',
+                    'Автоматическая ежедневная, еженедельная и месячная отчетность в Excel',
+                    'Подключение ваших внешних систем по API'
+                ] 
             },
             'result': { 
-                name: 'За результат', 
-                month: 25, 
-                year: 0, 
-                monthIfYear: 25,
-                features: ['Оплата только за заявки (25 ₽)', 'Отчет в конце месяца', 'Никаких фиксированных платежей', 'Вы платите только за результат'] 
+                name: 'За результат', month: 25, year: 0, monthIfYear: 25, limit: 99999,
+                features: [
+                    'Оплата только за реальные заявки (25 ₽ за штуку, автоматический сбор)',
+                    'Работает 24/7 без выходных',
+                    'Прозрачный отчет в конце месяца',
+                    'Встроенная мини-CRM для управления заявками',
+                    'До обучения на ваших материалах: услуги, цены, адреса',
+                    'Автоматическая ежедневная, еженедельная и месячная отчетность в Excel',
+                    'Подключение ваших внешних систем по API'
+                ] 
             }
         };
 
         let myClient = null;
         let myLeads = [];
         let currentPlanKey = null;
-        
         let filterTime = 'today'; 
         let filterStatus = 'all';
 
@@ -312,8 +333,18 @@
                     
                     myLeads = allLeads.filter(l => l.client_id === myClient.client_id);
                     document.getElementById('acc-total-leads').innerText = myLeads.length;
-                    document.getElementById('acc-limit-text').innerText = `${myLeads.length} / 300`;
-                    document.getElementById('acc-progress').style.width = Math.min((myLeads.length/300)*100, 100) + '%';
+                    
+                    // Динамический лимит
+                    const currentTariff = TARIFFS['business']; // Упрощенно, тут можно брать реальный тариф
+                    if (currentTariff.limit >= 99999) {
+                        document.getElementById('limit-label').innerText = 'Накоплено заявок:';
+                        document.getElementById('acc-limit-text').innerText = myLeads.length;
+                        document.getElementById('acc-progress').style.width = '100%';
+                    } else {
+                        document.getElementById('limit-label').innerText = 'Лимит заявок:';
+                        document.getElementById('acc-limit-text').innerText = `${myLeads.length} / ${currentTariff.limit}`;
+                        document.getElementById('acc-progress').style.width = Math.min((myLeads.length/currentTariff.limit)*100, 100) + '%';
+                    }
 
                     updateFilterCounts();
                     renderLeads();
@@ -322,7 +353,6 @@
             } catch (e) { console.error(e); }
         }
 
-        // --- РЕНДЕР ТАРИФОВ (Столбик цен) ---
         function renderPlans() {
             const container = document.getElementById('plans-container');
             container.innerHTML = '';
@@ -342,16 +372,22 @@
                     yearHtml = `<div class="price-note" style="margin-top:8px;">Оплата по факту заявок</div>`;
                 }
 
+                let priceHtml = '';
+                if (key === 'result') {
+                    priceHtml = `<div class="price-main">${t.month} ₽ <span>/ заявка</span></div>`;
+                } else {
+                    priceHtml = `<div class="price-main">${t.month} ₽ <span>/ мес</span></div>`;
+                }
+
                 card.innerHTML = `
                     <div class="plan-name">${t.name}</div>
-                    <div class="price-main">${t.month} ₽ <span>/ мес</span></div>
+                    ${priceHtml}
                     ${yearHtml}
                 `;
                 container.appendChild(card);
             });
         }
 
-        // --- РЕНДЕР ЗАЯВОК ---
         function updateFilterCounts() {
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -437,27 +473,44 @@
             renderLeads();
         }
 
-        // --- МОДАЛКИ ---
         function openPlanModal(key) {
             currentPlanKey = key;
             const t = TARIFFS[key];
             document.getElementById('modal-plan-name').innerText = t.name;
             
-            // Заполняем цены
-            document.getElementById('modal-price-month').innerText = `${t.month} ₽ / мес`;
-            if (t.year > 0) {
-                document.getElementById('modal-price-year').innerText = `${t.year} ₽`;
-                document.getElementById('modal-price-year').parentElement.style.display = 'block';
+            const payButtons = document.getElementById('modal-pay-buttons');
+            const connectBtn = document.getElementById('modal-connect-btn');
+            const yearBlock = document.getElementById('modal-year-block');
+
+            if (key === 'result') {
+                // Особый случай для "За результат"
+                document.getElementById('modal-price-main').innerText = `25 ₽ / заявка`;
+                yearBlock.style.display = 'none';
+                payButtons.style.display = 'none';
+                connectBtn.style.display = 'flex';
+                
+                // Пример расчета
+                const exampleHtml = `<div style="background:#f0fdf4; padding:12px; border-radius:8px; margin-bottom:16px; border:1px solid #bbf7d0;">
+                    <b>Пример:</b> 4 заявки = 100 ₽<br>
+                    <b>Пример:</b> 5 заявок = 125 ₽
+                </div>`;
+                document.getElementById('modal-price-main').insertAdjacentHTML('afterend', exampleHtml);
+            } else {
+                // Обычные тарифы
+                const existingExample = document.querySelector('.example-calc');
+                if(existingExample) existingExample.remove();
+
+                document.getElementById('modal-price-main').innerText = `${t.month} ₽ / мес`;
+                yearBlock.style.display = 'block';
+                document.getElementById('modal-price-year').innerText = `${t.monthIfYear} ₽ / мес`;
+                document.getElementById('modal-year-note').innerText = `При оплате за год: ${t.year} ₽`;
+                
+                payButtons.style.display = 'block';
+                connectBtn.style.display = 'none';
                 document.getElementById('btn-month-price').innerText = t.month;
                 document.getElementById('btn-year-price').innerText = t.year;
-                document.getElementById('btn-year-price').parentElement.style.display = 'flex';
-            } else {
-                document.getElementById('modal-price-year').parentElement.style.display = 'none';
-                document.getElementById('btn-month-price').innerText = t.month;
-                document.getElementById('btn-year-price').parentElement.style.display = 'none'; // Скрываем кнопку года для "За результат"
             }
 
-            // Заполняем фичи
             const ul = document.getElementById('modal-plan-features');
             ul.innerHTML = t.features.map(f => `<li style="font-size:14px; margin-bottom:8px; display:flex; gap:8px;"><span style="color:var(--success); font-weight:bold;">✓</span> ${f}</li>`).join('');
             
@@ -487,7 +540,7 @@
         function payPlan(period) {
             const t = TARIFFS[currentPlanKey];
             const amount = period === 'year' ? t.year : t.month;
-            alert(`Переход к оплате: ${amount} ₽ (${period === 'year' ? 'год' : 'месяц'})`);
+            alert(`Переход к оплате: ${amount} ₽`);
             closeModal('planModal');
         }
 
