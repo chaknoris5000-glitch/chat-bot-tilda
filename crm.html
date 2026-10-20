@@ -3,202 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CRM - AI-Администратор</title>
+    <title>AI CRM - Управление бизнесом</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
         :root {
-            --primary: #2F5B43;
-            --primary-hover: #213f2f;
-            --bg: #f4f6f8;
-            --card-bg: #ffffff;
-            --text-main: #333;
-            --text-muted: #777;
-            --border: #e0e0e0;
+            --bg: #f8fafc;
+            --sidebar-bg: #ffffff;
+            --primary: #1e3a2f;
+            --primary-light: #2F5B43;
+            --accent: #3b82f6;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
         }
-        
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text-main); display: flex; min-height: 100vh; }
-        
-        /* --- Sidebar (Меню) --- */
-        .sidebar { width: 240px; background: #fff; border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; position: fixed; height: 100%; left: 0; top: 0; z-index: 100; }
-        .logo { font-size: 20px; font-weight: bold; color: var(--primary); margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
-        .menu-item { padding: 12px 15px; border-radius: 8px; cursor: pointer; color: var(--text-muted); font-weight: 500; transition: 0.2s; margin-bottom: 5px; display: flex; align-items: center; gap: 10px; }
-        .menu-item:hover { background: #f0f4f2; color: var(--primary); }
-        .menu-item.active { background: #e8f0ec; color: var(--primary); font-weight: bold; }
-        
+        body { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text-main); display: flex; min-height: 100vh; }
+
+        /* --- Sidebar --- */
+        .sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid var(--border); padding: 24px; display: flex; flex-direction: column; position: fixed; height: 100%; left: 0; top: 0; z-index: 100; }
+        .logo { font-size: 20px; font-weight: 700; color: var(--primary); margin-bottom: 32px; display: flex; align-items: center; gap: 10px; letter-spacing: -0.5px; }
+        .logo span { color: var(--primary-light); }
+        .menu-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 12px; margin-top: 24px; font-weight: 600; }
+        .menu-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; color: var(--text-muted); font-weight: 500; transition: all 0.2s; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; font-size: 14px; }
+        .menu-item:hover { background: #f1f5f9; color: var(--text-main); }
+        .menu-item.active { background: #e8f0ec; color: var(--primary-light); font-weight: 600; }
+        .menu-item svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
         /* --- Main Content --- */
-        .main-content { flex: 1; margin-left: 240px; padding: 30px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        .header h1 { font-size: 24px; color: var(--primary); }
-        
-        /* Кнопки */
-        .btn { padding: 10px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .main-content { flex: 1; margin-left: 260px; padding: 32px 40px; max-width: 1400px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+        .header h1 { font-size: 24px; font-weight: 600; color: var(--text-main); letter-spacing: -0.5px; }
+        .header-actions { display: flex; gap: 12px; }
+
+        /* --- Buttons --- */
+        .btn { padding: 9px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
         .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); }
-        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
-        .btn-outline:hover { background: #f0f0f0; }
-        
-        /* --- Статистика --- */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); border: 1px solid var(--border); }
-        .stat-title { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .stat-value { font-size: 28px; font-weight: bold; color: var(--primary); }
-        
-        /* --- Таблица заявок --- */
-        .table-container { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); border: 1px solid var(--border); overflow-x: auto; }
+        .btn-primary:hover { background: var(--primary-light); }
+        .btn-outline { background: white; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+        /* --- Dashboard Stats --- */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 32px; }
+        .stat-card { background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--card-shadow); }
+        .stat-title { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
+        .stat-value { font-size: 28px; font-weight: 700; color: var(--text-main); letter-spacing: -1px; }
+        .stat-trend { font-size: 12px; margin-top: 8px; display: flex; align-items: center; gap: 4px; font-weight: 500; }
+        .trend-up { color: #10b981; }
+        .trend-neutral { color: var(--text-muted); }
+
+        /* --- Table --- */
+        .table-container { background: white; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--card-shadow); overflow: hidden; }
+        .table-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .table-header h2 { font-size: 16px; font-weight: 600; }
         table { width: 100%; border-collapse: collapse; text-align: left; }
-        th { background: #fcfcfc; padding: 15px; font-size: 13px; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); }
-        td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+        th { background: #f8fafc; padding: 12px 20px; font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+        td { padding: 14px 20px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; color: #334155; }
         tr:last-child td { border-bottom: none; }
-        tr:hover { background: #fafafa; }
-        
-        /* Статусы */
-        .status { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; }
-        .status-new { background: #e3f2fd; color: #0d47a1; }
-        .status-in_progress { background: #fff3e0; color: #e65100; }
-        .status-closed { background: #e8f5e9; color: #1b5e20; }
-        
-        .btn-action { padding: 6px 12px; border: 1px solid var(--border); background: #fff; border-radius: 4px; cursor: pointer; font-size: 12px; transition: 0.2s; }
-        .btn-action:hover { background: #f0f0f0; }
+        tr:hover td { background: #f8fafc; }
 
-        /* --- Модальное окно --- */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: #fff; padding: 25px; border-radius: 12px; width: 90%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .modal-content h2 { margin-bottom: 20px; color: var(--primary); }
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 5px; }
-        .input-group input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; transition: 0.2s; }
-        .input-group input:focus { border-color: var(--primary); }
-        
-        /* Авторизация */
-        #auth-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100%; text-align: center; }
-        #crm-container { display: none; } 
+        /* --- Status Badges --- */
+        .badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; }
+        .badge-new { background: #eff6ff; color: #1d4ed8; }
+        .badge-progress { background: #fffbeb; color: #b45309; }
+        .badge-closed { background: #f0fdf4; color: #15803d; }
 
-        /* --- Адаптивность (Мобилки) --- */
-        @media (max-width: 768px) {
-            body { flex-direction: column; padding-bottom: 70px; }
-            .sidebar { width: 100%; height: 60px; flex-direction: row; bottom: 0; top: auto; padding: 0; border-right: none; border-top: 1px solid var(--border); justify-content: space-around; align-items: center; }
-            .logo { display: none; }
-            .menu-item { flex-direction: column; font-size: 10px; gap: 4px; padding: 8px; margin: 0; }
-            .menu-item svg { width: 20px; height: 20px; }
-            .main-content { margin-left: 0; padding: 15px; }
-            .header { flex-direction: column; align-items: flex-start; gap: 15px; }
-            .header-actions { display: flex; gap: 10px; width: 100%; }
-            .btn { flex: 1; justify-content: center; }
-            
-            .table-container { display: none; } /* Прячем таблицу */
-            
-            /* Карточки для мобилок */
-            .mobile-cards { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
-            .mobile-card { background: #fff; padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-            .mobile-card-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px; color: var(--text-muted); }
-            .mobile-card-title { font-size: 16px; font-weight: bold; color: var(--primary); margin-bottom: 5px; }
-            .mobile-card-phone { font-size: 14px; font-weight: 500; margin-bottom: 10px; }
-            .mobile-card-desc { font-size: 13px; color: #555; background: #f9f9f9; padding: 10px; border-radius: 6px; margin-bottom: 15px; }
+        /* --- Mobile Cards --- */
+        .mobile-cards { display: none; flex-direction: column; gap: 16px; }
+        .m-card { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 16px; box-shadow: var(--card-shadow); }
+        .m-card-header { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+        .m-card-name { font-size: 16px; font-weight: 600; color: var(--text-main); margin-bottom: 4px; }
+        .m-card-phone { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
+        .m-card-desc { font-size: 13px; color: #475569; background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 16px; line-height: 1.4; }
+        .m-card-footer { display: flex; justify-content: space-between; align-items: center; }
+
+        /* --- Auth --- */
+        #auth-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100%; text-align: center; background: var(--bg); }
+        #crm-container { display: none; width: 100%; }
+
+        /* --- Modal --- */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 28px; border-radius: 16px; width: 90%; max-width: 480px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        .modal-content h2 { font-size: 20px; margin-bottom: 24px; color: var(--text-main); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
+        .form-group input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: border 0.2s; }
+        .form-group input:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(47, 91, 67, 0.1); }
+
+        /* --- Responsive --- */
+        @media (max-width: 1024px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
         }
-        @media (min-width: 769px) {
-            .mobile-cards { display: none; } /* Прячем карточки на ПК */
+        @media (max-width: 768px) {
+            body { flex-direction: column; padding-bottom: 72px; }
+            .sidebar { width: 100%; height: 64px; flex-direction: row; bottom: 0; top: auto; padding: 0 16px; border-right: none; border-top: 1px solid var(--border); justify-content: space-around; align-items: center; }
+            .logo, .menu-label { display: none; }
+            .menu-item { flex-direction: column; font-size: 10px; gap: 4px; padding: 8px; margin: 0; color: var(--text-muted); }
+            .menu-item.active { background: none; color: var(--primary-light); }
+            .menu-item svg { width: 22px; height: 22px; }
+            .main-content { margin-left: 0; padding: 20px 16px; }
+            .header { flex-direction: column; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+            .header-actions { width: 100%; }
+            .btn { flex: 1; justify-content: center; }
+            .table-container { display: none; }
+            .mobile-cards { display: flex; }
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+            .stat-card { padding: 16px; }
+            .stat-value { font-size: 22px; }
         }
     </style>
 </head>
 <body>
-    <!-- Экран входа -->
+    <!-- Auth Screen -->
     <div id="auth-container">
-        <h2 style="color: var(--primary); margin-bottom: 10px;">Вход в CRM</h2>
-        <p style="color: var(--text-muted); margin-bottom: 20px;">Авторизуйтесь через Telegram, чтобы продолжить</p>
+        <h2 style="color: var(--primary); margin-bottom: 8px; font-weight: 700;">AI CRM</h2>
+        <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 14px;">Войдите, чтобы управлять бизнесом</p>
         <div id="telegram-login-btn">
             <script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="vadim602_bot" data-size="large" data-onauth="onTelegramAuth(user)" data-request-access="write"></script>
         </div>
         <div id="loading-text" style="display:none; margin-top: 20px; color: var(--text-muted);">Загрузка...</div>
     </div>
 
-    <!-- Основной интерфейс -->
-    <div id="crm-container" style="width: 100%;">
-        <!-- Боковое меню -->
+    <!-- CRM Interface -->
+    <div id="crm-container">
+        <!-- Sidebar -->
         <div class="sidebar">
-            <div class="logo">🤖 AI CRM</div>
+            <div class="logo">AI <span>CRM</span></div>
+            
+            <div class="menu-label">Рабочее пространство</div>
             <div class="menu-item active" onclick="switchTab('leads')">
-                <span>📋</span> Заявки
+                <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                Заявки
             </div>
             <div class="menu-item" onclick="switchTab('analytics')">
-                <span>📊</span> Аналитика (скоро)
+                <svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                Аналитика
+            </div>
+            <div class="menu-item" onclick="switchTab('clients')">
+                <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Клиенты
+            </div>
+
+            <div class="menu-label">Настройки</div>
+            <div class="menu-item" onclick="switchTab('integrations')">
+                <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Интеграции
             </div>
             <div class="menu-item" onclick="switchTab('settings')">
-                <span>⚙️</span> Настройки
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                Настройки
             </div>
         </div>
 
-        <!-- Контентная часть -->
+        <!-- Main Content -->
         <div class="main-content">
             <div class="header">
-                <h1 id="page-title">Заявки</h1>
-                <div class="header-actions">
-                    <button class="btn btn-outline" onclick="exportToExcel()">📥 Excel</button>
-                    <button class="btn btn-primary" onclick="openCreateClientModal()">➕ Добавить</button>
+                <h1 id="page-title">Обзор заявок</h1>
+                <div class="header-actions" id="header-buttons">
+                    <button class="btn btn-outline" onclick="exportToExcel()">Экспорт</button>
+                    <button class="btn btn-primary" onclick="openCreateClientModal()">+ Новая заявка</button>
                 </div>
             </div>
 
-            <!-- Блок статистики -->
-            <div class="stats-grid">
+            <!-- Dashboard Stats -->
+            <div class="stats-grid" id="stats-block">
                 <div class="stat-card">
                     <div class="stat-title">Всего заявок</div>
                     <div class="stat-value" id="stat-total">0</div>
+                    <div class="stat-trend trend-up">↑ за всё время</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-title">Новые</div>
-                    <div class="stat-value" id="stat-new" style="color: #0d47a1;">0</div>
+                    <div class="stat-value" id="stat-new" style="color: #1d4ed8;">0</div>
+                    <div class="stat-trend trend-neutral">Требуют внимания</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-title">В работе</div>
-                    <div class="stat-value" id="stat-inprogress" style="color: #e65100;">0</div>
+                    <div class="stat-value" id="stat-progress" style="color: #b45309;">0</div>
+                    <div class="stat-trend trend-neutral">В процессе</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Закрыто</div>
+                    <div class="stat-value" id="stat-closed" style="color: #15803d;">0</div>
+                    <div class="stat-trend trend-up">Успешно</div>
                 </div>
             </div>
 
-            <!-- Таблица (для ПК) -->
-            <div class="table-container">
-                <table id="leadsTable">
+            <!-- Desktop Table -->
+            <div class="table-container" id="table-block">
+                <div class="table-header">
+                    <h2>Последние заявки</h2>
+                </div>
+                <table>
                     <thead>
                         <tr>
                             <th>ID</th>
                             <th>Дата</th>
-                            <th>Имя</th>
+                            <th>Клиент</th>
                             <th>Телефон</th>
                             <th>Задача</th>
                             <th>Статус</th>
-                            <th>Действие</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody id="leadsBody"></tbody>
                 </table>
             </div>
 
-            <!-- Карточки (для телефонов) -->
+            <!-- Mobile Cards -->
             <div class="mobile-cards" id="leadsCards"></div>
         </div>
     </div>
 
-    <!-- Модальное окно создания клиента -->
+    <!-- Modal -->
     <div id="clientModal" class="modal-overlay">
         <div class="modal-content">
-            <h2>Новый клиент</h2>
-            <div class="input-group">
+            <h2>Новая запись</h2>
+            <div class="form-group">
                 <label>ID клиента (латиницей)</label>
-                <input type="text" id="newClientId" placeholder="Например: salon1">
+                <input type="text" id="newClientId" placeholder="salon1">
             </div>
-            <div class="input-group">
+            <div class="form-group">
                 <label>Название бизнеса</label>
-                <input type="text" id="newBusinessName" placeholder="Салон красоты Ромашка">
+                <input type="text" id="newBusinessName" placeholder="Салон красоты">
             </div>
-            <div class="input-group">
+            <div class="form-group">
                 <label>Ссылка на сайт</label>
                 <input type="text" id="newSiteUrl" placeholder="https://...">
             </div>
-            <div class="input-group">
-                <label>Часовой пояс</label>
-                <input type="text" id="newTimezone" value="Europe/Moscow">
-            </div>
-            <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+            <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px;">
                 <button class="btn btn-outline" onclick="closeCreateClientModal()">Отмена</button>
                 <button class="btn btn-primary" onclick="submitNewClient()">Создать</button>
             </div>
@@ -211,7 +246,7 @@
         const ADMIN_TELEGRAM_ID = 5818548555; 
         let allLeads = [];
 
-        // --- АВТОРИЗАЦИЯ ---
+        // Auth
         function onTelegramAuth(user) {
             fetch('/auth/telegram', {
                 method: 'POST',
@@ -238,13 +273,14 @@
 
             if (tgId) {
                 document.getElementById('auth-container').style.display = 'none';
-                document.getElementById('crm-container').style.display = 'flex'; // Включаем flex для сайдбара
+                document.getElementById('crm-container').style.display = 'flex';
                 
                 if (tgId !== ADMIN_TELEGRAM_ID) {
-                    // Настройки для клиента
-                    document.querySelector('.logo').innerText = '🤖 Мой кабинет';
-                    document.querySelector('.btn-primary').style.display = 'none'; // Скрываем "Добавить"
-                    document.querySelector('.menu-item:nth-child(3)').style.display = 'none'; // Скрываем настройки
+                    // Client mode
+                    document.querySelector('.logo').innerHTML = 'AI <span>Кабинет</span>';
+                    document.getElementById('header-buttons').style.display = 'none';
+                    document.querySelectorAll('.menu-item')[2].style.display = 'none'; // Hide clients tab
+                    document.querySelectorAll('.menu-item')[4].style.display = 'none'; // Hide integrations
                 }
                 
                 loadLeads(tgId);
@@ -253,7 +289,7 @@
         }
         window.onload = checkAuth;
 
-        // --- ЗАГРУЗКА ДАННЫХ ---
+        // Load Data
         async function loadLeads(currentTgId = ADMIN_TELEGRAM_ID) {
             try {
                 let url = `${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`;
@@ -272,28 +308,32 @@
             }
         }
 
-        // --- ОТРИСОВКА ---
+        // Render
         function renderTable(data) {
             const tbody = document.getElementById('leadsBody');
             tbody.innerHTML = '';
             if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Заявок пока нет</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:40px;">Заявок пока нет</td></tr>';
                 return;
             }
 
             data.forEach(lead => {
-                let statusClass = lead.status === 'in_progress' ? 'status-in_progress' : (lead.status === 'closed' ? 'status-closed' : 'status-new');
-                let statusText = lead.status === 'in_progress' ? 'В работе' : (lead.status === 'closed' ? 'Закрыта' : 'Новая');
+                const statusMap = {
+                    'new': { class: 'badge-new', text: 'Новая' },
+                    'in_progress': { class: 'badge-progress', text: 'В работе' },
+                    'closed': { class: 'badge-closed', text: 'Закрыта' }
+                };
+                const s = statusMap[lead.status] || statusMap['new'];
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>#${lead.id}</td>
-                    <td>${new Date(lead.created_at).toLocaleDateString('ru-RU')}</td>
-                    <td style="font-weight:600;">${lead.name || '—'}</td>
-                    <td>${lead.phone || '—'}</td>
-                    <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${lead.problem || '—'}</td>
-                    <td><span class="status ${statusClass}">${statusText}</span></td>
-                    <td><button class="btn-action" onclick="changeStatus(${lead.id}, '${lead.status}')">Изменить</button></td>
+                    <td style="color:#94a3b8; font-weight:600; font-size:13px;">#${lead.id}</td>
+                    <td style="color:#64748b; font-size:13px;">${new Date(lead.created_at).toLocaleDateString('ru-RU')}</td>
+                    <td style="font-weight:600; color:#0f172a;">${lead.name || '—'}</td>
+                    <td style="color:#475569;">${lead.phone || '—'}</td>
+                    <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#64748b; font-size:13px;">${lead.problem || '—'}</td>
+                    <td><span class="badge ${s.class}">${s.text}</span></td>
+                    <td><button class="btn btn-outline" style="padding:6px 12px; font-size:12px;" onclick="changeStatus(${lead.id}, '${lead.status}')">Далее</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -303,27 +343,31 @@
             const cards = document.getElementById('leadsCards');
             cards.innerHTML = '';
             if (data.length === 0) {
-                cards.innerHTML = '<p style="text-align:center; color:#777;">Заявок пока нет</p>';
+                cards.innerHTML = '<p style="text-align:center; color:#94a3b8; padding:20px;">Заявок пока нет</p>';
                 return;
             }
 
             data.forEach(lead => {
-                let statusClass = lead.status === 'in_progress' ? 'status-in_progress' : (lead.status === 'closed' ? 'status-closed' : 'status-new');
-                let statusText = lead.status === 'in_progress' ? 'В работе' : (lead.status === 'closed' ? 'Закрыта' : 'Новая');
+                const statusMap = {
+                    'new': { class: 'badge-new', text: 'Новая' },
+                    'in_progress': { class: 'badge-progress', text: 'В работе' },
+                    'closed': { class: 'badge-closed', text: 'Закрыта' }
+                };
+                const s = statusMap[lead.status] || statusMap['new'];
 
                 const card = document.createElement('div');
-                card.className = 'mobile-card';
+                card.className = 'm-card';
                 card.innerHTML = `
-                    <div class="mobile-card-header">
+                    <div class="m-card-header">
                         <span>#${lead.id}</span>
                         <span>${new Date(lead.created_at).toLocaleDateString('ru-RU')}</span>
                     </div>
-                    <div class="mobile-card-title">${lead.name || 'Без имени'}</div>
-                    <div class="mobile-card-phone">📞 ${lead.phone || 'Нет телефона'}</div>
-                    <div class="mobile-card-desc">${lead.problem || 'Нет описания'}</div>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span class="status ${statusClass}">${statusText}</span>
-                        <button class="btn-action" onclick="changeStatus(${lead.id}, '${lead.status}')">Изменить</button>
+                    <div class="m-card-name">${lead.name || 'Без имени'}</div>
+                    <div class="m-card-phone">${lead.phone || 'Нет телефона'}</div>
+                    <div class="m-card-desc">${lead.problem || 'Нет описания'}</div>
+                    <div class="m-card-footer">
+                        <span class="badge ${s.class}">${s.text}</span>
+                        <button class="btn btn-outline" style="padding:6px 12px; font-size:12px;" onclick="changeStatus(${lead.id}, '${lead.status}')">Далее</button>
                     </div>
                 `;
                 cards.appendChild(card);
@@ -333,10 +377,11 @@
         function updateStats(data) {
             document.getElementById('stat-total').innerText = data.length;
             document.getElementById('stat-new').innerText = data.filter(l => l.status === 'new').length;
-            document.getElementById('stat-inprogress').innerText = data.filter(l => l.status === 'in_progress').length;
+            document.getElementById('stat-progress').innerText = data.filter(l => l.status === 'in_progress').length;
+            document.getElementById('stat-closed').innerText = data.filter(l => l.status === 'closed').length;
         }
 
-        // --- ДЕЙСТВИЯ ---
+        // Actions
         async function changeStatus(leadId, currentStatus) {
             let newStatus = currentStatus === 'new' ? 'in_progress' : (currentStatus === 'in_progress' ? 'closed' : 'new');
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`, {
@@ -344,20 +389,25 @@
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })
             });
-            // Перезагружаем с текущим ID
             const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
             loadLeads(tgUser ? tgUser.id : ADMIN_TELEGRAM_ID);
         }
 
         function switchTab(tab) {
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            const items = document.querySelectorAll('.menu-item');
+            
             if (tab === 'leads') {
-                document.querySelector('.menu-item:nth-child(1)').classList.add('active');
-                document.getElementById('page-title').innerText = 'Заявки';
-            } else if (tab === 'analytics') {
-                document.querySelector('.menu-item:nth-child(2)').classList.add('active');
-                document.getElementById('page-title').innerText = 'Аналитика';
-                alert('Раздел аналитики в разработке');
+                items[0].classList.add('active');
+                document.getElementById('page-title').innerText = 'Обзор заявок';
+                document.getElementById('stats-block').style.display = 'grid';
+                document.getElementById('table-block').style.display = 'block';
+            } else {
+                // Placeholder for other tabs
+                document.getElementById('page-title').innerText = 'В разработке';
+                document.getElementById('stats-block').style.display = 'none';
+                document.getElementById('table-block').style.display = 'none';
+                document.getElementById('leadsCards').innerHTML = '<p style="text-align:center; padding:40px; color:#94a3b8;">Этот раздел скоро появится</p>';
             }
         }
 
@@ -373,7 +423,7 @@
             XLSX.writeFile(wb, "leads_export.xlsx");
         }
 
-        // --- СОЗДАНИЕ КЛИЕНТА ---
+        // Modal
         function openCreateClientModal() { document.getElementById('clientModal').style.display = 'flex'; }
         function closeCreateClientModal() { document.getElementById('clientModal').style.display = 'none'; }
 
@@ -381,13 +431,12 @@
             const client_id = document.getElementById('newClientId').value.trim();
             const business_name = document.getElementById('newBusinessName').value.trim();
             const site_url = document.getElementById('newSiteUrl').value.trim();
-            const timezone = document.getElementById('newTimezone').value.trim();
             if (!client_id || !business_name || !site_url) return alert('Заполните все поля!');
 
             const res = await fetch('/api/create-client', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ client_id, business_name, site_url, timezone, manager_chat_id: ADMIN_TELEGRAM_ID.toString() })
+                body: JSON.stringify({ client_id, business_name, site_url, timezone: 'Europe/Moscow', manager_chat_id: ADMIN_TELEGRAM_ID.toString() })
             });
             const data = await res.json();
             if (data.ok) {
