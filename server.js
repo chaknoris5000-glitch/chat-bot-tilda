@@ -1306,7 +1306,6 @@ cron.schedule('0 10 * * *', async () => {
 app.get('/crm', (req, res) => {
   res.sendFile(path.join(__dirname, 'crm.html'));
 });
-// ========== АВТОРИЗАЦИЯ ЧЕРЕЗ TELEGRAM ==========
 app.all('/auth/telegram', async (req, res) => {
   try {
     const params = req.method === 'GET' ? req.query : req.body;
@@ -1314,30 +1313,25 @@ app.all('/auth/telegram', async (req, res) => {
     
     if (!hash) throw new Error('Нет параметра hash');
 
-    // 1. Собираем строку для проверки (сортируем ключи)
     const dataCheckString = Object.keys(data)
       .sort()
       .map(key => `${key}=${data[key]}`)
       .join('\n');
 
-    // 2. Генерируем секретный ключ из токена бота
     const crypto = require('crypto');
     const secretKey = crypto.createHash('sha256').update(TELEGRAM_TOKEN).digest();
-    
-    // 3. Считаем HMAC-SHA256
     const calculatedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
 
-    // 4. Сравниваем
     if (calculatedHash !== hash) {
       throw new Error('Неверная подпись');
     }
 
-    // 5. Если всё ок — перенаправляем обратно в CRM
-    res.redirect(`/crm?auth_success=1&telegram_id=${data.id}`);
+    // Возвращаем JSON, а не редирект
+    res.json({ ok: true, telegram_id: data.id, first_name: data.first_name });
     
   } catch (e) {
     console.error('Ошибка авторизации Telegram:', e.message);
-    res.status(401).send('Ошибка авторизации. Попробуйте вернуться и войти снова.');
+    res.status(401).json({ ok: false, error: 'Неверная подпись' });
   }
 });
 // ========== СОЗДАНИЕ КЛИЕНТА ИЗ CRM ==========
