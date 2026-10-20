@@ -2,97 +2,205 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CRM - AI-Администратор</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        h1 { margin: 0; color: #2F5B43; }
-        .btn-group { display: flex; gap: 10px; }
-        .btn-export { padding: 10px 15px; background: #0d47a1; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .btn-export:hover { background: #0b3c8a; }
-        .btn-create { background: #2F5B43; }
-        .btn-create:hover { background: #213f2f; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background: #f8f9fa; font-weight: bold; color: #555; }
-        tr:hover { background: #f1f1f1; }
-        .status { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        :root {
+            --primary: #2F5B43;
+            --primary-hover: #213f2f;
+            --bg: #f4f6f8;
+            --card-bg: #ffffff;
+            --text-main: #333;
+            --text-muted: #777;
+            --border: #e0e0e0;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text-main); display: flex; min-height: 100vh; }
+        
+        /* --- Sidebar (Меню) --- */
+        .sidebar { width: 240px; background: #fff; border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; position: fixed; height: 100%; left: 0; top: 0; z-index: 100; }
+        .logo { font-size: 20px; font-weight: bold; color: var(--primary); margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
+        .menu-item { padding: 12px 15px; border-radius: 8px; cursor: pointer; color: var(--text-muted); font-weight: 500; transition: 0.2s; margin-bottom: 5px; display: flex; align-items: center; gap: 10px; }
+        .menu-item:hover { background: #f0f4f2; color: var(--primary); }
+        .menu-item.active { background: #e8f0ec; color: var(--primary); font-weight: bold; }
+        
+        /* --- Main Content --- */
+        .main-content { flex: 1; margin-left: 240px; padding: 30px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .header h1 { font-size: 24px; color: var(--primary); }
+        
+        /* Кнопки */
+        .btn { padding: 10px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { background: #f0f0f0; }
+        
+        /* --- Статистика --- */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); border: 1px solid var(--border); }
+        .stat-title { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-value { font-size: 28px; font-weight: bold; color: var(--primary); }
+        
+        /* --- Таблица заявок --- */
+        .table-container { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); border: 1px solid var(--border); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background: #fcfcfc; padding: 15px; font-size: 13px; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+        td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: #fafafa; }
+        
+        /* Статусы */
+        .status { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; }
         .status-new { background: #e3f2fd; color: #0d47a1; }
         .status-in_progress { background: #fff3e0; color: #e65100; }
         .status-closed { background: #e8f5e9; color: #1b5e20; }
-        .btn-status { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; background: #2F5B43; font-size: 12px; }
-        .btn-status:hover { background: #213f2f; }
-        #auth-container { text-align: center; margin-top: 50px; }
-        #crm-container { display: none; } 
         
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: #fff; padding: 20px; border-radius: 8px; width: 400px; max-width: 90%; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-        .modal-content h2 { margin-top: 0; color: #2F5B43; }
-        .modal-content input { width: 100%; margin-bottom: 10px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
-        .btn-cancel { padding: 8px 15px; background: #ccc; border: none; border-radius: 4px; cursor: pointer; }
-        .btn-submit { padding: 8px 15px; background: #2F5B43; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .btn-submit:hover { background: #213f2f; }
+        .btn-action { padding: 6px 12px; border: 1px solid var(--border); background: #fff; border-radius: 4px; cursor: pointer; font-size: 12px; transition: 0.2s; }
+        .btn-action:hover { background: #f0f0f0; }
+
+        /* --- Модальное окно --- */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-content { background: #fff; padding: 25px; border-radius: 12px; width: 90%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .modal-content h2 { margin-bottom: 20px; color: var(--primary); }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 5px; }
+        .input-group input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; transition: 0.2s; }
+        .input-group input:focus { border-color: var(--primary); }
+        
+        /* Авторизация */
+        #auth-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100%; text-align: center; }
+        #crm-container { display: none; } 
+
+        /* --- Адаптивность (Мобилки) --- */
+        @media (max-width: 768px) {
+            body { flex-direction: column; padding-bottom: 70px; }
+            .sidebar { width: 100%; height: 60px; flex-direction: row; bottom: 0; top: auto; padding: 0; border-right: none; border-top: 1px solid var(--border); justify-content: space-around; align-items: center; }
+            .logo { display: none; }
+            .menu-item { flex-direction: column; font-size: 10px; gap: 4px; padding: 8px; margin: 0; }
+            .menu-item svg { width: 20px; height: 20px; }
+            .main-content { margin-left: 0; padding: 15px; }
+            .header { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .header-actions { display: flex; gap: 10px; width: 100%; }
+            .btn { flex: 1; justify-content: center; }
+            
+            .table-container { display: none; } /* Прячем таблицу */
+            
+            /* Карточки для мобилок */
+            .mobile-cards { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
+            .mobile-card { background: #fff; padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+            .mobile-card-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px; color: var(--text-muted); }
+            .mobile-card-title { font-size: 16px; font-weight: bold; color: var(--primary); margin-bottom: 5px; }
+            .mobile-card-phone { font-size: 14px; font-weight: 500; margin-bottom: 10px; }
+            .mobile-card-desc { font-size: 13px; color: #555; background: #f9f9f9; padding: 10px; border-radius: 6px; margin-bottom: 15px; }
+        }
+        @media (min-width: 769px) {
+            .mobile-cards { display: none; } /* Прячем карточки на ПК */
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="auth-container">
-            <h2>Вход в CRM</h2>
-            <p>Пожалуйста, авторизуйтесь через Telegram.</p>
-            <!-- Этот блок будет виден только в браузере -->
-            <div id="telegram-login-btn">
-                <script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="vadim602_bot" data-size="large" data-onauth="onTelegramAuth(user)" data-request-access="write"></script>
+    <!-- Экран входа -->
+    <div id="auth-container">
+        <h2 style="color: var(--primary); margin-bottom: 10px;">Вход в CRM</h2>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">Авторизуйтесь через Telegram, чтобы продолжить</p>
+        <div id="telegram-login-btn">
+            <script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="vadim602_bot" data-size="large" data-onauth="onTelegramAuth(user)" data-request-access="write"></script>
+        </div>
+        <div id="loading-text" style="display:none; margin-top: 20px; color: var(--text-muted);">Загрузка...</div>
+    </div>
+
+    <!-- Основной интерфейс -->
+    <div id="crm-container" style="width: 100%;">
+        <!-- Боковое меню -->
+        <div class="sidebar">
+            <div class="logo">🤖 AI CRM</div>
+            <div class="menu-item active" onclick="switchTab('leads')">
+                <span>📋</span> Заявки
             </div>
-            <!-- Этот блок будет виден только в Mini App -->
-            <div id="loading-text" style="display:none; margin-top: 20px; font-size: 16px; color: #777;">
-                Загрузка ваших данных...
+            <div class="menu-item" onclick="switchTab('analytics')">
+                <span>📊</span> Аналитика (скоро)
+            </div>
+            <div class="menu-item" onclick="switchTab('settings')">
+                <span>⚙️</span> Настройки
             </div>
         </div>
 
-        <div id="crm-container">
+        <!-- Контентная часть -->
+        <div class="main-content">
             <div class="header">
-                <h1>Панель управления (CRM)</h1>
-                <div class="btn-group">
-                    <button class="btn-export btn-create" onclick="openCreateClientModal()">➕ Добавить клиента</button>
-                    <button class="btn-export" onclick="exportToExcel()">📥 Скачать Excel</button>
+                <h1 id="page-title">Заявки</h1>
+                <div class="header-actions">
+                    <button class="btn btn-outline" onclick="exportToExcel()">📥 Excel</button>
+                    <button class="btn btn-primary" onclick="openCreateClientModal()">➕ Добавить</button>
                 </div>
             </div>
-            <p>Здесь отображаются все ваши заявки.</p>
-            <table id="leadsTable">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Дата</th>
-                        <th>Имя</th>
-                        <th>Телефон</th>
-                        <th>Задача</th>
-                        <th>Источник</th>
-                        <th>Статус</th>
-                        <th>Действие</th>
-                    </tr>
-                </thead>
-                <tbody id="leadsBody">
-                    <tr><td colspan="8" style="text-align:center;">Загрузка...</td></tr>
-                </tbody>
-            </table>
+
+            <!-- Блок статистики -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-title">Всего заявок</div>
+                    <div class="stat-value" id="stat-total">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Новые</div>
+                    <div class="stat-value" id="stat-new" style="color: #0d47a1;">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">В работе</div>
+                    <div class="stat-value" id="stat-inprogress" style="color: #e65100;">0</div>
+                </div>
+            </div>
+
+            <!-- Таблица (для ПК) -->
+            <div class="table-container">
+                <table id="leadsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Дата</th>
+                            <th>Имя</th>
+                            <th>Телефон</th>
+                            <th>Задача</th>
+                            <th>Статус</th>
+                            <th>Действие</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leadsBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Карточки (для телефонов) -->
+            <div class="mobile-cards" id="leadsCards"></div>
         </div>
     </div>
 
+    <!-- Модальное окно создания клиента -->
     <div id="clientModal" class="modal-overlay">
         <div class="modal-content">
             <h2>Новый клиент</h2>
-            <input type="text" id="newClientId" placeholder="ID клиента (латиницей)">
-            <input type="text" id="newBusinessName" placeholder="Название бизнеса">
-            <input type="text" id="newSiteUrl" placeholder="Ссылка на сайт (https://...)">
-            <input type="text" id="newTimezone" placeholder="Часовой пояс" value="Europe/Moscow">
-            <div class="modal-actions">
-                <button onclick="closeCreateClientModal()" class="btn-cancel">Отмена</button>
-                <button onclick="submitNewClient()" class="btn-submit">Создать</button>
+            <div class="input-group">
+                <label>ID клиента (латиницей)</label>
+                <input type="text" id="newClientId" placeholder="Например: salon1">
+            </div>
+            <div class="input-group">
+                <label>Название бизнеса</label>
+                <input type="text" id="newBusinessName" placeholder="Салон красоты Ромашка">
+            </div>
+            <div class="input-group">
+                <label>Ссылка на сайт</label>
+                <input type="text" id="newSiteUrl" placeholder="https://...">
+            </div>
+            <div class="input-group">
+                <label>Часовой пояс</label>
+                <input type="text" id="newTimezone" value="Europe/Moscow">
+            </div>
+            <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button class="btn btn-outline" onclick="closeCreateClientModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="submitNewClient()">Создать</button>
             </div>
         </div>
     </div>
@@ -101,10 +209,9 @@
         const SUPABASE_URL = 'https://ozutjnwextahorvzdbpl.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96dXRqbndleHRhaG9ydnpkYnBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MTQ3MzUsImV4cCI6MjEwNzE5MDczNX0.8L3adhQ9gUR5iSly1afSQN6HeEhkj9QQ4NtUyZUQx28';
         const ADMIN_TELEGRAM_ID = 5818548555; 
+        let allLeads = [];
 
-        let allLeads = []; 
-
-        // Функция для входа через виджет (браузер)
+        // --- АВТОРИЗАЦИЯ ---
         function onTelegramAuth(user) {
             fetch('/auth/telegram', {
                 method: 'POST',
@@ -113,94 +220,123 @@
             })
             .then(res => res.json())
             .then(data => {
-                if (data.ok) {
-                    window.location.href = `/crm?auth_success=1&telegram_id=${data.telegram_id}`;
-                } else {
-                    alert('Ошибка авторизации');
-                }
+                if (data.ok) window.location.href = `/crm?auth_success=1&telegram_id=${data.telegram_id}`;
             });
         }
 
-                // Проверяем, как мы зашли (через Mini App или через браузер)
         function checkAuth() {
             const urlParams = new URLSearchParams(window.location.search);
             let tgId = null;
 
-            // 1. Если это Telegram Mini App
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user) {
                 tgId = window.Telegram.WebApp.initDataUnsafe.user.id;
                 document.getElementById('telegram-login-btn').style.display = 'none';
                 document.getElementById('loading-text').style.display = 'block';
-            } 
-            // 2. Если мы вернулись после входа через браузер
-            else if (urlParams.get('auth_success') === '1') {
+            } else if (urlParams.get('auth_success') === '1') {
                 tgId = Number(urlParams.get('telegram_id'));
             }
 
-            // Если мы поняли, кто это — показываем панель
             if (tgId) {
                 document.getElementById('auth-container').style.display = 'none';
-                document.getElementById('crm-container').style.display = 'block';
+                document.getElementById('crm-container').style.display = 'flex'; // Включаем flex для сайдбара
                 
-                if (tgId === ADMIN_TELEGRAM_ID) {
-                    document.getElementById('crm-container').querySelector('h1').innerText = 'Панель управления (Админ)';
-                    loadLeads(ADMIN_TELEGRAM_ID);
-                } else {
-                    document.getElementById('crm-container').querySelector('h1').innerText = 'Мои заявки';
-                    document.querySelector('.btn-create').style.display = 'none'; 
-                    loadLeads(tgId);
+                if (tgId !== ADMIN_TELEGRAM_ID) {
+                    // Настройки для клиента
+                    document.querySelector('.logo').innerText = '🤖 Мой кабинет';
+                    document.querySelector('.btn-primary').style.display = 'none'; // Скрываем "Добавить"
+                    document.querySelector('.menu-item:nth-child(3)').style.display = 'none'; // Скрываем настройки
                 }
+                
+                loadLeads(tgId);
                 window.history.replaceState({}, document.title, "/crm");
             }
         }
-
         window.onload = checkAuth;
 
-        window.onload = checkAuth;
-
+        // --- ЗАГРУЗКА ДАННЫХ ---
         async function loadLeads(currentTgId = ADMIN_TELEGRAM_ID) {
             try {
                 let url = `${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`;
-                if (currentTgId !== ADMIN_TELEGRAM_ID) {
-                    url += `&client_id=eq.demo-client`; 
-                }
+                if (currentTgId !== ADMIN_TELEGRAM_ID) url += `&client_id=eq.demo-client`; 
 
-                const res = await fetch(url, {
-                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-                });
+                const res = await fetch(url, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
                 const data = await res.json();
                 allLeads = data; 
-                const tbody = document.getElementById('leadsBody');
-                tbody.innerHTML = '';
+                
+                renderTable(data);
+                renderCards(data);
+                updateStats(data);
 
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Заявок пока нет</td></tr>';
-                    return;
-                }
-
-                data.forEach(lead => {
-                    let statusClass = lead.status === 'in_progress' ? 'status-in_progress' : (lead.status === 'closed' ? 'status-closed' : 'status-new');
-                    let statusText = lead.status === 'in_progress' ? 'В работе' : (lead.status === 'closed' ? 'Закрыта' : 'Новая');
-                    let sourceText = lead.source === 'telegram' ? 'Telegram' : 'Сайт';
-
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${lead.id}</td>
-                        <td>${new Date(lead.created_at).toLocaleDateString('ru-RU')}</td>
-                        <td>${lead.name || '—'}</td>
-                        <td>${lead.phone || '—'}</td>
-                        <td>${lead.problem || '—'}</td>
-                        <td>${sourceText}</td>
-                        <td><span class="status ${statusClass}">${statusText}</span></td>
-                        <td><button class="btn-status" onclick="changeStatus(${lead.id}, '${lead.status}')">Изменить</button></td>
-                    `;
-                    tbody.appendChild(tr);
-                });
             } catch (e) {
-                document.getElementById('leadsBody').innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Ошибка загрузки</td></tr>';
+                console.error(e);
             }
         }
 
+        // --- ОТРИСОВКА ---
+        function renderTable(data) {
+            const tbody = document.getElementById('leadsBody');
+            tbody.innerHTML = '';
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Заявок пока нет</td></tr>';
+                return;
+            }
+
+            data.forEach(lead => {
+                let statusClass = lead.status === 'in_progress' ? 'status-in_progress' : (lead.status === 'closed' ? 'status-closed' : 'status-new');
+                let statusText = lead.status === 'in_progress' ? 'В работе' : (lead.status === 'closed' ? 'Закрыта' : 'Новая');
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>#${lead.id}</td>
+                    <td>${new Date(lead.created_at).toLocaleDateString('ru-RU')}</td>
+                    <td style="font-weight:600;">${lead.name || '—'}</td>
+                    <td>${lead.phone || '—'}</td>
+                    <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${lead.problem || '—'}</td>
+                    <td><span class="status ${statusClass}">${statusText}</span></td>
+                    <td><button class="btn-action" onclick="changeStatus(${lead.id}, '${lead.status}')">Изменить</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderCards(data) {
+            const cards = document.getElementById('leadsCards');
+            cards.innerHTML = '';
+            if (data.length === 0) {
+                cards.innerHTML = '<p style="text-align:center; color:#777;">Заявок пока нет</p>';
+                return;
+            }
+
+            data.forEach(lead => {
+                let statusClass = lead.status === 'in_progress' ? 'status-in_progress' : (lead.status === 'closed' ? 'status-closed' : 'status-new');
+                let statusText = lead.status === 'in_progress' ? 'В работе' : (lead.status === 'closed' ? 'Закрыта' : 'Новая');
+
+                const card = document.createElement('div');
+                card.className = 'mobile-card';
+                card.innerHTML = `
+                    <div class="mobile-card-header">
+                        <span>#${lead.id}</span>
+                        <span>${new Date(lead.created_at).toLocaleDateString('ru-RU')}</span>
+                    </div>
+                    <div class="mobile-card-title">${lead.name || 'Без имени'}</div>
+                    <div class="mobile-card-phone">📞 ${lead.phone || 'Нет телефона'}</div>
+                    <div class="mobile-card-desc">${lead.problem || 'Нет описания'}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="status ${statusClass}">${statusText}</span>
+                        <button class="btn-action" onclick="changeStatus(${lead.id}, '${lead.status}')">Изменить</button>
+                    </div>
+                `;
+                cards.appendChild(card);
+            });
+        }
+
+        function updateStats(data) {
+            document.getElementById('stat-total').innerText = data.length;
+            document.getElementById('stat-new').innerText = data.filter(l => l.status === 'new').length;
+            document.getElementById('stat-inprogress').innerText = data.filter(l => l.status === 'in_progress').length;
+        }
+
+        // --- ДЕЙСТВИЯ ---
         async function changeStatus(leadId, currentStatus) {
             let newStatus = currentStatus === 'new' ? 'in_progress' : (currentStatus === 'in_progress' ? 'closed' : 'new');
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`, {
@@ -208,14 +344,28 @@
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })
             });
-            loadLeads();
+            // Перезагружаем с текущим ID
+            const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+            loadLeads(tgUser ? tgUser.id : ADMIN_TELEGRAM_ID);
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            if (tab === 'leads') {
+                document.querySelector('.menu-item:nth-child(1)').classList.add('active');
+                document.getElementById('page-title').innerText = 'Заявки';
+            } else if (tab === 'analytics') {
+                document.querySelector('.menu-item:nth-child(2)').classList.add('active');
+                document.getElementById('page-title').innerText = 'Аналитика';
+                alert('Раздел аналитики в разработке');
+            }
         }
 
         function exportToExcel() {
             if (allLeads.length === 0) return alert('Нет данных');
-            const ws_data = [["ID", "Дата", "Имя", "Телефон", "Задача", "Источник", "Статус"]];
+            const ws_data = [["ID", "Дата", "Имя", "Телефон", "Задача", "Статус"]];
             allLeads.forEach(lead => {
-                ws_data.push([lead.id, new Date(lead.created_at).toLocaleString('ru-RU'), lead.name || '', lead.phone || '', lead.problem || '', lead.source === 'telegram' ? 'Telegram' : 'Сайт', lead.status]);
+                ws_data.push([lead.id, new Date(lead.created_at).toLocaleString('ru-RU'), lead.name || '', lead.phone || '', lead.problem || '', lead.status]);
             });
             const ws = XLSX.utils.aoa_to_sheet(ws_data);
             const wb = XLSX.utils.book_new();
@@ -223,6 +373,7 @@
             XLSX.writeFile(wb, "leads_export.xlsx");
         }
 
+        // --- СОЗДАНИЕ КЛИЕНТА ---
         function openCreateClientModal() { document.getElementById('clientModal').style.display = 'flex'; }
         function closeCreateClientModal() { document.getElementById('clientModal').style.display = 'none'; }
 
