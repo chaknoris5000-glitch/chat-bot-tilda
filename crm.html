@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CRM - AI-Администратор</title>
+    <!-- Подключаем библиотеку SheetJS для создания настоящих Excel-файлов -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
@@ -97,7 +99,7 @@
             let newStatus = 'new';
             if (currentStatus === 'new') newStatus = 'in_progress';
             else if (currentStatus === 'in_progress') newStatus = 'closed';
-            else newStatus = 'new'; // Возврат в новую
+            else newStatus = 'new';
 
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`, {
@@ -111,7 +113,7 @@
                 });
 
                 if (res.ok) {
-                    loadLeads(); // Перезагружаем таблицу
+                    loadLeads();
                 } else {
                     alert('Ошибка при обновлении статуса');
                 }
@@ -127,37 +129,42 @@
                 return;
             }
 
-            // \uFEFF - это BOM, который говорит Excel, что текст в кодировке UTF-8 (русский язык)
-            let csvContent = "\uFEFF"; 
-            
-            // Используем точку с запятой, так как русский Excel ждет именно её
-            csvContent += "ID;Дата;Имя;Телефон;Задача;Статус\n";
+            // Формируем данные для Excel
+            const ws_data = [
+                ["ID", "Дата", "Имя", "Телефон", "Задача", "Статус"] // Заголовки
+            ];
 
             allLeads.forEach(lead => {
                 let status = lead.status === 'closed' ? 'Закрыта' : (lead.status === 'in_progress' ? 'В работе' : 'Новая');
-                
-                // Оборачиваем телефон в апостроф, чтобы Excel не превращал его в формулу
-                let safePhone = lead.phone ? `'${lead.phone}` : '';
-                
-                // Оборачиваем тексты в кавычки на случай, если внутри есть запятые или переносы строк
-                let safeName = `"${(lead.name || '').replace(/"/g, '""')}"`;
-                let safeProblem = `"${(lead.problem || '').replace(/"/g, '""')}"`;
-                let safeDate = new Date(lead.created_at).toLocaleDateString('ru-RU');
-
-                let row = `${lead.id};${safeDate};${safeName};${safePhone};${safeProblem};${status}`;
-                csvContent += row + "\n";
+                ws_data.push([
+                    lead.id,
+                    new Date(lead.created_at).toLocaleDateString('ru-RU'),
+                    lead.name || '',
+                    lead.phone || '',
+                    lead.problem || '',
+                    status
+                ]);
             });
 
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            const url = URL.createObjectURL(blob);
-            
-            link.setAttribute("href", url);
-            link.setAttribute("download", "leads_export.csv");
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // Создаем лист Excel
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+            // Настраиваем ширину колонок
+            ws['!cols'] = [
+                { wch: 6 },  // ID
+                { wch: 12 }, // Дата
+                { wch: 20 }, // Имя
+                { wch: 18 }, // Телефон
+                { wch: 50 }, // Задача
+                { wch: 12 }  // Статус
+            ];
+
+            // Создаем книгу и добавляем лист
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Заявки");
+
+            // Скачиваем файл
+            XLSX.writeFile(wb, "leads_export.xlsx");
         }
 
         loadLeads();
