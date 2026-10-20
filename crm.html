@@ -66,11 +66,20 @@
         .filters-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
         .filters-bar select, .filters-bar input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; }
 
-        /* --- Modal --- */
+        /* --- Modal / Client Card --- */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.5); z-index: 1000; align-items: center; justify-content: center; }
         .modal-content { background: white; padding: 24px; border-radius: 12px; width: 95%; max-width: 650px; max-height: 90vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
         .modal-title { font-size: 20px; font-weight: 700; }
+        
+        /* --- Status Action Panel --- */
+        .status-panel { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+        .current-status { font-weight: bold; font-size: 14px; padding: 4px 10px; border-radius: 6px; }
+        .status-new { background: #eff6ff; color: #1d4ed8; }
+        .status-progress { background: #fffbeb; color: #b45309; }
+        .status-closed { background: #f0fdf4; color: #15803d; }
+        .status-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
         .contact-actions { display: flex; gap: 8px; margin-bottom: 20px; }
         .btn-contact { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; font-size: 12px; border-radius: 8px; text-decoration: none; font-weight: 600; border: none; cursor: pointer; }
         .btn-call { background: #eff6ff; color: #1d4ed8; }
@@ -177,7 +186,6 @@
                     </select>
                     <select id="filter-service" onchange="applyClientFilters()">
                         <option value="">Все услуги</option>
-                        <!-- Заполняется скриптом -->
                     </select>
                 </div>
                 <div class="table-container">
@@ -208,6 +216,12 @@
                 <div style="cursor:pointer; font-size:24px;" onclick="closeModal()">&times;</div>
             </div>
 
+            <!-- Панель управления статусом -->
+            <div class="status-panel" id="status-panel">
+                <div id="current-status-badge" class="current-status"></div>
+                <div class="status-actions" id="status-buttons"></div>
+            </div>
+
             <div class="contact-actions">
                 <a href="#" id="btn-call" class="btn-contact btn-call">📞 Позвонить</a>
                 <a href="#" id="btn-tg" class="btn-contact btn-tg" target="_blank">✈️ Telegram</a>
@@ -232,7 +246,6 @@
             <div style="display:flex; justify-content:space-between; margin-top:20px;">
                 <div>
                     <button class="btn btn-outline btn-sm" onclick="copyTemplate()">📋 Скопировать шаблон</button>
-                    <button class="btn btn-outline btn-sm" onclick="rebookClient()" style="color: var(--accent);">🔄 Записать повторно</button>
                 </div>
                 <div>
                     <button class="btn btn-danger btn-sm" onclick="deleteLead()">Удалить</button>
@@ -395,6 +408,44 @@
             document.getElementById('stat-revenue').innerText = revenue.toLocaleString() + ' ₽';
         }
 
+        // --- СТАТУСЫ В КАРТОЧКЕ ---
+        function updateStatusUI(status) {
+            const badge = document.getElementById('current-status-badge');
+            const buttons = document.getElementById('status-buttons');
+            buttons.innerHTML = '';
+
+            if (status === 'new') {
+                badge.className = 'current-status status-new';
+                badge.innerText = 'Статус: Новая';
+                buttons.innerHTML = `<button class="btn btn-primary btn-sm" onclick="changeStatusFromCard('in_progress')">Взять в работу</button>`;
+            } else if (status === 'in_progress') {
+                badge.className = 'current-status status-progress';
+                badge.innerText = 'Статус: В работе';
+                buttons.innerHTML = `
+                    <button class="btn btn-primary btn-sm" style="background:var(--success);" onclick="changeStatusFromCard('closed')">Выполнено</button>
+                    <button class="btn btn-outline btn-sm" onclick="changeStatusFromCard('new')">Вернуть в новые</button>
+                `;
+            } else if (status === 'closed') {
+                badge.className = 'current-status status-closed';
+                badge.innerText = 'Статус: Выполнено';
+                buttons.innerHTML = `
+                    <button class="btn btn-primary btn-sm" style="background:var(--accent);" onclick="rebookClient()">Связаться повторно</button>
+                    <button class="btn btn-outline btn-sm" onclick="changeStatusFromCard('in_progress')">Вернуть в работу</button>
+                    <button class="btn btn-outline btn-sm" onclick="changeStatusFromCard('new')">Вернуть в новые</button>
+                `;
+            }
+        }
+
+        async function changeStatusFromCard(newStatus) {
+            await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${currentLeadId}`, {
+                method: 'PATCH',
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            closeModal();
+            loadLeads();
+        }
+
         // ACTIONS
         function openClientModal(id) {
             const lead = allLeads.find(l => l.id === id);
@@ -416,6 +467,8 @@
                 document.getElementById('edit-reminder').value = '';
             }
             document.getElementById('edit-notes').value = lead.notes || lead.problem || '';
+
+            updateStatusUI(lead.status); // Обновляем кнопки статуса
 
             const cleanPhone = (lead.phone || '').replace(/\D/g, '');
             document.getElementById('btn-call').href = `tel:${lead.phone || ''}`;
@@ -533,7 +586,7 @@
             XLSX.writeFile(wb, "leads_export.xlsx");
         }
 
-        // CREATE MODAL (Упрощенно для примера)
+        // CREATE MODAL
         function openCreateModal() { alert('Создание нового клиента-бота (пока в разработке)'); }
     </script>
 </body>
