@@ -510,7 +510,11 @@
                 const res = await fetch('/api/connect-result', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: user.id, name: user.first_name })
+                    body: JSON.stringify({ 
+                        chat_id: user.id, 
+                        name: user.first_name,
+                        manager_id: ADMIN_TELEGRAM_ID 
+                    })
                 });
                 
                 if (res.ok) {
@@ -520,23 +524,4 @@
                     alert('Ошибка при подключении тарифа');
                 }
             } catch (e) {
-                alert('Ошибка сети');
-            }
-        }
-
-        function submitCancel() { alert('Отменено'); closeModal('cancelModal'); }
-        
-        async function sendSupport() {
-            const text = document.getElementById('support-text').value;
-            if(!text) return;
-            await fetch('/api/support', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, user_id: tg.initDataUnsafe.user.id, name: tg.initDataUnsafe.user.first_name }) });
-            alert('Отправлено!');
-            closeModal('supportModal');
-        }
-
-        function goToCRM() { window.location.href = '/crm?auth_success=1&telegram_id=' + tg.initDataUnsafe.user.id; }
-
-        init();
-    </script>
-</body>
-</html>
+                alert('Ошиб
