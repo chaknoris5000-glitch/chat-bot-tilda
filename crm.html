@@ -7,8 +7,11 @@
     <style>
         body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        h1 { margin-top: 0; color: #2F5B43; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h1 { margin: 0; color: #2F5B43; }
+        .btn-export { padding: 10px 15px; background: #0d47a1; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-export:hover { background: #0b3c8a; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background: #f8f9fa; font-weight: bold; color: #555; }
         tr:hover { background: #f1f1f1; }
@@ -16,13 +19,16 @@
         .status-new { background: #e3f2fd; color: #0d47a1; }
         .status-in_progress { background: #fff3e0; color: #e65100; }
         .status-closed { background: #e8f5e9; color: #1b5e20; }
-        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; background: #2F5B43; font-size: 12px; }
-        .btn:hover { background: #213f2f; }
+        .btn-status { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; background: #2F5B43; font-size: 12px; }
+        .btn-status:hover { background: #213f2f; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Панель управления (CRM)</h1>
+        <div class="header">
+            <h1>Панель управления (CRM)</h1>
+            <button class="btn-export" onclick="exportToExcel()">📥 Скачать Excel</button>
+        </div>
         <p>Здесь отображаются все ваши заявки.</p>
         <table id="leadsTable">
             <thead>
@@ -43,20 +49,18 @@
     </div>
 
     <script>
-        // Внимание: В реальном проекте лучше брать данные через сервер, 
-        // но для первого шага мы заберем их напрямую из Supabase.
         const SUPABASE_URL = 'https://ozutjnwextahorvzdbpl.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96dXRqbndleHRhaG9ydnpkYnBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MTQ3MzUsImV4cCI6MjEwNzE5MDczNX0.8L3adhQ9gUR5iSly1afSQN6HeEhkj9QQ4NtUyZUQx28';
+
+        let allLeads = []; // Храним данные для экспорта
 
         async function loadLeads() {
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`, {
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': `Bearer ${SUPABASE_KEY}`
-                    }
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
                 });
                 const data = await res.json();
+                allLeads = data; // Сохраняем в память
                 const tbody = document.getElementById('leadsBody');
                 tbody.innerHTML = '';
 
@@ -78,8 +82,8 @@
                         <td>${lead.name || '—'}</td>
                         <td>${lead.phone || '—'}</td>
                         <td>${lead.problem || '—'}</td>
-                        <td><span class="status ${statusClass}">${statusText}</span></td>
-                        <td><button class="btn" onclick="alert('Управление статусами появится на следующем шаге')">Изменить</button></td>
+                        <td><span id="status-badge-${lead.id}" class="status ${statusClass}">${statusText}</span></td>
+                        <td><button id="btn-${lead.id}" class="btn-status" onclick="changeStatus(${lead.id}, '${lead.status}')">Изменить</button></td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -87,6 +91,58 @@
                 console.error(e);
                 document.getElementById('leadsBody').innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Ошибка загрузки данных</td></tr>';
             }
+        }
+
+        async function changeStatus(leadId, currentStatus) {
+            let newStatus = 'new';
+            if (currentStatus === 'new') newStatus = 'in_progress';
+            else if (currentStatus === 'in_progress') newStatus = 'closed';
+            else newStatus = 'new'; // Возврат в новую
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                if (res.ok) {
+                    loadLeads(); // Перезагружаем таблицу
+                } else {
+                    alert('Ошибка при обновлении статуса');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Ошибка сети');
+            }
+        }
+
+        function exportToExcel() {
+            if (allLeads.length === 0) {
+                alert('Нет данных для экспорта');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // BOM для русского языка
+            csvContent += "ID;Дата;Имя;Телефон;Задача;Статус\n";
+
+            allLeads.forEach(lead => {
+                let status = lead.status === 'closed' ? 'Закрыта' : (lead.status === 'in_progress' ? 'В работе' : 'Новая');
+                let row = `${lead.id};${new Date(lead.created_at).toLocaleDateString('ru-RU')};${lead.name || ''};${lead.phone || ''};${lead.problem || ''};${status}`;
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "leads_export.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         loadLeads();
