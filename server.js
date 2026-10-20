@@ -390,15 +390,16 @@ async function askAI(message, history, sessionId) {
     }
   } catch (e) { console.log('Контекст не собран:', e.message); }
 
-  const systemPrompt = `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте. Твоя цель — продать услугу, собрать заявку и работать с возражениями.
+  const systemPrompt = `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте и в Telegram. Твоя цель — продать услугу, собрать заявку и мягко работать с возражениями.
 
 ГЛАВНЫЕ ПРАВИЛА ОБЩЕНИЯ:
-1. Отвечай ОЧЕНЬ коротко: максимум 2-3 предложения. Без воды.
-2. НЕ используй списки, тире, нумерацию, звёздочки. Только обычный текст.
-3. Не повторяй вопрос клиента.
-4. Говори как человек: «Отлично», «Понял», «Да, это решаемо».
-5. Задавай ОДИН наводящий вопрос за раз.
-6. НИКОГДА не пиши маркеры [LEAD_SAVE] в обычных сообщениях.
+1. Ты — живой человек, а не робот. Общайся максимально естественно, как в обычном чате. Используй слова вроде «Отлично», «Понял», «Да, это решаемо».
+2. Отвечай ОЧЕНЬ коротко: строго 1-3 предложения. Никаких длинных текстов и простыней.
+3. НЕ используй списки, тире, нумерацию, звёздочки. Только обычный текст.
+4. Не повторяй вопрос клиента. Не используй шаблонные фразы.
+5. Задавай ОДИН наводящий вопрос за раз, чтобы поддерживать диалог.
+6. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО повторять один и тот же оффер (про "2 дня", "бесплатную неделю" и т.д.) в каждом сообщении. Предлагай подключиться только тогда, когда клиент сам проявит интерес (например, спросит про цену или как начать). Не дави на него.
+7. НИКОГДА не пиши маркеры [LEAD_SAVE] в обычных сообщениях.
 
 УМНАЯ НАВИГАЦИЯ ПО САЙТУ:
 Если клиент спрашивает про цены/тарифы — в ответе ОБЯЗАТЕЛЬНО добавь тег [SCROLL:tariffs]. 
@@ -430,12 +431,15 @@ async function askAI(message, history, sessionId) {
 2. Уточни боль: теряются ли заявки?
 3. Покажи выгоду.
 4. Если спрашивают цену — озвучь ВСЕ 4 ТАРИФА кратко.
-5. Обязательно подчеркни: "Настройка и первая неделя бесплатно".
-6. Призыв к действию: «Оставьте имя и телефон».
+5. Обязательно подчеркни: "Настройка и первая неделя бесплатно" (но только если уместно!).
+6. Призыв к действию: «Оставьте имя и телефон» (сделай это один раз, не навязчиво).
 
 СБОР ЗАЯВКИ:
 Когда клиент назвал имя + телефон — добавь в САМОМ КОНЦЕ ответа:
 [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:краткая суть]
+
+КОНТЕКСТ ДИАЛОГА:
+Если ты видишь, что диалог начался на сайте (в истории есть предыдущие сообщения), не начинай разговор с нуля. Продолжай его по смыслу. Например: "Возвращаясь к вашему вопросу про тарифы..." или "Как я понял, вас интересует...".
 
 БАЗА ЗНАНИЙ:
 ${context || 'Информация временно недоступна.'}`;
@@ -807,9 +811,32 @@ app.post('/telegram-webhook', async (req, res) => {
       const payload = parts[1] || '';
 
       if (payload.startsWith('sess_')) {
-        await getOrCreateSession(payload);
-        await updateSession(payload, { telegram_chat_id: chatId });
-        await sendTelegram(chatId, '👋 Продолжаем диалог с сайта. Чем помочь?');
+        const sessId = payload;
+        await getOrCreateSession(sessId);
+        await updateSession(sessId, { telegram_chat_id: chatId });
+        
+        const sessionData = await getOrCreateSession(sessId);
+        const history = sessionData.history || [];
+        
+        if (history.length > 0) {
+          const lastMessages = history.slice(-4).map(m => `${m.role === 'user' ? 'Клиент' : 'Бот'}: ${m.content}`).join('\n');
+          const prompt = `Сгенерируй короткое (1-2 предложения) приветствие для клиента, который перешел с сайта в Telegram. Вот последние сообщения из их диалога:\n${lastMessages}\n\nНапиши приветствие, которое логично продолжит этот диалог. Не пиши шаблонное "Чем помочь", а сошлись на прошлую тему.`;
+          
+          try {
+             const aiResp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+               method: 'POST',
+               headers: { 'Authorization': `Bearer ${OPENROUTER_KEY}`, 'Content-Type': 'application/json' },
+               body: JSON.stringify({ model: AI_MODEL_CHAT, messages: [{ role: 'user', content: prompt }], max_tokens: 100 })
+             });
+             const aiData = await aiResp.json();
+             const aiGreeting = aiData.choices?.[0]?.message?.content || '👋 Продолжаем диалог с сайта. Чем помочь?';
+             await sendTelegram(chatId, cleanReply(aiGreeting));
+          } catch (e) {
+             await sendTelegram(chatId, '👋 Продолжаем диалог с сайта. Чем помочь?');
+          }
+        } else {
+          await sendTelegram(chatId, '👋 Привет! Продолжаем. Что вас интересует?');
+        }
         return;
       }
 
@@ -841,24 +868,38 @@ app.post('/telegram-webhook', async (req, res) => {
         }
       }
 
-      const startText = `<b>👋 Добро пожаловать!</b>\n\n` +
-        `Я — AI-Администратор. Отвечаю клиентам 24/7, собираю заявки и присылаю их вам в Telegram.\n\n` +
-        `<b>Что я умею:</b>\n` +
-        `📥 Собирать заявки (имя, телефон, запрос)\n` +
-        `💼 Работать как CRM (все заявки в одном месте)\n` +
-        `📊 Выгружать данные в Excel\n` +
-        `🎙 Понимать голосовые сообщения\n\n` +
-        `<b>Условия:</b>\n` +
-        `🎁 Настройка и первая неделя — бесплатно\n` +
-        `🚀 Запуск за 2 дня\n\n` +
-        `Нажмите на кнопку ниже, чтобы посмотреть тарифы, или просто напишите мне свой вопрос.`;
-
       const startKeyboard = [
         [{ text: '💳 Посмотреть тарифы', callback_data: 'menu_bill' }],
         [{ text: '🌐 Открыть сайт', url: BASE_URL }]
       ];
 
-      await sendTelegram(chatId, startText, startKeyboard);
+      if (payload === 'free') {
+        await sendTelegram(chatId, 
+          `Отличное решение! 👌\n\n` +
+          `Чтобы запустить тест на 7 дней, мне понадобится ваше имя и телефон. Напишите их сюда, и я передам данные менеджеру.\n\n` +
+          `Если есть вопросы — задавайте, обсудим.`, 
+          startKeyboard
+        );
+        return;
+      }
+
+      if (payload.startsWith('tariff_')) {
+        const tariffKey = payload.split('_')[1];
+        const tariffName = TARIFFS[tariffKey]?.name || 'выбранный';
+        await sendTelegram(chatId, 
+          `Отличный выбор! Тариф «${tariffName}» — это то, что нужно. 🚀\n\n` +
+          `Давайте я покажу, как он будет работать именно на вашем бизнесе. Расскажите, чем вы занимаетесь?`, 
+          startKeyboard
+        );
+        return;
+      }
+
+      await sendTelegram(chatId, 
+        `Здравствуйте! 👋\n\n` +
+        `Я AI-Администратор — отвечаю клиентам 24/7, собираю заявки и помогаю с ними работать.\n\n` +
+        `Можете посмотреть тарифы по кнопкам ниже, или просто расскажите, чем занимается ваш бизнес — я подскажу, как лучше настроить бота под ваши задачи.`, 
+        startKeyboard
+      );
       return;
     }
 
@@ -1218,9 +1259,8 @@ cron.schedule('0 7 1 * *', async () => {
 });
 
 // ========== НАПОМИНАНИЯ ОБ ОПЛАТЕ ==========
-cron.schedule('0 10 * * *', async () => { // Каждый день в 10:00
+cron.schedule('0 10 * * *', async () => { 
   try {
-    // Получаем всех клиентов из базы
     const r = await fetch(`${SUPABASE_URL}/rest/v1/clients?select=*`, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
     });
@@ -1228,7 +1268,7 @@ cron.schedule('0 10 * * *', async () => { // Каждый день в 10:00
     if (!Array.isArray(clients)) return;
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Обнуляем время для точного сравнения дней
+    today.setHours(0, 0, 0, 0);
 
     for (const client of clients) {
       if (!client.paid_until) continue;
@@ -1236,11 +1276,9 @@ cron.schedule('0 10 * * *', async () => { // Каждый день в 10:00
       const paidDate = new Date(client.paid_until);
       paidDate.setHours(0, 0, 0, 0);
 
-      // Вычисляем разницу в днях
       const diffTime = paidDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      // Если оплата заканчивается завтра (diffDays === 1)
       if (diffDays === 1) {
         const chatId = client.chat_id || MANAGER_CHAT_ID;
         if (chatId) {
