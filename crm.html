@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CRM - AI-Администратор</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-    <!-- Этот скрипт автоматически создаст кнопку входа в div с id="telegram-login-btn" -->
-    <script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="vadim602_bot" data-size="large" data-auth-url="https://chat-bot-tilda.onrender.com/auth/telegram" data-request-access="write"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
@@ -35,7 +33,9 @@
             <h2>Вход в CRM</h2>
             <p>Пожалуйста, авторизуйтесь через Telegram.</p>
             <!-- Сюда Telegram автоматически вставит кнопку входа -->
-            <div id="telegram-login-btn"></div>
+            <div id="telegram-login-btn">
+                <script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="vadim602_bot" data-size="large" data-auth-url="https://chat-bot-tilda.onrender.com/auth/telegram" data-request-access="write"></script>
+            </div>
         </div>
 
         <!-- Экран CRM -->
