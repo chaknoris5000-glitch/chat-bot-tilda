@@ -46,7 +46,7 @@
             <h2>Вход в CRM</h2>
             <p>Пожалуйста, авторизуйтесь через Telegram.</p>
             <div id="telegram-login-btn">
-                <script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="vadim602_bot" data-size="large" data-auth-url="https://chat-bot-tilda.onrender.com/auth/telegram" data-request-access="write"></script>
+                <script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="vadim602_bot" data-size="large" data-onauth="onTelegramAuth(user)" data-request-access="write"></script>
             </div>
         </div>
 
@@ -105,7 +105,32 @@
 
         let allLeads = []; 
 
-        // Эта функция вызывается, когда Telegram возвращает пользователя на сайт
+        // Эта функция вызывается, когда Telegram успешно подтверждает вход
+        function onTelegramAuth(user) {
+            console.log("Данные от Telegram:", user);
+            
+            // Отправляем данные на сервер для проверки
+            fetch('/auth/telegram', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(user)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok) {
+                    // Если сервер сказал "ОК", перезагружаем страницу с параметрами
+                    window.location.href = `/crm?auth_success=1&telegram_id=${data.telegram_id}`;
+                } else {
+                    alert('Ошибка авторизации: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(e => {
+                console.error(e);
+                alert('Ошибка сети при попытке входа');
+            });
+        }
+
+        // Эта функция вызывается при загрузке страницы
         function checkAuth() {
             const urlParams = new URLSearchParams(window.location.search);
             
@@ -113,8 +138,7 @@
             if (urlParams.get('auth_success') === '1') {
                 const tgId = Number(urlParams.get('telegram_id'));
                 
-                // Если ID совпадает с твоим — пускаем
-                               if (tgId === ADMIN_TELEGRAM_ID) {
+                if (tgId === ADMIN_TELEGRAM_ID) {
                     // Это ты (Админ)
                     document.getElementById('auth-container').style.display = 'none';
                     document.getElementById('crm-container').style.display = 'block';
@@ -131,26 +155,35 @@
                     loadLeads(tgId);
                     window.history.replaceState({}, document.title, "/crm");
                 }
+            }
+        }
+
         // Запускаем проверку при загрузке страницы
         window.onload = checkAuth;
 
-                async function loadLeads(currentTgId = ADMIN_TELEGRAM_ID) {
+        async function loadLeads(currentTgId = ADMIN_TELEGRAM_ID) {
             try {
                 // Если это админ — грузим всё. Если клиент — только его заявки.
                 let url = `${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`;
                 
                 if (currentTgId !== ADMIN_TELEGRAM_ID) {
-                    // Для клиента: сначала узнаем его client_id по telegram_id, а потом грузим заявки
-                    // (Для простоты в этом тесте мы просто имитируем фильтр, 
-                    // но в реальном коде мы сначала делаем запрос в таблицу clients)
-                    url += `&client_id=eq.demo-client`; // Пока ставим хардкод для теста
+                    // Для клиента: фильтруем по client_id (пока демо-клиент)
+                    url += `&client_id=eq.demo-client`; 
                 }
 
                 const res = await fetch(url, {
                     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
                 });
                 const data = await res.json();
-                // ... дальше код отрисовки таблицы (он не меняется)
+                allLeads = data; 
+                const tbody = document.getElementById('leadsBody');
+                tbody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Заявок пока нет</td></tr>';
+                    return;
+                }
+
                 data.forEach(lead => {
                     let statusClass = 'status-new';
                     let statusText = 'Новая';
@@ -196,7 +229,7 @@
                 });
 
                 if (res.ok) {
-                    loadLeads();
+                    loadLeads(); // Перезагружаем таблицу
                 } else {
                     alert('Ошибка при обновлении статуса');
                 }
