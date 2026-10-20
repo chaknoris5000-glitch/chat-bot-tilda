@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const cron = require('node-cron');
 
@@ -1299,7 +1300,9 @@ cron.schedule('0 10 * * *', async () => {
     console.log('Ошибка при проверке напоминаний:', e.message);
   }
 });
-
+app.get('/crm', (req, res) => {
+  res.sendFile(path.join(__dirname, 'crm.html'));
+});
 app.listen(PORT, () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
 });
