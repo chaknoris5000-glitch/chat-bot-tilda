@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI-Администратор</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: #f4f6f8; --primary: #1e3a2f; --primary-light: #2F5B43;
+            --text-main: #0f172a; --text-muted: #64748b; --border: #e2e8f0;
+            --card-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text-main); padding: 20px; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        .header { text-align: center; margin-bottom: 30px; margin-top: 20px; }
+        .header h1 { font-size: 24px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; margin-bottom: 8px; }
+        .header p { color: var(--text-muted); font-size: 14px; }
+
+        .card { background: white; border-radius: 16px; padding: 24px; box-shadow: var(--card-shadow); border: 1px solid var(--border); margin-bottom: 20px; }
+        
+        .client-info { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+        .avatar { width: 56px; height: 56px; border-radius: 50%; background: #e8f0ec; color: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; }
+        .client-name { font-size: 18px; font-weight: 700; }
+        .client-role { font-size: 13px; color: var(--text-muted); }
+
+        .status-block { background: #f8fafc; border-radius: 12px; padding: 16px; margin-bottom: 20px; border: 1px solid var(--border); }
+        .status-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
+        .status-row:last-child { margin-bottom: 0; }
+        .status-label { color: var(--text-muted); }
+        .status-value { font-weight: 700; }
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+        .badge-active { background: #f0fdf4; color: #15803d; }
+        .badge-expired { background: #fef2f2; color: #b91c1c; }
+
+        .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-size: 16px; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
+        .btn-primary { background: var(--primary); color: white; margin-bottom: 12px; }
+        .btn-primary:hover { background: var(--primary-light); }
+        .btn-outline { background: white; border: 2px solid var(--border); color: var(--text-main); }
+        
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .stat-box { background: white; border-radius: 12px; padding: 16px; text-align: center; border: 1px solid var(--border); box-shadow: var(--card-shadow); }
+        .stat-box .num { font-size: 24px; font-weight: 800; color: var(--primary); }
+        .stat-box .lbl { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+        #loading { text-align: center; margin-top: 50px; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <div id="loading">Загрузка данных...</div>
+
+    <div id="app-content" style="display: none;">
+        <div class="header">
+            <h1>AI-Администратор</h1>
+            <p>Личный кабинет</p>
+        </div>
+
+        <div class="card">
+            <div class="client-info">
+                <div class="avatar" id="user-avatar">?</div>
+                <div>
+                    <div class="client-name" id="user-name">Пользователь</div>
+                    <div class="client-role" id="user-role">Клиент</div>
+                </div>
+            </div>
+
+            <!-- Блок для КЛИЕНТА -->
+            <div id="client-view" style="display: none;">
+                <div class="status-block">
+                    <div class="status-row">
+                        <span class="status-label">Ваш тариф</span>
+                        <span class="status-value" id="client-tariff">Бизнес</span>
+                    </div>
+                    <div class="status-row">
+                        <span class="status-label">Статус подписки</span>
+                        <span class="badge badge-active" id="client-status">Активна</span>
+                    </div>
+                    <div class="status-row">
+                        <span class="status-label">Оплачено до</span>
+                        <span class="status-value" id="client-paid-until">—</span>
+                    </div>
+                </div>
+
+                <div class="stat-grid">
+                    <div class="stat-box">
+                        <div class="num" id="client-leads-total">0</div>
+                        <div class="lbl">Всего заявок</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="num" id="client-leads-month">0</div>
+                        <div class="lbl">За месяц</div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="goToCRM()">Перейти в мою CRM</button>
+            </div>
+
+            <!-- Блок для АДМИНА -->
+            <div id="admin-view" style="display: none;">
+                <div class="stat-grid">
+                    <div class="stat-box">
+                        <div class="num" id="admin-clients-total">0</div>
+                        <div class="lbl">Клиентов</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="num" id="admin-leads-total">0</div>
+                        <div class="lbl">Всего заявок</div>
+                    </div>
+                </div>
+                
+                <button class="btn btn-primary" onclick="goToCRM()">Перейти в общую CRM</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- НАСТРОЙКИ ---
+        const SUPABASE_URL = 'https://ozutjnwextahorvzdbpl.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96dXRqbndleHRhaG9ydnpkYnBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MTQ3MzUsImV4cCI6MjEwNzE5MDczNX0.8L3adhQ9gUR5iSly1afSQN6HeEhkj9QQ4NtUyZUQx28';
+        const ADMIN_TELEGRAM_ID = 5818548555; 
+        
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Разворачиваем на весь экран
+
+        async function init() {
+            const user = tg.initDataUnsafe?.user;
+            
+            if (!user) {
+                document.getElementById('loading').innerText = 'Ошибка: нет данных от Telegram';
+                return;
+            }
+
+            document.getElementById('user-name').innerText = user.first_name;
+            document.getElementById('user-avatar').innerText = user.first_name.charAt(0).toUpperCase();
+            
+            // Загружаем статистику
+            try {
+                // 1. Получаем все заявки
+                const resLeads = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=id,client_id`, {
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                });
+                const allLeads = await resLeads.json();
+
+                // 2. Получаем всех клиентов
+                const resClients = await fetch(`${SUPABASE_URL}/rest/v1/clients?select=*`, {
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                });
+                const allClients = await resClients.json();
+
+                // ЛОГИКА ДЛЯ АДМИНА
+                if (user.id === ADMIN_TELEGRAM_ID) {
+                    document.getElementById('user-role').innerText = 'Администратор (Владелец)';
+                    document.getElementById('admin-view').style.display = 'block';
+                    
+                    document.getElementById('admin-clients-total').innerText = allClients.length;
+                    document.getElementById('admin-leads-total').innerText = allLeads.length;
+                } 
+                // ЛОГИКА ДЛЯ КЛИЕНТА
+                else {
+                    document.getElementById('user-role').innerText = 'Кабинет бизнеса';
+                    document.getElementById('client-view').style.display = 'block';
+
+                    // Ищем текущего клиента в базе по его Telegram ID
+                    const myClient = allClients.find(c => c.owner_telegram_id === user.id);
+
+                    if (myClient) {
+                        document.getElementById('client-tariff').innerText = myClient.business_name || 'Бизнес';
+                        
+                        // Проверяем оплату
+                        const paidUntil = new Date(myClient.paid_until);
+                        const isActive = paidUntil > new Date();
+                        
+                        const statusBadge = document.getElementById('client-status');
+                        statusBadge.innerText = isActive ? 'Активна' : 'Истекла';
+                        statusBadge.className = `badge ${isActive ? 'badge-active' : 'badge-expired'}`;
+                        
+                        document.getElementById('client-paid-until').innerText = paidUntil.toLocaleDateString('ru-RU');
+
+                        // Считаем заявки клиента
+                        const myLeads = allLeads.filter(l => l.client_id === myClient.client_id);
+                        document.getElementById('client-leads-total').innerText = myLeads.length;
+                        document.getElementById('client-leads-month').innerText = myLeads.length; // Пока просто дублируем
+                    } else {
+                        document.getElementById('client-tariff').innerText = 'Нет активной подписки';
+                        document.getElementById('client-status').innerText = 'Нет доступа';
+                        document.getElementById('client-status').className = 'badge badge-expired';
+                    }
+                }
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('app-content').style.display = 'block';
+
+            } catch (e) {
+                console.error(e);
+                document.getElementById('loading').innerText = 'Ошибка загрузки данных';
+            }
+        }
+
+        function goToCRM() {
+            // Открываем CRM в том же окне
+            window.location.href = '/crm?auth_success=1&telegram_id=' + tg.initDataUnsafe.user.id;
+        }
+
+        init();
+    </script>
+</body>
+</html>
