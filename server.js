@@ -1370,6 +1370,20 @@ app.post('/api/create-client', async (req, res) => {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
+app.post('/api/support', async (req, res) => {
+  try {
+    const { message, user_id, name } = req.body;
+    if (!message) return res.status(400).json({ ok: false });
+
+    // Отправляем сообщение тебе (Админу)
+    if (MANAGER_CHAT_ID) {
+      await sendTelegram(MANAGER_CHAT_ID, `🆘 <b>Обращение в поддержку</b>\n\nОт: ${name} (ID: ${user_id})\n\nСообщение:\n${message}`);
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 app.listen(PORT, () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
 });
