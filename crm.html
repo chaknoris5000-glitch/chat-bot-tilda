@@ -60,6 +60,7 @@
         .k-phone { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
         .k-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
         .k-tag { font-size: 10px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #475569; }
+        .k-actions { margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 8px; display: flex; justify-content: flex-end; }
 
         /* --- Table --- */
         .table-container { background: white; border-radius: 10px; border: 1px solid var(--border); overflow-x: auto; }
@@ -69,8 +70,10 @@
         tr:hover td { background: #f8fafc; cursor: pointer; }
 
         /* --- Filters --- */
-        .filters-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-        .filters-bar select, .filters-bar input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; }
+        .filters-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+        .filter-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border); background: #fff; color: var(--text-muted); font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+        .filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .filter-input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; }
 
         /* --- Modal / Client Card --- */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.5); z-index: 1000; align-items: center; justify-content: center; }
@@ -98,6 +101,11 @@
         .form-group label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
         .form-group input, .form-group select, .form-group textarea { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; font-family: inherit; }
 
+        .settings-section { background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
+        .settings-section h3 { font-size: 16px; margin-bottom: 15px; color: var(--primary); }
+        .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .settings-row:last-child { border-bottom: none; padding-bottom: 0; }
+
         /* --- Mobile --- */
         @media (max-width: 768px) {
             body { flex-direction: column; padding-bottom: 64px; }
@@ -122,7 +130,6 @@
     </style>
 </head>
 <body>
-    <!-- Auth -->
     <div id="auth-container" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; width:100%;">
         <h2 style="color: var(--primary); margin-bottom: 10px;">AI CRM</h2>
         <div id="telegram-login-btn">
@@ -130,7 +137,6 @@
         </div>
     </div>
 
-    <!-- CRM App -->
     <div id="crm-container" style="display: none; width: 100%;">
         <div class="sidebar">
             <div class="logo">AI CRM</div>
@@ -186,42 +192,39 @@
                 <h1 id="page-title">Воронка продаж</h1>
             </div>
 
-            <div class="stats-grid" id="stats-block">
-                <div class="stat-card"><div class="stat-title">Всего лидов</div><div class="stat-value" id="stat-total">0</div></div>
-                <div class="stat-card"><div class="stat-title">В работе</div><div class="stat-value" id="stat-progress" style="color: #b45309;">0</div></div>
-                <div class="stat-card"><div class="stat-title">Выполнено</div><div class="stat-value" id="stat-closed" style="color: #15803d;">0</div></div>
-                <div class="stat-card" style="background: #f1f5f9; border-color: #e2e8f0;"><div class="stat-title" style="color: #475569;">Архив</div><div class="stat-value" id="stat-archive" style="color: #475569;">0</div></div>
-            </div>
-
             <!-- KANBAN VIEW -->
             <div id="kanban-view" class="kanban-board"></div>
 
-            <!-- LIST VIEW -->
+            <!-- ALL LEADS VIEW -->
             <div id="list-view" style="display: none;">
+                <div class="filters-bar">
+                    <button class="filter-btn active" onclick="filterLeadsByStatus('all', this)">Все</button>
+                    <button class="filter-btn" onclick="filterLeadsByStatus('new', this)">Новые</button>
+                    <button class="filter-btn" onclick="filterLeadsByStatus('in_progress', this)">В работе</button>
+                    <button class="filter-btn" onclick="filterLeadsByStatus('closed', this)">Выполнено</button>
+                    <button class="filter-btn" onclick="filterLeadsByStatus('archived', this)">Архив</button>
+                    <input type="date" class="filter-input" id="list-filter-date" onchange="applyListFilters()">
+                    <input type="text" class="filter-input" id="list-filter-search" placeholder="Имя или телефон" oninput="applyListFilters()">
+                </div>
                 <div class="table-container">
                     <table>
-                        <thead><tr><th>ID</th><th>Клиент</th><th>Телефон</th><th>Услуга</th><th>Сумма</th><th>Статус</th></tr></thead>
+                        <thead><tr><th>ID</th><th>Клиент</th><th>Телефон</th><th>Услуга</th><th>Сумма</th><th>Дата</th><th>Статус</th></tr></thead>
                         <tbody id="leadsBody"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- CLIENTS VIEW -->
+            <!-- CLIENTS BASE VIEW (Уникальные клиенты) -->
             <div id="clients-view" style="display: none;">
                 <div class="filters-bar">
-                    <input type="text" id="filter-search" placeholder="Поиск по имени, телефону или услуге..." oninput="applyClientFilters()">
-                    <select id="filter-status" onchange="applyClientFilters()">
-                        <option value="">Все статусы</option>
-                        <option value="new">Новые</option>
-                        <option value="in_progress">В работе</option>
-                        <option value="closed">Выполнено</option>
-                        <option value="archived">Архив</option>
-                    </select>
+                    <input type="text" class="filter-input" id="client-filter-name" placeholder="Поиск по имени" oninput="applyClientBaseFilters()">
+                    <input type="text" class="filter-input" id="client-filter-phone" placeholder="Поиск по телефону" oninput="applyClientBaseFilters()">
+                    <input type="date" class="filter-input" id="client-filter-date" onchange="applyClientBaseFilters()">
                 </div>
                 <div class="table-container">
                     <table>
-                        <thead><tr><th>Имя</th><th>Телефон</th><th>Услуга</th><th>Сумма</th><th>Дата</th><th>Статус</th></tr></thead>
-                        <tbody id="clientsBody"></tbody>
+                        <thead><tr><th>Имя</th><th>Телефон</th><th>Услуги</th><th>Сумма</th><th>Последняя дата</th></tr></thead>
+                        <tbody id="clientsBaseBody"></tbody>
                     </table>
                 </div>
             </div>
@@ -238,6 +241,43 @@
                     </table>
                 </div>
             </div>
+
+            <!-- SETTINGS VIEW -->
+            <div id="settings-view" style="display: none;">
+                <div class="settings-section">
+                    <h3>Профиль владельца</h3>
+                    <div class="settings-row">
+                        <span>Имя</span>
+                        <input type="text" class="filter-input" value="Владелец" style="width: 200px;">
+                    </div>
+                    <div class="settings-row">
+                        <span>Контакт</span>
+                        <input type="text" class="filter-input" value="+7 (999) 000-00-00" style="width: 200px;">
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Уведомления</h3>
+                    <div class="settings-row"><span>Новые заявки</span><input type="checkbox" checked style="width: 20px; height: 20px;"></div>
+                    <div class="settings-row"><span>Напоминания о задачах</span><input type="checkbox" checked style="width: 20px; height: 20px;"></div>
+                    <div class="settings-row"><span>Ежедневный отчет</span><input type="checkbox" style="width: 20px; height: 20px;"></div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Интеграции</h3>
+                    <div class="settings-row"><span>Почта</span><button class="btn btn-outline">Подключить</button></div>
+                    <div class="settings-row"><span>WhatsApp</span><button class="btn btn-outline">Подключить</button></div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Обратная связь</h3>
+                    <div class="settings-row"><span>Оставить отзыв о работе</span><button class="btn btn-outline">Написать</button></div>
+                    <div class="settings-row"><span>Сообщить о проблеме</span><button class="btn btn-outline">Написать</button></div>
+                </div>
+
+                <button class="btn btn-danger" style="width: 100%; margin-top: 10px;" onclick="alert('Выход из аккаунта')">Выйти</button>
+            </div>
+
         </div>
     </div>
 
@@ -275,7 +315,7 @@
                 <div class="form-group"><label>Оплачено?</label>
                     <select id="edit-paid"><option value="false">Нет</option><option value="true">Да</option></select>
                 </div>
-                <div class="form-group full"><label>Заметка</label><textarea id="edit-notes" rows="2"></textarea></div>
+                <div class="form-group full"><label>Заметка / Задача</label><textarea id="edit-notes" rows="2"></textarea></div>
             </div>
             
             <div style="margin-top: 15px;">
@@ -302,22 +342,10 @@
                 <div style="cursor:pointer; font-size:24px;" onclick="closeCreateClientModal()">&times;</div>
             </div>
             <div class="form-grid">
-                <div class="form-group full">
-                    <label>ID клиента (латиницей)</label>
-                    <input type="text" id="newClientId" placeholder="salon1">
-                </div>
-                <div class="form-group full">
-                    <label>Название бизнеса</label>
-                    <input type="text" id="newBusinessName" placeholder="Салон красоты">
-                </div>
-                <div class="form-group full">
-                    <label>Ссылка на сайт</label>
-                    <input type="text" id="newSiteUrl" placeholder="https://...">
-                </div>
-                <div class="form-group full">
-                    <label>Токен Telegram-бота</label>
-                    <input type="text" id="newBotToken" placeholder="123456:ABC-DEF...">
-                </div>
+                <div class="form-group full"><label>ID клиента (латиницей)</label><input type="text" id="newClientId" placeholder="salon1"></div>
+                <div class="form-group full"><label>Название бизнеса</label><input type="text" id="newBusinessName" placeholder="Салон красоты"></div>
+                <div class="form-group full"><label>Ссылка на сайт</label><input type="text" id="newSiteUrl" placeholder="https://..."></div>
+                <div class="form-group full"><label>Токен Telegram-бота</label><input type="text" id="newBotToken" placeholder="123456:ABC-DEF..."></div>
             </div>
             <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
                 <button class="btn btn-outline" onclick="closeCreateClientModal()">Отмена</button>
@@ -334,10 +362,7 @@
                 <div style="cursor:pointer; font-size:24px;" onclick="closeTaskModal()">&times;</div>
             </div>
             <div class="form-grid">
-                <div class="form-group full">
-                    <label>Клиент</label>
-                    <select id="task-client-id"></select>
-                </div>
+                <div class="form-group full"><label>Клиент</label><select id="task-client-id"></select></div>
                 <div class="form-group full"><label>Что сделать?</label><input type="text" id="task-text" placeholder="Перезвонить..."></div>
                 <div class="form-group full"><label>Когда?</label><input type="datetime-local" id="task-date"></div>
             </div>
@@ -356,6 +381,7 @@
         let allLeads = [];
         let currentLeadId = null;
         let currentUserTgId = null;
+        let currentListStatus = 'all';
 
         // AUTH
         function onTelegramAuth(user) {
@@ -400,9 +426,8 @@
                 allLeads = data; 
                 renderKanban(data);
                 renderList(data);
-                renderClients(data);
+                renderClientBase(data);
                 renderTasks(data);
-                updateStats(data);
                 populateTaskClientSelect(data);
             } catch (e) { console.error(e); }
         }
@@ -411,26 +436,23 @@
         function renderKanban(data) {
             const board = document.getElementById('kanban-view');
             board.innerHTML = '';
-            const columns = [{ id: 'new', title: 'Новые' }, { id: 'in_progress', title: 'В работе' }, { id: 'closed', title: 'Успешно' }];
+            const columns = [{ id: 'new', title: 'Новые' }, { id: 'in_progress', title: 'В работе' }, { id: 'closed', title: 'Выполнено' }];
 
             columns.forEach(col => {
                 const colLeads = data.filter(l => l.status === col.id);
-                const totalSum = colLeads.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
                 const colEl = document.createElement('div');
                 colEl.className = 'kanban-col';
-                colEl.innerHTML = `<div class="col-header"><span>${col.title} (${colLeads.length})</span><span style="color:var(--success);">${totalSum > 0 ? totalSum.toLocaleString() + ' ₽' : ''}</span></div>`;
+                colEl.innerHTML = `<div class="col-header"><span>${col.title} (${colLeads.length})</span></div>`;
 
                 colLeads.forEach(lead => {
                     const card = document.createElement('div');
                     card.className = 'kanban-card';
                     card.onclick = () => openClientModal(lead.id);
                     card.innerHTML = `
-                        <div class="k-title"><span>${lead.name || 'Без имени'}</span><span class="k-amount">${lead.amount ? lead.amount + ' ₽' : ''}</span></div>
-                        <div class="k-phone">${lead.phone || '—'}</div>
-                        <div class="k-tags">
-                            ${lead.service ? `<span class="k-tag">${lead.service}</span>` : ''}
-                            <span class="k-tag">#${lead.id}</span>
-                        </div>
+                        <div class="k-title"><span>${lead.name || 'Без имени'}</span></div>
+                        <div class="k-phone">${lead.phone || (lead.phones && lead.phones[0]) || '—'}</div>
+                        <div class="k-tags">${lead.service ? `<span class="k-tag">${lead.service}</span>` : ''}<span class="k-tag">#${lead.id}</span></div>
+                        ${col.id === 'closed' ? `<div class="k-actions"><button class="btn btn-outline btn-sm" onclick="event.stopPropagation(); archiveFromKanban(${lead.id})">В архив</button></div>` : ''}
                     `;
                     colEl.appendChild(card);
                 });
@@ -441,7 +463,19 @@
         function renderList(data) {
             const tbody = document.getElementById('leadsBody');
             tbody.innerHTML = '';
-            data.forEach(lead => {
+            
+            // Фильтрация для списка
+            const dateVal = document.getElementById('list-filter-date').value;
+            const searchVal = document.getElementById('list-filter-search').value.toLowerCase();
+            
+            let filtered = data.filter(l => {
+                if (currentListStatus !== 'all' && l.status !== currentListStatus) return false;
+                if (dateVal && !l.created_at.startsWith(dateVal)) return false;
+                if (searchVal && !(l.name||'').toLowerCase().includes(searchVal) && !(l.phone||'').includes(searchVal)) return false;
+                return true;
+            });
+
+            filtered.forEach(lead => {
                 const tr = document.createElement('tr');
                 tr.onclick = () => openClientModal(lead.id);
                 tr.innerHTML = `
@@ -450,25 +484,51 @@
                     <td>${lead.phone || '—'}</td>
                     <td>${lead.service || '—'}</td>
                     <td style="font-weight:700; color:var(--success);">${lead.amount ? lead.amount + ' ₽' : '—'}</td>
+                    <td>${new Date(lead.created_at).toLocaleDateString('ru-RU')}</td>
                     <td>${lead.status}</td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        function renderClients(data) {
-            const tbody = document.getElementById('clientsBody');
+        function renderClientBase(data) {
+            const tbody = document.getElementById('clientsBaseBody');
             tbody.innerHTML = '';
+
+            // Объединение в уникальных клиентов (по телефону)
+            const uniqueClients = {};
             data.forEach(lead => {
+                const phone = lead.phone || (lead.phones && lead.phones[0]) || 'unknown';
+                if (!uniqueClients[phone]) {
+                    uniqueClients[phone] = { ...lead, allServices: [], lastDate: lead.created_at };
+                }
+                if (lead.service && !uniqueClients[phone].allServices.includes(lead.service)) uniqueClients[phone].allServices.push(lead.service);
+                if (lead.created_at > uniqueClients[phone].lastDate) uniqueClients[phone].lastDate = lead.created_at;
+            });
+
+            const clientsArray = Object.values(uniqueClients);
+
+            // Фильтрация
+            const nameVal = document.getElementById('client-filter-name').value.toLowerCase();
+            const phoneVal = document.getElementById('client-filter-phone').value;
+            const dateVal = document.getElementById('client-filter-date').value;
+
+            const filtered = clientsArray.filter(c => {
+                if (nameVal && !(c.name||'').toLowerCase().includes(nameVal)) return false;
+                if (phoneVal && !(c.phone||'').includes(phoneVal)) return false;
+                if (dateVal && !c.lastDate.startsWith(dateVal)) return false;
+                return true;
+            });
+
+            filtered.forEach(client => {
                 const tr = document.createElement('tr');
-                tr.onclick = () => openClientModal(lead.id);
+                tr.onclick = () => openClientModal(client.id);
                 tr.innerHTML = `
-                    <td style="font-weight:600;">${lead.name || '—'}</td>
-                    <td>${lead.phone || (lead.phones && lead.phones[0]) || '—'}</td>
-                    <td>${lead.service || (lead.services && lead.services.join(', ')) || '—'}</td>
-                    <td style="color:var(--success);">${lead.amount ? lead.amount + ' ₽' : '—'}</td>
-                    <td>${new Date(lead.created_at).toLocaleDateString('ru-RU')}</td>
-                    <td><span style="font-size:11px;">${lead.status === 'archived' ? 'Архив' : (lead.status === 'closed' ? 'Выполнено' : (lead.status === 'in_progress' ? 'В работе' : 'Новый'))}</span></td>
+                    <td style="font-weight:600;">${client.name || '—'}</td>
+                    <td>${client.phone || '—'}</td>
+                    <td>${client.allServices.join(', ') || '—'}</td>
+                    <td style="color:var(--success);">${client.amount ? client.amount + ' ₽' : '—'}</td>
+                    <td>${new Date(client.lastDate).toLocaleDateString('ru-RU')}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -494,14 +554,7 @@
             });
         }
 
-        function updateStats(data) {
-            document.getElementById('stat-total').innerText = data.length;
-            document.getElementById('stat-progress').innerText = data.filter(l => l.status === 'in_progress').length;
-            document.getElementById('stat-closed').innerText = data.filter(l => l.status === 'closed').length;
-            document.getElementById('stat-archive').innerText = data.filter(l => l.status === 'archived').length;
-        }
-
-        // --- СТАТУСЫ ---
+        // --- СТАТУСЫ И КАРТОЧКА ---
         function updateStatusUI(status) {
             const badge = document.getElementById('current-status-badge');
             const buttons = document.getElementById('status-buttons');
@@ -514,24 +567,14 @@
             } else if (status === 'in_progress') {
                 badge.className = 'current-status status-progress';
                 badge.innerText = 'Статус: В работе';
-                buttons.innerHTML = `
-                    <button class="btn btn-primary btn-sm" style="background:var(--success);" onclick="changeStatusFromCard('closed')">Выполнено</button>
-                    <button class="btn btn-outline btn-sm" onclick="changeStatusFromCard('new')">Вернуть в новые</button>
-                `;
+                buttons.innerHTML = `<button class="btn btn-primary btn-sm" style="background:var(--success);" onclick="changeStatusFromCard('closed')">Выполнено</button>`;
             } else if (status === 'closed') {
                 badge.className = 'current-status status-closed';
                 badge.innerText = 'Статус: Выполнено';
-                buttons.innerHTML = `
-                    <button class="btn btn-primary btn-sm" style="background:var(--accent);" onclick="rebookClient()">Связаться повторно</button>
-                    <button class="btn btn-outline btn-sm" onclick="changeStatusFromCard('in_progress')">Вернуть в работу</button>
-                    <button class="btn btn-outline btn-sm" onclick="changeStatusFromCard('new')">Вернуть в новые</button>
-                `;
             } else if (status === 'archived') {
                 badge.className = 'current-status status-archived';
                 badge.innerText = 'Статус: В архиве';
-                buttons.innerHTML = `
-                    <button class="btn btn-outline btn-sm" onclick="changeStatusFromCard('new')">Вернуть в новые</button>
-                `;
+                buttons.innerHTML = `<button class="btn btn-outline btn-sm" onclick="changeStatusFromCard('new')">Вернуть в новые</button>`;
             }
         }
 
@@ -545,7 +588,15 @@
             loadLeads();
         }
 
-        // ACTIONS
+        async function archiveFromKanban(id) {
+            await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
+                method: 'PATCH',
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'archived' })
+            });
+            loadLeads();
+        }
+
         function openClientModal(id) {
             const lead = allLeads.find(l => l.id === id);
             if (!lead) return;
@@ -556,15 +607,12 @@
             document.getElementById('edit-paid').value = lead.is_paid ? 'true' : 'false';
             document.getElementById('edit-notes').value = lead.notes || lead.problem || '';
 
-            // Очищаем контейнеры
             document.getElementById('phones-container').innerHTML = '';
             document.getElementById('services-container').innerHTML = '';
 
-            // Загружаем телефоны
             const phones = lead.phones && lead.phones.length > 0 ? lead.phones : (lead.phone ? [lead.phone] : ['']);
             phones.forEach(p => addPhoneField(p));
 
-            // Загружаем услуги
             const services = lead.services && lead.services.length > 0 ? lead.services : (lead.service ? [lead.service] : ['']);
             services.forEach(s => addServiceField(s));
 
@@ -580,8 +628,7 @@
         function addPhoneField(value = '') {
             const container = document.getElementById('phones-container');
             const div = document.createElement('div');
-            div.style.display = 'flex';
-            div.style.gap = '8px';
+            div.style.display = 'flex'; div.style.gap = '8px';
             div.innerHTML = `
                 <input type="text" class="dynamic-phone" value="${value}" placeholder="+7..." style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px;">
                 <button class="btn btn-danger btn-sm" type="button" onclick="this.parentElement.remove()" style="padding:0 10px;">✕</button>
@@ -592,8 +639,7 @@
         function addServiceField(value = '') {
             const container = document.getElementById('services-container');
             const div = document.createElement('div');
-            div.style.display = 'flex';
-            div.style.gap = '8px';
+            div.style.display = 'flex'; div.style.gap = '8px';
             div.innerHTML = `
                 <input type="text" class="dynamic-service" value="${value}" placeholder="Услуга" style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px;">
                 <button class="btn btn-danger btn-sm" type="button" onclick="this.parentElement.remove()" style="padding:0 10px;">✕</button>
@@ -609,10 +655,8 @@
 
             const updates = {
                 name: document.getElementById('edit-name').value.trim(),
-                phones: phones,
-                services: services,
-                phone: phones[0] || null,
-                service: services[0] || null,
+                phones: phones, services: services,
+                phone: phones[0] || null, service: services[0] || null,
                 amount: Number(document.getElementById('edit-amount').value) || 0,
                 is_paid: document.getElementById('edit-paid').value === 'true',
                 notes: document.getElementById('edit-notes').value.trim()
@@ -622,21 +666,18 @@
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(updates)
             });
-            closeModal();
-            loadLeads();
+            closeModal(); loadLeads();
         }
 
         async function archiveLead() {
-            const reason = prompt('Укажите причину переноса в архив (например: Выполнено, Отменено, Спам):');
+            const reason = prompt('Укажите причину переноса в архив:');
             if (reason === null) return; 
-            
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${currentLeadId}`, {
                 method: 'PATCH',
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'archived', archive_reason: reason || 'Без причины' })
             });
-            closeModal();
-            loadLeads();
+            closeModal(); loadLeads();
         }
 
         async function deleteLead() {
@@ -645,39 +686,20 @@
                 method: 'DELETE',
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
             });
-            closeModal();
-            loadLeads();
+            closeModal(); loadLeads();
         }
 
         function copyTemplate() {
             const name = document.getElementById('edit-name').value || 'Клиент';
-            const text = `Здравствуйте, ${name}! Спасибо за обращение. Наш менеджер свяжется с вами в ближайшее время.`;
-            navigator.clipboard.writeText(text);
-            alert('Шаблон скопирован в буфер обмена!');
-        }
-
-        async function rebookClient() {
-            if (!confirm('Создать повторную заявку для этого клиента?')) return;
-            const name = document.getElementById('edit-name').value;
-            const phone = document.getElementById('edit-phone') ? document.getElementById('edit-phone').value : (document.querySelector('.dynamic-phone') ? document.querySelector('.dynamic-phone').value : '');
-            
-            await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
-                method: 'POST',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, phone, source: 'manual', status: 'new', client_id: 'tilda' })
-            });
-            alert('Повторная заявка создана!');
-            closeModal();
-            loadLeads();
+            navigator.clipboard.writeText(`Здравствуйте, ${name}! Спасибо за обращение. Наш менеджер свяжется с вами в ближайшее время.`);
+            alert('Шаблон скопирован!');
         }
 
         // TASKS
         function populateTaskClientSelect(data) {
             const select = document.getElementById('task-client-id');
             select.innerHTML = '<option value="">Выберите клиента...</option>';
-            data.forEach(l => {
-                select.innerHTML += `<option value="${l.id}">${l.name || 'Без имени'} (${l.phone || '—'})</option>`;
-            });
+            data.forEach(l => { select.innerHTML += `<option value="${l.id}">${l.name || 'Без имени'} (${l.phone || '—'})</option>`; });
         }
 
         function openTaskModal() { document.getElementById('taskModal').style.display = 'flex'; }
@@ -694,16 +716,13 @@
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ next_contact_date: date, notes: text })
             });
-            closeTaskModal();
-            loadLeads();
-            switchTab('tasks');
+            closeTaskModal(); loadLeads(); switchTab('tasks');
         }
 
         // TABS
         function switchTab(tab) {
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.main-content > div').forEach(el => el.style.display = 'none');
-            document.getElementById('stats-block').style.display = 'grid';
 
             if (tab === 'kanban') {
                 document.querySelectorAll('.menu-item')[0].classList.add('active');
@@ -723,25 +742,20 @@
                 document.getElementById('tasks-view').style.display = 'block';
             } else {
                 document.querySelectorAll('.menu-item')[4].classList.add('active');
-                document.getElementById('page-title').innerText = 'Настройки (в разработке)';
-                document.getElementById('stats-block').style.display = 'none';
+                document.getElementById('page-title').innerText = 'Настройки';
+                document.getElementById('settings-view').style.display = 'block';
             }
         }
 
-        function applyClientFilters() {
-            const search = document.getElementById('filter-search').value.toLowerCase();
-            const status = document.getElementById('filter-status').value;
-            
-            const filtered = allLeads.filter(l => {
-                const matchName = (l.name || '').toLowerCase().includes(search);
-                const matchPhone = (l.phone || '').includes(search) || (l.phones && l.phones.join(',').includes(search));
-                const matchService = (l.service || '').toLowerCase().includes(search) || (l.services && l.services.join(',').toLowerCase().includes(search));
-                const matchStatus = status ? l.status === status : true;
-                
-                return (matchName || matchPhone || matchService) && matchStatus;
-            });
-            renderClients(filtered);
+        function filterLeadsByStatus(status, btn) {
+            currentListStatus = status;
+            document.querySelectorAll('.filters-bar .filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            applyListFilters();
         }
+
+        function applyListFilters() { renderList(allLeads); }
+        function applyClientBaseFilters() { renderClientBase(allLeads); }
 
         // EXPORT & CREATE
         function exportToExcel() {
@@ -756,7 +770,6 @@
             XLSX.writeFile(wb, "leads_export.xlsx");
         }
 
-        // CREATE CLIENT
         function openCreateModal() { document.getElementById('createModal').style.display = 'flex'; }
         function closeCreateClientModal() { document.getElementById('createModal').style.display = 'none'; }
 
@@ -765,32 +778,17 @@
             const business_name = document.getElementById('newBusinessName').value.trim();
             const site_url = document.getElementById('newSiteUrl').value.trim();
             const bot_token = document.getElementById('newBotToken').value.trim();
-            const timezone = 'Europe/Moscow';
-
-            if (!client_id || !business_name || !site_url || !bot_token) {
-                alert('Заполните все поля!');
-                return;
-            }
-
-            const manager_chat_id = ADMIN_TELEGRAM_ID.toString();
+            if (!client_id || !business_name || !site_url || !bot_token) return alert('Заполните все поля!');
 
             try {
                 const res = await fetch('/api/create-client', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ client_id, business_name, site_url, timezone, manager_chat_id, bot_token })
+                    body: JSON.stringify({ client_id, business_name, site_url, timezone: 'Europe/Moscow', manager_chat_id: ADMIN_TELEGRAM_ID.toString(), bot_token })
                 });
-
                 const data = await res.json();
-                if (data.ok) {
-                    alert('🚀 Задача запущена на GitHub! Клиент скоро появится в базе.');
-                    closeCreateClientModal();
-                } else {
-                    alert('Ошибка: ' + data.error);
-                }
-            } catch (e) {
-                alert('Ошибка сети: ' + e.message);
-            }
+                if (data.ok) { alert('🚀 Задача запущена!'); closeCreateClientModal(); } else { alert('Ошибка: ' + data.error); }
+            } catch (e) { alert('Ошибка сети: ' + e.message); }
         }
     </script>
 </body>
