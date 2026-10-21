@@ -83,6 +83,7 @@
         .status-new { background: #eff6ff; color: #1d4ed8; }
         .status-progress { background: #fffbeb; color: #b45309; }
         .status-closed { background: #f0fdf4; color: #15803d; }
+        .status-archived { background: #f1f5f9; color: #475569; }
         .status-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
         .contact-actions { display: flex; gap: 8px; margin-bottom: 20px; }
@@ -134,7 +135,6 @@
         <div class="sidebar">
             <div class="logo">AI CRM</div>
             
-            <!-- Кнопки действий в сайдбаре -->
             <div class="sidebar-actions">
                 <button class="btn btn-primary" onclick="openCreateModal()">+ Добавить клиента</button>
                 <button class="btn btn-outline" onclick="exportToExcel()">Скачать Excel</button>
@@ -177,7 +177,6 @@
         </div>
 
         <div class="main-content">
-            <!-- Кнопки для мобильной версии -->
             <div class="header-actions-mobile">
                 <button class="btn btn-primary" onclick="openCreateModal()">+ Клиент</button>
                 <button class="btn btn-outline" onclick="exportToExcel()">Excel</button>
@@ -185,12 +184,9 @@
 
             <div class="header">
                 <h1 id="page-title">Воронка продаж</h1>
-                <div class="header-actions" id="header-desktop-buttons">
-                    <!-- Кнопки переехали в сайдбар, тут оставил пустое место -->
-                </div>
             </div>
 
-                        <div class="stats-grid" id="stats-block">
+            <div class="stats-grid" id="stats-block">
                 <div class="stat-card"><div class="stat-title">Всего лидов</div><div class="stat-value" id="stat-total">0</div></div>
                 <div class="stat-card"><div class="stat-title">В работе</div><div class="stat-value" id="stat-progress" style="color: #b45309;">0</div></div>
                 <div class="stat-card"><div class="stat-title">Выполнено</div><div class="stat-value" id="stat-closed" style="color: #15803d;">0</div></div>
@@ -224,7 +220,7 @@
                 </div>
                 <div class="table-container">
                     <table>
-                        <thead><tr><th>Имя</th><th>Телефон</th><th>Услуга</th><th>Сумма</th><th>Дата</th><th>Действие</th></tr></thead>
+                        <thead><tr><th>Имя</th><th>Телефон</th><th>Услуга</th><th>Сумма</th><th>Дата</th><th>Статус</th></tr></thead>
                         <tbody id="clientsBody"></tbody>
                     </table>
                 </div>
@@ -246,7 +242,59 @@
     </div>
 
     <!-- Client Card Modal -->
-        <!-- Create Client Modal -->
+    <div id="clientModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Карточка <span id="edit-id" style="color:#94a3b8; font-size:14px;"></span></div>
+                <div style="cursor:pointer; font-size:24px;" onclick="closeModal()">&times;</div>
+            </div>
+
+            <div class="status-panel" id="status-panel">
+                <div id="current-status-badge" class="current-status"></div>
+                <div class="status-actions" id="status-buttons"></div>
+            </div>
+
+            <div class="contact-actions">
+                <a href="#" id="btn-call" class="btn-contact btn-call">📞 Позвонить</a>
+                <a href="#" id="btn-tg" class="btn-contact btn-tg" target="_blank">✈️ Telegram</a>
+                <a href="#" id="btn-email" class="btn-contact btn-email">✉️ Почта</a>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group full"><label>Имя</label><input type="text" id="edit-name"></div>
+                
+                <div class="form-group full" style="margin-bottom: 5px;"><label>Телефоны</label></div>
+                <div id="phones-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;"></div>
+                <button class="btn btn-outline btn-sm" type="button" onclick="addPhoneField()" style="margin-bottom: 15px;">+ Добавить телефон</button>
+
+                <div class="form-group full" style="margin-bottom: 5px;"><label>Услуги</label></div>
+                <div id="services-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;"></div>
+                <button class="btn btn-outline btn-sm" type="button" onclick="addServiceField()" style="margin-bottom: 15px;">+ Добавить услугу</button>
+
+                <div class="form-group"><label>Сумма (₽)</label><input type="number" id="edit-amount"></div>
+                <div class="form-group"><label>Оплачено?</label>
+                    <select id="edit-paid"><option value="false">Нет</option><option value="true">Да</option></select>
+                </div>
+                <div class="form-group full"><label>Заметка</label><textarea id="edit-notes" rows="2"></textarea></div>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <button class="btn btn-danger btn-sm" onclick="archiveLead()">📦 Перенести в архив</button>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; margin-top:20px;">
+                <div>
+                    <button class="btn btn-outline btn-sm" onclick="copyTemplate()">📋 Копировать шаблон</button>
+                </div>
+                <div>
+                    <button class="btn btn-danger btn-sm" onclick="deleteLead()">Удалить</button>
+                    <button class="btn btn-primary" onclick="saveLead()">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Modal -->
     <div id="createModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -274,56 +322,6 @@
             <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
                 <button class="btn btn-outline" onclick="closeCreateClientModal()">Отмена</button>
                 <button class="btn btn-primary" onclick="submitNewClient()">Создать</button>
-            </div>
-        </div>
-    </div>
-    <div id="clientModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">Карточка <span id="edit-id" style="color:#94a3b8; font-size:14px;"></span></div>
-                <div style="cursor:pointer; font-size:24px;" onclick="closeModal()">&times;</div>
-            </div>
-
-            <div class="status-panel" id="status-panel">
-                <div id="current-status-badge" class="current-status"></div>
-                <div class="status-actions" id="status-buttons"></div>
-            </div>
-
-            <div class="contact-actions">
-                <a href="#" id="btn-call" class="btn-contact btn-call">📞 Позвонить</a>
-                <a href="#" id="btn-tg" class="btn-contact btn-tg" target="_blank">✈️ Telegram</a>
-                <a href="#" id="btn-email" class="btn-contact btn-email">✉️ Почта</a>
-            </div>
-
-                        <div class="form-grid">
-                <div class="form-group full"><label>Имя</label><input type="text" id="edit-name"></div>
-                
-                <div class="form-group full" style="margin-bottom: 5px;"><label>Телефоны</label></div>
-                <div id="phones-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;"></div>
-                <button class="btn btn-outline btn-sm" type="button" onclick="addPhoneField()" style="margin-bottom: 15px;">+ Добавить телефон</button>
-
-                <div class="form-group full" style="margin-bottom: 5px;"><label>Услуги</label></div>
-                <div id="services-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;"></div>
-                <button class="btn btn-outline btn-sm" type="button" onclick="addServiceField()" style="margin-bottom: 15px;">+ Добавить услугу</button>
-
-                <div class="form-group"><label>Сумма (₽)</label><input type="number" id="edit-amount"></div>
-                <div class="form-group"><label>Оплачено?</label>
-                    <select id="edit-paid"><option value="false">Нет</option><option value="true">Да</option></select>
-                </div>
-                <div class="form-group full"><label>Заметка</label><textarea id="edit-notes" rows="2"></textarea></div>
-            </div>
-            <div style="margin-top: 15px;">
-                <button class="btn btn-danger btn-sm" onclick="archiveLead()">📦 Перенести в архив</button>
-            </div>
-
-            <div style="display:flex; justify-content:space-between; margin-top:20px;">
-                <div>
-                    <button class="btn btn-outline btn-sm" onclick="copyTemplate()">📋 Копировать шаблон</button>
-                </div>
-                <div>
-                    <button class="btn btn-danger btn-sm" onclick="deleteLead()">Удалить</button>
-                    <button class="btn btn-primary" onclick="saveLead()">Сохранить</button>
-                </div>
             </div>
         </div>
     </div>
@@ -466,11 +464,11 @@
                 tr.onclick = () => openClientModal(lead.id);
                 tr.innerHTML = `
                     <td style="font-weight:600;">${lead.name || '—'}</td>
-                    <td>${lead.phone || '—'}</td>
-                    <td>${lead.gender || '—'}</td>
-                    <td>${lead.service || '—'}</td>
+                    <td>${lead.phone || (lead.phones && lead.phones[0]) || '—'}</td>
+                    <td>${lead.service || (lead.services && lead.services.join(', ')) || '—'}</td>
                     <td style="color:var(--success);">${lead.amount ? lead.amount + ' ₽' : '—'}</td>
                     <td>${new Date(lead.created_at).toLocaleDateString('ru-RU')}</td>
+                    <td><span style="font-size:11px;">${lead.status === 'archived' ? 'Архив' : (lead.status === 'closed' ? 'Выполнено' : (lead.status === 'in_progress' ? 'В работе' : 'Новый'))}</span></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -500,8 +498,7 @@
             document.getElementById('stat-total').innerText = data.length;
             document.getElementById('stat-progress').innerText = data.filter(l => l.status === 'in_progress').length;
             document.getElementById('stat-closed').innerText = data.filter(l => l.status === 'closed').length;
-            const revenue = data.filter(l => l.is_paid).reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-            document.getElementById('stat-revenue').innerText = revenue.toLocaleString() + ' ₽';
+            document.getElementById('stat-archive').innerText = data.filter(l => l.status === 'archived').length;
         }
 
         // --- СТАТУСЫ ---
@@ -529,6 +526,12 @@
                     <button class="btn btn-outline btn-sm" onclick="changeStatusFromCard('in_progress')">Вернуть в работу</button>
                     <button class="btn btn-outline btn-sm" onclick="changeStatusFromCard('new')">Вернуть в новые</button>
                 `;
+            } else if (status === 'archived') {
+                badge.className = 'current-status status-archived';
+                badge.innerText = 'Статус: В архиве';
+                buttons.innerHTML = `
+                    <button class="btn btn-outline btn-sm" onclick="changeStatusFromCard('new')">Вернуть в новые</button>
+                `;
             }
         }
 
@@ -549,12 +552,21 @@
             currentLeadId = id;
             document.getElementById('edit-id').innerText = `#${id}`;
             document.getElementById('edit-name').value = lead.name || '';
-            document.getElementById('edit-phone').value = lead.phone || '';
-            document.getElementById('edit-gender').value = lead.gender || '';
-            document.getElementById('edit-service').value = lead.service || '';
             document.getElementById('edit-amount').value = lead.amount || '';
             document.getElementById('edit-paid').value = lead.is_paid ? 'true' : 'false';
             document.getElementById('edit-notes').value = lead.notes || lead.problem || '';
+
+            // Очищаем контейнеры
+            document.getElementById('phones-container').innerHTML = '';
+            document.getElementById('services-container').innerHTML = '';
+
+            // Загружаем телефоны
+            const phones = lead.phones && lead.phones.length > 0 ? lead.phones : (lead.phone ? [lead.phone] : ['']);
+            phones.forEach(p => addPhoneField(p));
+
+            // Загружаем услуги
+            const services = lead.services && lead.services.length > 0 ? lead.services : (lead.service ? [lead.service] : ['']);
+            services.forEach(s => addServiceField(s));
 
             updateStatusUI(lead.status);
 
@@ -565,14 +577,42 @@
             document.getElementById('clientModal').style.display = 'flex';
         }
 
+        function addPhoneField(value = '') {
+            const container = document.getElementById('phones-container');
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.gap = '8px';
+            div.innerHTML = `
+                <input type="text" class="dynamic-phone" value="${value}" placeholder="+7..." style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px;">
+                <button class="btn btn-danger btn-sm" type="button" onclick="this.parentElement.remove()" style="padding:0 10px;">✕</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function addServiceField(value = '') {
+            const container = document.getElementById('services-container');
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.gap = '8px';
+            div.innerHTML = `
+                <input type="text" class="dynamic-service" value="${value}" placeholder="Услуга" style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px;">
+                <button class="btn btn-danger btn-sm" type="button" onclick="this.parentElement.remove()" style="padding:0 10px;">✕</button>
+            `;
+            container.appendChild(div);
+        }
+
         function closeModal() { document.getElementById('clientModal').style.display = 'none'; }
 
         async function saveLead() {
+            const phones = Array.from(document.querySelectorAll('.dynamic-phone')).map(i => i.value.trim()).filter(v => v);
+            const services = Array.from(document.querySelectorAll('.dynamic-service')).map(i => i.value.trim()).filter(v => v);
+
             const updates = {
                 name: document.getElementById('edit-name').value.trim(),
-                phone: document.getElementById('edit-phone').value.trim(),
-                gender: document.getElementById('edit-gender').value,
-                service: document.getElementById('edit-service').value.trim(),
+                phones: phones,
+                services: services,
+                phone: phones[0] || null,
+                service: services[0] || null,
                 amount: Number(document.getElementById('edit-amount').value) || 0,
                 is_paid: document.getElementById('edit-paid').value === 'true',
                 notes: document.getElementById('edit-notes').value.trim()
@@ -581,6 +621,19 @@
                 method: 'PATCH',
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(updates)
+            });
+            closeModal();
+            loadLeads();
+        }
+
+        async function archiveLead() {
+            const reason = prompt('Укажите причину переноса в архив (например: Выполнено, Отменено, Спам):');
+            if (reason === null) return; 
+            
+            await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${currentLeadId}`, {
+                method: 'PATCH',
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'archived', archive_reason: reason || 'Без причины' })
             });
             closeModal();
             loadLeads();
@@ -606,7 +659,8 @@
         async function rebookClient() {
             if (!confirm('Создать повторную заявку для этого клиента?')) return;
             const name = document.getElementById('edit-name').value;
-            const phone = document.getElementById('edit-phone').value;
+            const phone = document.getElementById('edit-phone') ? document.getElementById('edit-phone').value : (document.querySelector('.dynamic-phone') ? document.querySelector('.dynamic-phone').value : '');
+            
             await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
                 method: 'POST',
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
@@ -676,11 +730,15 @@
 
         function applyClientFilters() {
             const search = document.getElementById('filter-search').value.toLowerCase();
-            const gender = document.getElementById('filter-gender').value;
+            const status = document.getElementById('filter-status').value;
+            
             const filtered = allLeads.filter(l => {
-                const matchName = (l.name || '').toLowerCase().includes(search) || (l.phone || '').includes(search);
-                const matchGender = gender ? l.gender === gender : true;
-                return matchName && matchGender;
+                const matchName = (l.name || '').toLowerCase().includes(search);
+                const matchPhone = (l.phone || '').includes(search) || (l.phones && l.phones.join(',').includes(search));
+                const matchService = (l.service || '').toLowerCase().includes(search) || (l.services && l.services.join(',').toLowerCase().includes(search));
+                const matchStatus = status ? l.status === status : true;
+                
+                return (matchName || matchPhone || matchService) && matchStatus;
             });
             renderClients(filtered);
         }
@@ -688,9 +746,9 @@
         // EXPORT & CREATE
         function exportToExcel() {
             if (allLeads.length === 0) return alert('Нет данных');
-            const ws_data = [["ID", "Дата", "Имя", "Телефон", "Пол", "Услуга", "Сумма", "Оплачено", "Статус"]];
+            const ws_data = [["ID", "Дата", "Имя", "Телефон", "Услуга", "Сумма", "Оплачено", "Статус"]];
             allLeads.forEach(l => {
-                ws_data.push([l.id, new Date(l.created_at).toLocaleString('ru-RU'), l.name || '', l.phone || '', l.gender || '', l.service || '', l.amount || 0, l.is_paid ? 'Да' : 'Нет', l.status]);
+                ws_data.push([l.id, new Date(l.created_at).toLocaleString('ru-RU'), l.name || '', l.phone || '', l.service || '', l.amount || 0, l.is_paid ? 'Да' : 'Нет', l.status]);
             });
             const ws = XLSX.utils.aoa_to_sheet(ws_data);
             const wb = XLSX.utils.book_new();
@@ -698,7 +756,8 @@
             XLSX.writeFile(wb, "leads_export.xlsx");
         }
 
-                function openCreateModal() { document.getElementById('createModal').style.display = 'flex'; }
+        // CREATE CLIENT
+        function openCreateModal() { document.getElementById('createModal').style.display = 'flex'; }
         function closeCreateClientModal() { document.getElementById('createModal').style.display = 'none'; }
 
         async function submitNewClient() {
