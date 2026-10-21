@@ -853,8 +853,9 @@
                 const data = await res.json();
                 if (data.ok) { alert('🚀 Задача запущена!'); closeCreateClientModal(); } else { alert('Ошибка: ' + data.error); }
             } catch (e) { alert('Ошибка сети: ' + e.message); }
-        }        function toggleTheme() {
-                       if (isDark) {
+        }                function toggleTheme() {
+            const isDark = document.getElementById('theme-toggle').checked;
+            if (isDark) {
                 document.body.style.background = '#000000';
                 document.body.style.color = '#e2e8f0';
                 
@@ -871,14 +872,10 @@
                     el.style.color = '#e2e8f0';
                     el.style.borderColor = '#3a3a3c';
                 });
-                
-                // ДОБАВИТЬ ВОТ ЭТО, ЧТОБЫ КНОПКИ СТАЛИ СВЕТЛЫМИ:
                 document.querySelectorAll('.btn, .btn-outline, .btn-primary').forEach(el => {
                     el.style.color = '#e2e8f0';
                     el.style.borderColor = '#3a3a3c';
                 });
-
-           
             } else {
                 document.body.style.background = '#f4f6f8';
                 document.body.style.color = '#0f172a';
