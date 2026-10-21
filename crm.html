@@ -856,24 +856,26 @@
         }
                  function toggleTheme() {
             const isDark = document.getElementById('theme-toggle').checked;
-                       if (isDark) {
-                document.body.style.background = '#000000'; // Чистый черный
-                document.body.style.color = '#ffffff';
+            if (isDark) {
+                document.body.style.background = '#1e293b';
+                document.body.style.color = '#f8fafc';
                 
+                // Делаем фон карточек и панелей темным
                 document.querySelectorAll('.stat-card, .table-container, .sidebar, .settings-section, .modal-content, .kanban-col').forEach(el => {
-                    el.style.background = '#1c1c1e'; // Темно-серый (как в iOS)
-                    el.style.borderColor = '#2c2c2e';
-                    el.style.color = '#ffffff';
+                    el.style.background = '#334155';
+                    el.style.borderColor = '#475569';
+                    el.style.color = '#f8fafc';
                 });
+                // Красим заголовки и текст внутри
                 document.querySelectorAll('h1, h2, h3, .stat-title, .stat-value, .settings-row, .k-title').forEach(el => {
-                    el.style.color = '#ffffff';
+                    el.style.color = '#f8fafc';
                 });
+                // Красим инпуты
                 document.querySelectorAll('input, select, textarea').forEach(el => {
-                    el.style.background = '#2c2c2e';
-                    el.style.color = '#ffffff';
-                    el.style.borderColor = '#3a3a3c';
+                    el.style.background = '#475569';
+                    el.style.color = '#f8fafc';
+                    el.style.borderColor = '#64748b';
                 });
-            } else {
             } else {
                 document.body.style.background = '#f4f6f8';
                 document.body.style.color = '#0f172a';
