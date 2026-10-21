@@ -244,6 +244,37 @@
     </div>
 
     <!-- Client Card Modal -->
+        <!-- Create Client Modal -->
+    <div id="createModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Новый клиент</div>
+                <div style="cursor:pointer; font-size:24px;" onclick="closeCreateClientModal()">&times;</div>
+            </div>
+            <div class="form-grid">
+                <div class="form-group full">
+                    <label>ID клиента (латиницей)</label>
+                    <input type="text" id="newClientId" placeholder="salon1">
+                </div>
+                <div class="form-group full">
+                    <label>Название бизнеса</label>
+                    <input type="text" id="newBusinessName" placeholder="Салон красоты">
+                </div>
+                <div class="form-group full">
+                    <label>Ссылка на сайт</label>
+                    <input type="text" id="newSiteUrl" placeholder="https://...">
+                </div>
+                <div class="form-group full">
+                    <label>Токен Telegram-бота</label>
+                    <input type="text" id="newBotToken" placeholder="123456:ABC-DEF...">
+                </div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button class="btn btn-outline" onclick="closeCreateClientModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="submitNewClient()">Создать</button>
+            </div>
+        </div>
+    </div>
     <div id="clientModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -658,7 +689,41 @@
             XLSX.writeFile(wb, "leads_export.xlsx");
         }
 
-        function openCreateModal() { alert('Создание нового клиента-бота (пока в разработке)'); }
+                function openCreateModal() { document.getElementById('createModal').style.display = 'flex'; }
+        function closeCreateClientModal() { document.getElementById('createModal').style.display = 'none'; }
+
+        async function submitNewClient() {
+            const client_id = document.getElementById('newClientId').value.trim();
+            const business_name = document.getElementById('newBusinessName').value.trim();
+            const site_url = document.getElementById('newSiteUrl').value.trim();
+            const bot_token = document.getElementById('newBotToken').value.trim();
+            const timezone = 'Europe/Moscow';
+
+            if (!client_id || !business_name || !site_url || !bot_token) {
+                alert('Заполните все поля!');
+                return;
+            }
+
+            const manager_chat_id = ADMIN_TELEGRAM_ID.toString();
+
+            try {
+                const res = await fetch('/api/create-client', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ client_id, business_name, site_url, timezone, manager_chat_id, bot_token })
+                });
+
+                const data = await res.json();
+                if (data.ok) {
+                    alert('🚀 Задача запущена на GitHub! Клиент скоро появится в базе.');
+                    closeCreateClientModal();
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            } catch (e) {
+                alert('Ошибка сети: ' + e.message);
+            }
+        }
     </script>
 </body>
 </html>
