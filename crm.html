@@ -854,24 +854,31 @@
                 if (data.ok) { alert('🚀 Задача запущена!'); closeCreateClientModal(); } else { alert('Ошибка: ' + data.error); }
             } catch (e) { alert('Ошибка сети: ' + e.message); }
         }        function toggleTheme() {
-            const isDark = document.getElementById('theme-toggle').checked;
-            if (isDark) {
+                       if (isDark) {
                 document.body.style.background = '#000000';
-                document.body.style.color = '#e2e8f0'; // Мягкий текст
+                document.body.style.color = '#e2e8f0';
                 
                 document.querySelectorAll('.stat-card, .table-container, .sidebar, .settings-section, .modal-content, .kanban-col').forEach(el => {
                     el.style.background = '#1c1c1e';
                     el.style.borderColor = '#2c2c2e';
-                    el.style.color = '#e2e8f0'; // Мягкий текст
+                    el.style.color = '#e2e8f0';
                 });
-                document.querySelectorAll('h1, h2, h3, .stat-title, .stat-value, .settings-row, .k-title').forEach(el => {
-                    el.style.color = '#e2e8f0'; // Мягкий текст
+                document.querySelectorAll('h1, h2, h3, .stat-title, .stat-value, .settings-row, .k-title, .k-phone').forEach(el => {
+                    el.style.color = '#e2e8f0';
                 });
                 document.querySelectorAll('input, select, textarea').forEach(el => {
                     el.style.background = '#2c2c2e';
-                    el.style.color = '#e2e8f0'; // Мягкий текст
+                    el.style.color = '#e2e8f0';
                     el.style.borderColor = '#3a3a3c';
                 });
+                
+                // ДОБАВИТЬ ВОТ ЭТО, ЧТОБЫ КНОПКИ СТАЛИ СВЕТЛЫМИ:
+                document.querySelectorAll('.btn, .btn-outline, .btn-primary').forEach(el => {
+                    el.style.color = '#e2e8f0';
+                    el.style.borderColor = '#3a3a3c';
+                });
+
+           
             } else {
                 document.body.style.background = '#f4f6f8';
                 document.body.style.color = '#0f172a';
