@@ -255,6 +255,8 @@
 
             <!-- SETTINGS VIEW -->
             <div id="settings-view" style="display: none;">
+                            <!-- SETTINGS VIEW -->
+            <div id="settings-view" style="display: none;">
                 <div class="settings-section">
                     <h3>Профиль владельца</h3>
                     <div class="settings-row">
@@ -268,6 +270,14 @@
                 </div>
 
                 <div class="settings-section">
+                    <h3>Внешний вид</h3>
+                    <div class="settings-row">
+                        <span>Тёмная тема</span>
+                        <input type="checkbox" id="theme-toggle" onchange="toggleTheme()" style="width: 20px; height: 20px;">
+                    </div>
+                </div>
+
+                <div class="settings-section">
                     <h3>Уведомления</h3>
                     <div class="settings-row"><span>Новые заявки</span><input type="checkbox" checked style="width: 20px; height: 20px;"></div>
                     <div class="settings-row"><span>Напоминания о задачах</span><input type="checkbox" checked style="width: 20px; height: 20px;"></div>
@@ -276,21 +286,30 @@
 
                 <div class="settings-section">
                     <h3>Интеграции</h3>
-                    <div class="settings-row"><span>Почта</span><button class="btn btn-outline">Подключить</button></div>
-                    <div class="settings-row"><span>WhatsApp</span><button class="btn btn-outline">Подключить</button></div>
+                    <div class="settings-row">
+                        <span>Почта</span>
+                        <button class="btn btn-outline" onclick="alert('Для подключения почты нужен SMTP-сервер. Мы работаем над этим!')">Подключить</button>
+                    </div>
+                    <div class="settings-row">
+                        <span>WhatsApp</span>
+                        <button class="btn btn-outline" onclick="alert('Для подключения WhatsApp нужен API. Мы работаем над этим!')">Подключить</button>
+                    </div>
                 </div>
 
                 <div class="settings-section">
                     <h3>Обратная связь</h3>
-                    <div class="settings-row"><span>Оставить отзыв о работе</span><button class="btn btn-outline">Написать</button></div>
-                    <div class="settings-row"><span>Сообщить о проблеме</span><button class="btn btn-outline">Написать</button></div>
+                    <div class="settings-row">
+                        <span>Оставить отзыв о работе</span>
+                        <button class="btn btn-outline" onclick="window.open('https://t.me/vadim602_bot', '_blank')">Написать</button>
+                    </div>
+                    <div class="settings-row">
+                        <span>Сообщить о проблеме</span>
+                        <button class="btn btn-outline" onclick="window.open('https://t.me/vadim602_bot', '_blank')">Написать</button>
+                    </div>
                 </div>
 
-                <button class="btn btn-danger" style="width: 100%; margin-top: 10px;" onclick="alert('Выход из аккаунта')">Выйти</button>
+                <button class="btn btn-danger" style="width: 100%; margin-top: 10px;" onclick="window.location.reload()">Выйти</button>
             </div>
-
-        </div>
-    </div>
 
     <!-- Client Card Modal -->
     <div id="clientModal" class="modal-overlay">
@@ -385,6 +404,7 @@
     </div>
 
     <script>
+             
         const SUPABASE_URL = 'https://ozutjnwextahorvzdbpl.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96dXRqbndleHRhaG9ydnpkYnBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MTQ3MzUsImV4cCI6MjEwNzE5MDczNX0.8L3adhQ9gUR5iSly1afSQN6HeEhkj9QQ4NtUyZUQx28';
         const ADMIN_TELEGRAM_ID = 5818548555; 
@@ -835,6 +855,24 @@
                 const data = await res.json();
                 if (data.ok) { alert('🚀 Задача запущена!'); closeCreateClientModal(); } else { alert('Ошибка: ' + data.error); }
             } catch (e) { alert('Ошибка сети: ' + e.message); }
+        }
+          function toggleTheme() {
+            const isDark = document.getElementById('theme-toggle').checked;
+            if (isDark) {
+                document.body.style.background = '#1e293b';
+                document.body.style.color = '#f8fafc';
+                document.querySelectorAll('.card, .modal-content, .table-container, .sidebar, .settings-section').forEach(el => {
+                    el.style.background = '#334155';
+                    el.style.color = '#f8fafc';
+                });
+            } else {
+                document.body.style.background = '#f4f6f8';
+                document.body.style.color = '#0f172a';
+                document.querySelectorAll('.card, .modal-content, .table-container, .sidebar, .settings-section').forEach(el => {
+                    el.style.background = '#ffffff';
+                    el.style.color = '#0f172a';
+                });
+            }
         }
     </script>
 </body>
