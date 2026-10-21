@@ -425,28 +425,19 @@
                 colLeads.forEach(lead => {
                     const card = document.createElement('div');
                     card.className = 'kanban-card';
-                           function addPhoneField(value = '') {
-            const container = document.getElementById('phones-container');
-            const div = document.createElement('div');
-            div.style.display = 'flex';
-            div.style.gap = '8px';
-            div.innerHTML = `
-                <input type="text" class="dynamic-phone" value="${value}" placeholder="+7..." style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px;">
-                <button class="btn btn-danger btn-sm" type="button" onclick="this.parentElement.remove()" style="padding:0 10px;">✕</button>
-            `;
-            container.appendChild(div);
-        }
-
-        function addServiceField(value = '') {
-            const container = document.getElementById('services-container');
-            const div = document.createElement('div');
-            div.style.display = 'flex';
-            div.style.gap = '8px';
-            div.innerHTML = `
-                <input type="text" class="dynamic-service" value="${value}" placeholder="Услуга" style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px;">
-                <button class="btn btn-danger btn-sm" type="button" onclick="this.parentElement.remove()" style="padding:0 10px;">✕</button>
-            `;
-            container.appendChild(div);
+                    card.onclick = () => openClientModal(lead.id);
+                    card.innerHTML = `
+                        <div class="k-title"><span>${lead.name || 'Без имени'}</span><span class="k-amount">${lead.amount ? lead.amount + ' ₽' : ''}</span></div>
+                        <div class="k-phone">${lead.phone || '—'}</div>
+                        <div class="k-tags">
+                            ${lead.service ? `<span class="k-tag">${lead.service}</span>` : ''}
+                            <span class="k-tag">#${lead.id}</span>
+                        </div>
+                    `;
+                    colEl.appendChild(card);
+                });
+                board.appendChild(colEl);
+            });
         }
 
         function renderList(data) {
@@ -469,14 +460,21 @@
 
         function renderClients(data) {
             const tbody = document.getElementById('clientsBody');
-                          tr.innerHTML = `
+            tbody.innerHTML = '';
+            data.forEach(lead => {
+                const tr = document.createElement('tr');
+                tr.onclick = () => openClientModal(lead.id);
+                tr.innerHTML = `
                     <td style="font-weight:600;">${lead.name || '—'}</td>
-                    <td>${lead.phone || (lead.phones && lead.phones[0]) || '—'}</td>
-                    <td>${lead.service || (lead.services && lead.services.join(', ')) || '—'}</td>
+                    <td>${lead.phone || '—'}</td>
+                    <td>${lead.gender || '—'}</td>
+                    <td>${lead.service || '—'}</td>
                     <td style="color:var(--success);">${lead.amount ? lead.amount + ' ₽' : '—'}</td>
                     <td>${new Date(lead.created_at).toLocaleDateString('ru-RU')}</td>
-                    <td><span style="font-size:11px;">${lead.status === 'archived' ? 'Архив' : (lead.status === 'closed' ? 'Выполнено' : (lead.status === 'in_progress' ? 'В работе' : 'Новый'))}</span></td>
                 `;
+                tbody.appendChild(tr);
+            });
+        }
 
         function renderTasks(data) {
             const tbody = document.getElementById('tasksBody');
@@ -545,27 +543,18 @@
         }
 
         // ACTIONS
-                function openClientModal(id) {
+        function openClientModal(id) {
             const lead = allLeads.find(l => l.id === id);
             if (!lead) return;
             currentLeadId = id;
             document.getElementById('edit-id').innerText = `#${id}`;
             document.getElementById('edit-name').value = lead.name || '';
+            document.getElementById('edit-phone').value = lead.phone || '';
+            document.getElementById('edit-gender').value = lead.gender || '';
+            document.getElementById('edit-service').value = lead.service || '';
             document.getElementById('edit-amount').value = lead.amount || '';
             document.getElementById('edit-paid').value = lead.is_paid ? 'true' : 'false';
             document.getElementById('edit-notes').value = lead.notes || lead.problem || '';
-
-            // Очищаем контейнеры
-            document.getElementById('phones-container').innerHTML = '';
-            document.getElementById('services-container').innerHTML = '';
-
-            // Загружаем телефоны
-            const phones = lead.phones && lead.phones.length > 0 ? lead.phones : (lead.phone ? [lead.phone] : ['']);
-            phones.forEach(p => addPhoneField(p));
-
-            // Загружаем услуги
-            const services = lead.services && lead.services.length > 0 ? lead.services : (lead.service ? [lead.service] : ['']);
-            services.forEach(s => addServiceField(s));
 
             updateStatusUI(lead.status);
 
@@ -575,18 +564,15 @@
             
             document.getElementById('clientModal').style.display = 'flex';
         }
+
         function closeModal() { document.getElementById('clientModal').style.display = 'none'; }
 
-               async function saveLead() {
-            const phones = Array.from(document.querySelectorAll('.dynamic-phone')).map(i => i.value.trim()).filter(v => v);
-            const services = Array.from(document.querySelectorAll('.dynamic-service')).map(i => i.value.trim()).filter(v => v);
-
+        async function saveLead() {
             const updates = {
                 name: document.getElementById('edit-name').value.trim(),
-                phones: phones,
-                services: services,
-                phone: phones[0] || null, // Для совместимости со старым полем
-                service: services[0] || null, // Для совместимости
+                phone: document.getElementById('edit-phone').value.trim(),
+                gender: document.getElementById('edit-gender').value,
+                service: document.getElementById('edit-service').value.trim(),
                 amount: Number(document.getElementById('edit-amount').value) || 0,
                 is_paid: document.getElementById('edit-paid').value === 'true',
                 notes: document.getElementById('edit-notes').value.trim()
@@ -600,14 +586,11 @@
             loadLeads();
         }
 
-               async function archiveLead() {
-            const reason = prompt('Укажите причину переноса в архив (например: Выполнено, Отменено, Спам):');
-            if (reason === null) return; // Если нажали "Отмена"
-            
+        async function deleteLead() {
+            if (!confirm('Удалить заявку?')) return;
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${currentLeadId}`, {
-                method: 'PATCH',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'archived', archive_reason: reason || 'Без причины' })
+                method: 'DELETE',
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
             });
             closeModal();
             loadLeads();
@@ -691,17 +674,13 @@
             }
         }
 
-                function applyClientFilters() {
+        function applyClientFilters() {
             const search = document.getElementById('filter-search').value.toLowerCase();
-            const status = document.getElementById('filter-status').value;
-            
+            const gender = document.getElementById('filter-gender').value;
             const filtered = allLeads.filter(l => {
-                const matchName = (l.name || '').toLowerCase().includes(search);
-                const matchPhone = (l.phone || '').includes(search) || (l.phones && l.phones.join(',').includes(search));
-                const matchService = (l.service || '').toLowerCase().includes(search) || (l.services && l.services.join(',').toLowerCase().includes(search));
-                const matchStatus = status ? l.status === status : true;
-                
-                return (matchName || matchPhone || matchService) && matchStatus;
+                const matchName = (l.name || '').toLowerCase().includes(search) || (l.phone || '').includes(search);
+                const matchGender = gender ? l.gender === gender : true;
+                return matchName && matchGender;
             });
             renderClients(filtered);
         }
