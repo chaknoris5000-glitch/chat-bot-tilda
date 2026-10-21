@@ -191,7 +191,12 @@
             <div class="header">
                 <h1 id="page-title">Воронка продаж</h1>
             </div>
-
+            <div class="stats-grid" id="stats-block">
+                <div class="stat-card"><div class="stat-title">Всего лидов</div><div class="stat-value" id="stat-total">0</div></div>
+                <div class="stat-card"><div class="stat-title">В работе</div><div class="stat-value" id="stat-progress" style="color: #b45309;">0</div></div>
+                <div class="stat-card"><div class="stat-title">Выполнено</div><div class="stat-value" id="stat-closed" style="color: #15803d;">0</div></div>
+                <div class="stat-card" style="background: #f1f5f9; border-color: #e2e8f0;"><div class="stat-title" style="color: #475569;">Архив</div><div class="stat-value" id="stat-archive" style="color: #475569;">0</div></div>
+            </div>
             <!-- KANBAN VIEW -->
             <div id="kanban-view" class="kanban-board"></div>
 
@@ -424,6 +429,7 @@
                 const res = await fetch(url, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
                 const data = await res.json();
                 allLeads = data; 
+                updateStats(data);
                 renderKanban(data);
                 renderList(data);
                 renderClientBase(data);
@@ -433,6 +439,12 @@
         }
 
         // RENDER
+                function updateStats(data) {
+            document.getElementById('stat-total').innerText = data.length;
+            document.getElementById('stat-progress').innerText = data.filter(l => l.status === 'in_progress').length;
+            document.getElementById('stat-closed').innerText = data.filter(l => l.status === 'closed').length;
+            document.getElementById('stat-archive').innerText = data.filter(l => l.status === 'archived').length;
+        }
         function renderKanban(data) {
             const board = document.getElementById('kanban-view');
             board.innerHTML = '';
