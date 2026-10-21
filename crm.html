@@ -445,26 +445,54 @@
             document.getElementById('stat-closed').innerText = data.filter(l => l.status === 'closed').length;
             document.getElementById('stat-archive').innerText = data.filter(l => l.status === 'archived').length;
         }
-        function renderKanban(data) {
+               function renderKanban(data) {
             const board = document.getElementById('kanban-view');
             board.innerHTML = '';
-            const columns = [{ id: 'new', title: 'Новые' }, { id: 'in_progress', title: 'В работе' }, { id: 'closed', title: 'Выполнено' }];
+            const columns = [
+                { id: 'new', title: 'Новые' }, 
+                { id: 'in_progress', title: 'В работе' }, 
+                { id: 'closed', title: 'Выполнено' }
+            ];
 
             columns.forEach(col => {
                 const colLeads = data.filter(l => l.status === col.id);
+                const totalSum = colLeads.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+                
                 const colEl = document.createElement('div');
                 colEl.className = 'kanban-col';
-                colEl.innerHTML = `<div class="col-header"><span>${col.title} (${colLeads.length})</span></div>`;
+                colEl.innerHTML = `<div class="col-header"><span>${col.title} (${colLeads.length})</span><span style="color:var(--success);">${totalSum > 0 ? totalSum.toLocaleString() + ' ₽' : ''}</span></div>`;
 
                 colLeads.forEach(lead => {
                     const card = document.createElement('div');
                     card.className = 'kanban-card';
                     card.onclick = () => openClientModal(lead.id);
+                    
+                    let actionBtn = '';
+                    if (col.id === 'new') {
+                        actionBtn = `<button class="btn btn-outline btn-sm" onclick="event.stopPropagation(); changeStatusFromCard(${lead.id}, 'in_progress')">→ В работу</button>`;
+                    } else if (col.id === 'in_progress') {
+                        actionBtn = `
+                            <div style="display:flex; gap:5px;">
+                                <button class="btn btn-outline btn-sm" onclick="event.stopPropagation(); changeStatusFromCard(${lead.id}, 'new')">← Новые</button>
+                                <button class="btn btn-outline btn-sm" onclick="event.stopPropagation(); changeStatusFromCard(${lead.id}, 'closed')">→ Выполнено</button>
+                            </div>
+                        `;
+                    } else if (col.id === 'closed') {
+                        actionBtn = `
+                            <div style="display:flex; gap:5px;">
+                                <button class="btn btn-outline btn-sm" onclick="event.stopPropagation(); changeStatusFromCard(${lead.id}, 'in_progress')">← В работу</button>
+                                <button class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="event.stopPropagation(); archiveFromKanban(${lead.id})">📦 В архив</button>
+                            </div>
+                        `;
+                    }
+
                     card.innerHTML = `
-                        <div class="k-title"><span>${lead.name || 'Без имени'}</span></div>
+                        <div class="k-title"><span>${lead.name || 'Без имени'}</span><span class="k-amount">${lead.amount ? lead.amount + ' ₽' : ''}</span></div>
                         <div class="k-phone">${lead.phone || (lead.phones && lead.phones[0]) || '—'}</div>
                         <div class="k-tags">${lead.service ? `<span class="k-tag">${lead.service}</span>` : ''}<span class="k-tag">#${lead.id}</span></div>
-                        ${col.id === 'closed' ? `<div class="k-actions"><button class="btn btn-outline btn-sm" onclick="event.stopPropagation(); archiveFromKanban(${lead.id})">В архив</button></div>` : ''}
+                        <div class="k-actions" style="justify-content: flex-end; gap: 5px;">
+                            ${actionBtn}
+                        </div>
                     `;
                     colEl.appendChild(card);
                 });
@@ -590,8 +618,8 @@
             }
         }
 
-        async function changeStatusFromCard(newStatus) {
-            await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${currentLeadId}`, {
+                async function changeStatusFromCard(id, newStatus) {
+            await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
                 method: 'PATCH',
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })
@@ -600,7 +628,7 @@
             loadLeads();
         }
 
-        async function archiveFromKanban(id) {
+                async function archiveFromKanban(id) {
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
                 method: 'PATCH',
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
