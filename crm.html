@@ -190,11 +190,11 @@
                 </div>
             </div>
 
-            <div class="stats-grid" id="stats-block">
+                        <div class="stats-grid" id="stats-block">
                 <div class="stat-card"><div class="stat-title">Всего лидов</div><div class="stat-value" id="stat-total">0</div></div>
                 <div class="stat-card"><div class="stat-title">В работе</div><div class="stat-value" id="stat-progress" style="color: #b45309;">0</div></div>
-                <div class="stat-card"><div class="stat-title">Успешно</div><div class="stat-value" id="stat-closed" style="color: #15803d;">0</div></div>
-                <div class="stat-card" style="background: #f0fdf4; border-color: #bbf7d0;"><div class="stat-title" style="color: #166534;">Выручка</div><div class="stat-value" id="stat-revenue" style="color: #15803d;">0 ₽</div></div>
+                <div class="stat-card"><div class="stat-title">Выполнено</div><div class="stat-value" id="stat-closed" style="color: #15803d;">0</div></div>
+                <div class="stat-card" style="background: #f1f5f9; border-color: #e2e8f0;"><div class="stat-title" style="color: #475569;">Архив</div><div class="stat-value" id="stat-archive" style="color: #475569;">0</div></div>
             </div>
 
             <!-- KANBAN VIEW -->
@@ -213,16 +213,18 @@
             <!-- CLIENTS VIEW -->
             <div id="clients-view" style="display: none;">
                 <div class="filters-bar">
-                    <input type="text" id="filter-search" placeholder="Поиск по имени или телефону..." oninput="applyClientFilters()">
-                    <select id="filter-gender" onchange="applyClientFilters()">
-                        <option value="">Любой пол</option>
-                        <option value="М">Мужчины</option>
-                        <option value="Ж">Женщины</option>
+                    <input type="text" id="filter-search" placeholder="Поиск по имени, телефону или услуге..." oninput="applyClientFilters()">
+                    <select id="filter-status" onchange="applyClientFilters()">
+                        <option value="">Все статусы</option>
+                        <option value="new">Новые</option>
+                        <option value="in_progress">В работе</option>
+                        <option value="closed">Выполнено</option>
+                        <option value="archived">Архив</option>
                     </select>
                 </div>
                 <div class="table-container">
                     <table>
-                        <thead><tr><th>Имя</th><th>Телефон</th><th>Пол</th><th>Услуга</th><th>Сумма</th><th>Дата</th></tr></thead>
+                        <thead><tr><th>Имя</th><th>Телефон</th><th>Услуга</th><th>Сумма</th><th>Дата</th><th>Действие</th></tr></thead>
                         <tbody id="clientsBody"></tbody>
                     </table>
                 </div>
@@ -293,18 +295,25 @@
                 <a href="#" id="btn-email" class="btn-contact btn-email">✉️ Почта</a>
             </div>
 
-            <div class="form-grid">
-                <div class="form-group"><label>Имя</label><input type="text" id="edit-name"></div>
-                <div class="form-group"><label>Телефон</label><input type="text" id="edit-phone"></div>
-                <div class="form-group"><label>Пол</label>
-                    <select id="edit-gender"><option value="">Не указан</option><option value="М">Мужской</option><option value="Ж">Женский</option></select>
-                </div>
-                <div class="form-group"><label>Услуга</label><input type="text" id="edit-service"></div>
+                        <div class="form-grid">
+                <div class="form-group full"><label>Имя</label><input type="text" id="edit-name"></div>
+                
+                <div class="form-group full" style="margin-bottom: 5px;"><label>Телефоны</label></div>
+                <div id="phones-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;"></div>
+                <button class="btn btn-outline btn-sm" type="button" onclick="addPhoneField()" style="margin-bottom: 15px;">+ Добавить телефон</button>
+
+                <div class="form-group full" style="margin-bottom: 5px;"><label>Услуги</label></div>
+                <div id="services-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;"></div>
+                <button class="btn btn-outline btn-sm" type="button" onclick="addServiceField()" style="margin-bottom: 15px;">+ Добавить услугу</button>
+
                 <div class="form-group"><label>Сумма (₽)</label><input type="number" id="edit-amount"></div>
                 <div class="form-group"><label>Оплачено?</label>
                     <select id="edit-paid"><option value="false">Нет</option><option value="true">Да</option></select>
                 </div>
                 <div class="form-group full"><label>Заметка</label><textarea id="edit-notes" rows="2"></textarea></div>
+            </div>
+            <div style="margin-top: 15px;">
+                <button class="btn btn-danger btn-sm" onclick="archiveLead()">📦 Перенести в архив</button>
             </div>
 
             <div style="display:flex; justify-content:space-between; margin-top:20px;">
