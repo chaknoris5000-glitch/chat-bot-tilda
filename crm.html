@@ -972,7 +972,7 @@
     av.style.width = '28px'; av.style.height = '28px'; av.style.borderRadius = '50%'; av.style.background = '#2F5B43'; av.style.color = '#fff'; av.style.display = 'flex'; av.style.alignItems = 'center'; av.style.justifyContent = 'center'; av.style.fontSize = '14px'; av.style.flexShrink = '0'; av.textContent = '🤖';
     var b = document.createElement('div');
     b.style.background = '#fff'; b.style.color = '#222'; b.style.padding = '8px 12px'; b.style.borderRadius = '12px'; b.style.borderTopLeftRadius = '4px'; b.style.maxWidth = '80%'; b.style.wordWrap = 'break-word'; b.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
-    b.innerHTML = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#2F5B43;text-decoration:underline;">$1</a>');
+    b.innerHTML = text.replace(/(https?:\\/\\/[^\\s]+)/g, '<a href="$1" target="_blank" style="color:#2F5B43;text-decoration:underline;">$1</a>');
     wrap.appendChild(av); wrap.appendChild(b); messages.appendChild(wrap); messages.scrollTop = messages.scrollHeight;
   }
   function handleScroll(replyText) {
@@ -1004,7 +1004,7 @@
       .then(function(data) {
         var rawReply = data.reply || 'Нет ответа';
         handleScroll(rawReply); 
-        var cleanText = rawReply.replace(/\[SCROLL:[^\]]*\]/g, '').replace(/\[LEAD_SAVE\]|\[NAME:[^\]]*\]|\[PHONE:[^\]]*\]|\[PROBLEM:[^\]]*\]/g, '').trim();
+        var cleanText = rawReply.replace(/\\[SCROLL:[^\\]]*\\]/g, '').replace(/\\[LEAD_SAVE\\]|\\[NAME:[^\\]]*\\]|\\[PHONE:[^\\]]*\\]|\\[PROBLEM:[^\\]]*\\]/g, '').trim();
         addBotMessage(cleanText); status.textContent = '';
       })
       .catch(function() { addBotMessage('Ошибка соединения. Попробуйте позже.'); status.textContent = ''; });
