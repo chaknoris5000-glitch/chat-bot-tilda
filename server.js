@@ -274,7 +274,7 @@ async function saveLead(sessionId, name, phone, problem, source = 'site') {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
       method: 'POST',
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-      body: JSON.stringify({ session_id: sessionId, name: name || null, phone: phone || null, problem: problem || null, source, status: 'new' })
+      body: JSON.stringify({ session_id: sessionId, client_id: CLIENT_ID, name: name || null, phone: phone || null, problem: problem || null, source, status: 'new' })
     });
     const inserted = await r.json();
     const leadId = Array.isArray(inserted) && inserted[0] ? inserted[0].id : 0;
@@ -584,7 +584,7 @@ async function buildXlsx(leads, title = 'Заявки') {
 }
 
 async function fetchLeads(sinceIso = null) {
-  let url = `${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`;
+  let url = `${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc&client_id=eq.${CLIENT_ID}`;
   if (sinceIso) url += `&created_at=gte.${encodeURIComponent(sinceIso)}`;
   const r = await fetch(url, {
     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
