@@ -44,17 +44,29 @@ async function createClient() {
     await axios.put(`https://api.github.com/repos/${GITHUB_OWNER}/chat-bot-${clientId}/contents/package.json`, { message: "Add package.json", content: Buffer.from(packageJson).toString('base64') }, { headers: ghHeaders });
     console.log(`✅ GitHub готов (код подменен под клиента)`);
 
-    // 4. СОЗДАЕМ SUPABASE
-    let supabaseUrl = '', supabaseKey = '';
+        // 4. ЗАПИСЫВАЕМ КЛИЕНТА В ОБЩУЮ БАЗУ (loans-bot)
+    let supabaseUrl = 'https://ggmshdfplrqsybnchvha.supabase.co';
+    let supabaseKey = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnbXNoZGZwbHJxc3libmNodmhhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MTcwMDgxNSwiZXhwIjoyMTA3Mjc2ODE1fQ.JJcTw6oNMUvUAYHP_CwQ5DuKPWwZN7jSW1hRMo04L7Y';
+    
     try {
-      const dbPassword = Math.random().toString(36).slice(-10) + 'A1!';
-      const sbRes = await axios.post(`https://api.supabase.com/v1/projects`, { organization_id: SUPABASE_ORG_ID, name: `sb-${clientId}`, region: 'eu-central-1', db_pass: dbPassword }, { headers: { Authorization: `Bearer ${SUPABASE_TOKEN}` } });
-      await new Promise(r => setTimeout(r, 60000));
-      
-            const keysRes = await axios.get(`https://api.supabase.com/v1/projects/${sbRes.data.id}/api-keys`, { headers: { Authorization: `Bearer ${SUPABASE_TOKEN}` } });
-      supabaseUrl = `https://${sbRes.data.id}.supabase.co`;
-      supabaseKey = keysRes.data.find(k => k.name === 'service_role')?.api_key;
-      console.log(`✅ Supabase готов`);
+      const res = await axios.post(`${supabaseUrl}/rest/v1/clients`, {
+        client_id: clientId,
+        business_name: businessName,
+        chat_id: parseInt(managerChatId, 10),
+        paid_until: new Date(Date.now() + 7 * 86400000).toISOString(),
+        timezone: timezone
+      }, {
+        headers: { 
+          'apikey': supabaseKey, 
+          'Authorization': `Bearer ${supabaseKey}`, 
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        }
+      });
+      console.log(`✅ Клиент добавлен в общую базу loans-bot`);
+    } catch (e) {
+      console.log(`❌ Ошибка при записи в общую базу: ${e.response?.data?.message || e.message}`);
+    }
 
       // СОЗДАНИЕ ТАБЛИЦ АВТОМАТИЧЕСКИ
       try {
