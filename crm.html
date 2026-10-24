@@ -1009,10 +1009,10 @@
       })
       .catch(function() { addBotMessage('Ошибка соединения. Попробуйте позже.'); status.textContent = ''; });
   }
-  sendBtn.addEventListener('click', sendMessage);
+    sendBtn.addEventListener('click', sendMessage);
   input.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 })();
-</script>
+<\/script>
             `.trim();
 
             const blob = new Blob([widgetCode], { type: 'text/html' });
