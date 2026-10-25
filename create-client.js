@@ -37,6 +37,7 @@ async function createClient() {
 
     // 2. СОЗДАЕМ РЕПОЗИТОРИЙ
     const ghRes = await axios.post(`https://api.github.com/user/repos`, { name: `chat-bot-${clientId}`, private: false }, { headers: ghHeaders });
+    console.log("ОТВЕТ GITHUB:", ghRes.data);
     const githubRepoUrl = ghRes.data.html_url;
 
     // 3. ЗАЛИВАЕМ ФАЙЛЫ
