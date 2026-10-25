@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const GITHUB_TOKEN = process.env.MY_GITHUB_TOKEN || '';
+const GITHUB_TOKEN = process.env.GH_PAT || '';
 const RENDER_API_KEY = process.env.RENDER_API_KEY || '';
 const SUPABASE_TOKEN = process.env.SUPABASE_TOKEN || '';
 const SUPABASE_ORG_ID = 'ixrnejeyhrxibepllfac'; 
