@@ -40,5 +40,9 @@ jobs:
           MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           SUPABASE_TOKEN: ${{ secrets.SUPABASE_TOKEN }}
+          COMMON_SUPABASE_URL: ${{ secrets.COMMON_SUPABASE_URL }}
+          COMMON_SUPABASE_KEY: ${{ secrets.COMMON_SUPABASE_KEY }}
+          COMMON_OPENROUTER_KEY: ${{ secrets.COMMON_OPENROUTER_KEY }}
+          COMMON_FIRECRAWL_KEY: ${{ secrets.COMMON_FIRECRAWL_KEY }}
         run: |
                     node create-client.js "${{ github.event.inputs.client_id }}" "${{ github.event.inputs.business_name }}" "${{ github.event.inputs.site_url }}" "${{ github.event.inputs.timezone }}" "${{ github.event.inputs.manager_chat_id }}" "${{ github.event.inputs.bot_token }}"
