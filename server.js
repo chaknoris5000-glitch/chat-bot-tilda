@@ -398,8 +398,8 @@ async function askAI(message, history, sessionId) {
       context = matches.map(m => m.content).join('\n\n---\n\n');
     }
   } catch (e) { console.log('Контекст не собран:', e.message); }
-
-  const systemPrompt = `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте и в Telegram. Твоя цель — продать услугу, собрать заявку и мягко работать с возражениями.
+const clientConfig = await getClient(CLIENT_ID);
+  const systemPrompt = clientConfig?.prompt ? clientConfig.prompt : \Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте и в Telegram. Твоя цель — продать услугу, собрать заявку и мягко работать с возражениями.
 
 ГЛАВНЫЕ ПРАВИЛА ОБЩЕНИЯ:
 1. Ты — живой человек, а не робот. Общайся максимально естественно, как в обычном чате. Используй слова вроде «Отлично», «Понял», «Да, это решаемо».
