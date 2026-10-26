@@ -242,17 +242,17 @@ async function getOrCreateSession(sessionId) {
     const ins = await fetch(`${SUPABASE_URL}/rest/v1/chat_sessions`, {
       method: 'POST',
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-      body: JSON.stringify({ session_id: sessionId, history: [] })
+      body: JSON.stringify({ session_id: sessionId, history: [], client_id: CLIENT_ID })
     });
     const created = await ins.json();
     if (Array.isArray(created) && created.length > 0) return created[0];
-    return { session_id: sessionId, history: [] };
-  } catch (e) { return { session_id: sessionId, history: [] }; }
+    return { session_id: sessionId, history: [], client_id: CLIENT_ID };
+  } catch (e) { return { session_id: sessionId, history: [], client_id: CLIENT_ID }; }
 }
 
 async function getSessionByTelegram(chatId) {
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/chat_sessions?telegram_chat_id=eq.${chatId}&select=*&order=updated_at.desc&limit=1`, {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/chat_sessions?telegram_chat_id=eq.${chatId}&client_id=eq.${CLIENT_ID}&select=*&order=updated_at.desc&limit=1`, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
     });
     const rows = await r.json();
