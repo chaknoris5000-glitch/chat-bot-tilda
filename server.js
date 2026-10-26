@@ -197,9 +197,10 @@ async function searchDocuments(queryEmbedding, limit = 8) {
     const docs = await r.json();
     if (!Array.isArray(docs) || docs.length === 0) { console.log('docs empty'); return []; }
 
-    function parseEmb(str) {
+        function parseEmb(str) {
+      if (!str) return [];
       if (Array.isArray(str)) return str;
-      return str.replace(/[\[\]]/g, '').split(',').map(Number);
+      return String(str).replace(/[\[\]]/g, '').split(',').map(Number);
     }
     function cos(a, b) {
       let dot = 0, na = 0, nb = 0;
