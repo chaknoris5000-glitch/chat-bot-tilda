@@ -188,6 +188,10 @@ async function getTelegramFileUrl(fileId) {
   return `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${d.result.file_path}`;
 }
 
+    }
+
+async function searchDocuments(queryEmbedding, limit = 8) {
+  try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/documents?select=id,content,url,embedding&client_id=eq.${CLIENT_ID}`, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
     });
