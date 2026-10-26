@@ -190,6 +190,7 @@ async function getTelegramFileUrl(fileId) {
 
 async function searchDocuments(queryEmbedding, limit = 8) {
   try {
+    // ИСПРАВЛЕНО: Сначала фильтр client_id, потом select
     const r = await fetch(`${SUPABASE_URL}/rest/v1/documents?client_id=eq.${CLIENT_ID}&select=id,content,url,embedding`, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
     });
@@ -242,6 +243,7 @@ async function getOrCreateSession(sessionId) {
     const ins = await fetch(`${SUPABASE_URL}/rest/v1/chat_sessions`, {
       method: 'POST',
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      // ИСПРАВЛЕНО: добавлен client_id
       body: JSON.stringify({ session_id: sessionId, history: [], client_id: CLIENT_ID })
     });
     const created = await ins.json();
@@ -252,6 +254,7 @@ async function getOrCreateSession(sessionId) {
 
 async function getSessionByTelegram(chatId) {
   try {
+    // ИСПРАВЛЕНО: добавлен фильтр client_id
     const r = await fetch(`${SUPABASE_URL}/rest/v1/chat_sessions?telegram_chat_id=eq.${chatId}&client_id=eq.${CLIENT_ID}&select=*&order=updated_at.desc&limit=1`, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
     });
