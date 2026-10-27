@@ -149,7 +149,7 @@
 
     <div id="crm-container" style="display: none; width: 100%;">
         
-        <!-- МОБИЛЬНЫЕ КНОПКИ (ВЫНЕСЕНЫ НАВЕРХ, ЧТОБЫ НЕ ИСЧЕЗАЛИ) -->
+        <!-- МОБИЛЬНЫЕ КНОПКИ -->
         <div class="header-actions-mobile">
             <button class="btn btn-primary" id="add-client-btn-mobile" onclick="openCreateModal()">+ Клиент</button>
             <button class="btn btn-outline" onclick="exportToExcel()">Excel</button>
@@ -336,9 +336,19 @@
                 <a href="#" id="btn-email" class="btn-contact btn-email">✉️ Почта</a>
             </div>
           
-            <div style="margin-bottom: 20px;">
-                <div id="widget-download-container" style="margin-bottom: 20px;">
-                    <button class="btn btn-primary" style="width: 100%;" onclick="downloadWidget()">📥 Скачать код виджета</button>
+            <!-- БЛОК УПРАВЛЕНИЯ БОТОМ (ТОЛЬКО ДЛЯ АДМИНА) -->
+            <div id="bot-creation-block" style="margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
+                <h4 style="margin-bottom: 10px; color: var(--primary);">Управление ботом</h4>
+                
+                <div id="create-bot-fields">
+                    <div class="form-group" style="margin-bottom: 8px;"><label>ID клиента (латиницей)</label><input type="text" id="bot-client-id" placeholder="например: salon1"></div>
+                    <div class="form-group" style="margin-bottom: 8px;"><label>Токен Telegram-бота</label><input type="text" id="bot-token" placeholder="123456:ABC-DEF..."></div>
+                    <div class="form-group" style="margin-bottom: 8px;"><label>Ссылка на сайт</label><input type="text" id="bot-site-url" placeholder="https://..."></div>
+                    <button class="btn btn-primary" style="width: 100%;" onclick="createBotFromCard()">🚀 Создать бота</button>
+                </div>
+
+                <div id="widget-download-container" style="display: none; margin-top: 10px;">
+                    <button class="btn btn-primary" style="width: 100%; background: var(--success);" onclick="downloadWidget()">📥 Скачать код виджета</button>
                 </div>
             </div>
             
@@ -450,13 +460,13 @@
                 
                 if (currentUserTgId !== ADMIN_TELEGRAM_ID) {
                     document.querySelector('.logo').innerHTML = 'Кабинет';
-                    // Скрываем кнопки для клиентов
                     const addBtn = document.getElementById('add-client-btn');
                     if (addBtn) addBtn.style.display = 'none';
                     const addBtnMobile = document.getElementById('add-client-btn-mobile');
                     if (addBtnMobile) addBtnMobile.style.display = 'none';
-                    const widgetBtn = document.getElementById('widget-download-container');
-                    if (widgetBtn) widgetBtn.style.display = 'none';
+                    // Скрываем весь блок управления ботом для клиентов
+                    const botBlock = document.getElementById('bot-creation-block');
+                    if (botBlock) botBlock.style.display = 'none';
                 }
                 
                 loadLeads();
@@ -702,6 +712,18 @@
             const cleanPhone = (lead.phone || '').replace(/\D/g, '');
             document.getElementById('btn-call').href = `tel:${lead.phone || ''}`;
             document.getElementById('btn-tg').href = cleanPhone.length > 5 ? `https://t.me/+${cleanPhone}` : '#';
+
+            // Проверка на наличие client_id (создан ли бот)
+            if (lead.client_id) {
+                document.getElementById('create-bot-fields').style.display = 'none';
+                document.getElementById('widget-download-container').style.display = 'block';
+            } else {
+                document.getElementById('create-bot-fields').style.display = 'block';
+                document.getElementById('widget-download-container').style.display = 'none';
+                document.getElementById('bot-client-id').value = '';
+                document.getElementById('bot-token').value = '';
+                document.getElementById('bot-site-url').value = '';
+            }
             
             document.getElementById('clientModal').style.display = 'flex';
         }
@@ -803,7 +825,6 @@
         // TABS
         function switchTab(tab) {
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-            // Скрываем все блоки КРОМЕ мобильных кнопок
             document.querySelectorAll('.main-content > div:not(.header-actions-mobile)').forEach(el => el.style.display = 'none');
             document.getElementById('stats-block').style.display = 'grid';
             if (tab === 'kanban') {
@@ -873,41 +894,73 @@
             } catch (e) { alert('Ошибка сети: ' + e.message); }
         }
 
+        // ФУНКЦИЯ СОЗДАНИЯ БОТА ИЗ КАРТОЧКИ
+        async function createBotFromCard() {
+            const client_id = document.getElementById('bot-client-id').value.trim();
+            const bot_token = document.getElementById('bot-token').value.trim();
+            const site_url = document.getElementById('bot-site-url').value.trim();
+            
+            if (!client_id || !bot_token || !site_url) return alert('Заполните все поля для создания бота!');
+
+            const lead = allLeads.find(l => l.id === currentLeadId);
+            const business_name = lead.name || 'Новый бизнес';
+
+            try {
+                const res = await fetch('/api/create-client', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        client_id, 
+                        business_name, 
+                        site_url, 
+                        timezone: 'Europe/Moscow', 
+                        manager_chat_id: ADMIN_TELEGRAM_ID.toString(), 
+                        bot_token 
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.ok) {
+                    alert('🚀 Бот создается! Через минуту появится кнопка скачивания.');
+                    
+                    await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${currentLeadId}`, {
+                        method: 'PATCH',
+                        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ client_id: client_id })
+                    });
+
+                    document.getElementById('create-bot-fields').style.display = 'none';
+                    document.getElementById('widget-download-container').style.display = 'block';
+                    
+                    if (lead) lead.client_id = client_id;
+                    
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            } catch (e) { alert('Ошибка сети: ' + e.message); }
+        }
+
         function toggleTheme() {
             const isDark = document.getElementById('theme-toggle').checked;
             if (isDark) {
                 document.body.style.background = '#000000';
                 document.body.style.color = '#e2e8f0';
-                
                 document.querySelectorAll('.stat-card, .table-container, .sidebar, .settings-section, .modal-content, .kanban-col').forEach(el => {
-                    el.style.background = '#1c1c1e';
-                    el.style.borderColor = '#2c2c2e';
-                    el.style.color = '#e2e8f0';
+                    el.style.background = '#1c1c1e'; el.style.borderColor = '#2c2c2e'; el.style.color = '#e2e8f0';
                 });
-                document.querySelectorAll('h1, h2, h3, .stat-title, .stat-value, .settings-row, .k-title').forEach(el => {
-                    el.style.color = '#e2e8f0';
-                });
+                document.querySelectorAll('h1, h2, h3, .stat-title, .stat-value, .settings-row, .k-title').forEach(el => { el.style.color = '#e2e8f0'; });
                 document.querySelectorAll('input, select, textarea').forEach(el => {
-                    el.style.background = '#2c2c2e';
-                    el.style.color = '#e2e8f0';
-                    el.style.borderColor = '#3a3a3c';
+                    el.style.background = '#2c2c2e'; el.style.color = '#e2e8f0'; el.style.borderColor = '#3a3a3c';
                 });
             } else {
                 document.body.style.background = '#f4f6f8';
                 document.body.style.color = '#0f172a';
-                
                 document.querySelectorAll('.stat-card, .table-container, .sidebar, .settings-section, .modal-content, .kanban-col').forEach(el => {
-                    el.style.background = '#ffffff';
-                    el.style.borderColor = '#e2e8f0';
-                    el.style.color = '#0f172a';
+                    el.style.background = '#ffffff'; el.style.borderColor = '#e2e8f0'; el.style.color = '#0f172a';
                 });
-                document.querySelectorAll('h1, h2, h3, .stat-title, .stat-value, .settings-row, .k-title').forEach(el => {
-                    el.style.color = '#0f172a';
-                });
+                document.querySelectorAll('h1, h2, h3, .stat-title, .stat-value, .settings-row, .k-title').forEach(el => { el.style.color = '#0f172a'; });
                 document.querySelectorAll('input, select, textarea').forEach(el => {
-                    el.style.background = '#ffffff';
-                    el.style.color = '#0f172a';
-                    el.style.borderColor = '#e2e8f0';
+                    el.style.background = '#ffffff'; el.style.color = '#0f172a'; el.style.borderColor = '#e2e8f0';
                 });
             }
         }
