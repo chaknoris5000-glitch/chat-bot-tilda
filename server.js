@@ -1125,7 +1125,7 @@ app.post('/telegram-webhook', async (req, res) => {
 
     let chatSession = await getSessionByTelegram(chatId);
     if (!chatSession) {
-      const newSid = 'tg_' + chatId;
+      const newSid = 'tg_' + chatId + '_' + CLIENT_ID;
       await getOrCreateSession(newSid);
       await updateSession(newSid, { telegram_chat_id: chatId });
       chatSession = await getSessionByTelegram(chatId);
