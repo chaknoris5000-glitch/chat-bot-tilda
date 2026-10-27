@@ -52,7 +52,6 @@ async function createClient() {
     serverCode = serverCode.replace(/const BUSINESS_NAME = .*?;/, `const BUSINESS_NAME = '${businessName}';`);
     serverCode = serverCode.replace(/const SITE_TO_CRAWL = .*?;/, `const SITE_TO_CRAWL = '${siteUrl}';`);
     serverCode = serverCode.replace(/const BASE_URL = .*?;/, `const BASE_URL = '${siteUrl}';`);
-    serverCode = serverCode.replace(/const TELEGRAM_TOKEN = .*?;/, `const TELEGRAM_TOKEN = '${botToken}';`);
     serverCode = serverCode.replace(/const MANAGER_CHAT_ID = .*?;/, `const MANAGER_CHAT_ID = '${managerChatId}';`);
     
     const pRes = await axios.get(`https://api.github.com/repos/${SOURCE_REPO}/contents/package.json`, { headers: ghHeaders });
