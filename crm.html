@@ -459,18 +459,23 @@
                 document.getElementById('auth-container').style.display = 'none';
                 document.getElementById('crm-container').style.display = 'flex';
                 
-                if (currentUserTgId !== ADMIN_TELEGRAM_ID) {
-                    document.querySelector('.logo').innerHTML = 'Кабинет';
-                    const addBtn = document.getElementById('add-client-btn');
-                    if (addBtn) addBtn.style.display = 'none';
-                    const addBtnMobile = document.getElementById('add-client-btn-mobile');
-                    if (addBtnMobile) addBtnMobile.style.display = 'none';
-                    const botBlock = document.getElementById('bot-creation-block');
-                    if (botBlock) botBlock.style.display = 'none';
-                }
-                
-                loadLeads();
-                window.history.replaceState({}, document.title, "/crm");
+               if (currentUserTgId !== ADMIN_TELEGRAM_ID) {
+    document.querySelector('.logo').innerHTML = 'Кабинет';
+    const addBtn = document.getElementById('add-client-btn');
+    if (addBtn) addBtn.style.display = 'none';
+    const addBtnMobile = document.getElementById('add-client-btn-mobile');
+    if (addBtnMobile) addBtnMobile.style.display = 'none';
+    const botBlock = document.getElementById('bot-creation-block');
+    if (botBlock) botBlock.style.display = 'none';
+    
+    // ЗАГЛУШКА ДЛЯ НЕ-АДМИНОВ
+    document.querySelector('.main-content').innerHTML = '<div style="text-align:center; padding:50px;"><h2>Доступ только для владельца</h2><p>Пожалуйста, войдите под аккаунтом администратора.</p></div>';
+    document.querySelector('.sidebar').style.display = 'none';
+    document.querySelector('.header-actions-mobile').style.display = 'none';
+    return;
+}
+loadLeads();
+window.history.replaceState({}, document.title, "/crm");
             }
         }
         window.onload = checkAuth;
