@@ -2,8 +2,6 @@ const axios = require('axios');
 
 const GITHUB_TOKEN = process.env.MY_GITHUB_TOKEN || '';
 const RENDER_API_KEY = process.env.RENDER_API_KEY || '';
-const SUPABASE_TOKEN = process.env.SUPABASE_TOKEN || '';
-const SUPABASE_ORG_ID = 'ixrnejeyhrxibepllfac'; 
 const GITHUB_OWNER = 'chaknoris5000-glitch';
 const SOURCE_REPO = 'chaknoris5000-glitch/chat-bot-tilda';
 
@@ -120,6 +118,18 @@ async function createClient() {
         await axios.get(`https://api.telegram.org/bot${botToken}/setWebhook?url=${webhookUrl}`);
         console.log(`✅ Вебхук привязан`);
       } catch (e) { console.log(`❌ Ошибка вебхука: ${e.message}`); }
+    }
+
+    // 7. АВТОМАТИЧЕСКИЙ ПАРСИНГ САЙТА
+    if (siteUrl) {
+      try {
+        console.log(`⏳ Запускаю парсинг сайта... Жду 10 сек...`);
+        await new Promise(resolve => setTimeout(resolve, 10000)); 
+        await axios.get(`https://chat-bot-${clientId}.onrender.com/crawl`);
+        console.log(`✅ Сайт успешно спарсен!`);
+      } catch (e) {
+        console.log(`⚠️ Ошибка парсинга (сервер мог еще не проснуться): ${e.message}`);
+      }
     }
 
   } catch (e) { console.log(`❌ Ошибка: ${e.response?.data?.message || e.message}`); }
