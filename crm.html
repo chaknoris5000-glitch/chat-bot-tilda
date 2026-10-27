@@ -345,6 +345,7 @@
                     <div class="form-group" style="margin-bottom: 8px;"><label>Название бизнеса</label><input type="text" id="bot-business-name" placeholder="например: Салон красоты"></div>
                     <div class="form-group" style="margin-bottom: 8px;"><label>Ссылка на сайт</label><input type="text" id="bot-site-url" placeholder="https://..."></div>
                     <div class="form-group" style="margin-bottom: 8px;"><label>Токен Telegram-бота</label><input type="text" id="bot-token" placeholder="123456:ABC-DEF..."></div>
+                    <div class="form-group" style="margin-bottom: 8px;"><label>Telegram ID владельца (для доступа)</label><input type="text" id="bot-owner-id" placeholder="Например: 123456789"></div>
                     <button class="btn btn-primary" style="width: 100%;" onclick="createBotFromCard()">🚀 Создать бота</button>
                 </div>
 
@@ -931,6 +932,7 @@ window.history.replaceState({}, document.title, "/crm");
                         timezone: 'Europe/Moscow', 
                         manager_chat_id: ADMIN_TELEGRAM_ID.toString(), 
                         bot_token 
+                        owner_telegram_id: Number(document.getElementById('bot-owner-id').value.trim()) //
                     })
                 });
                 const data = await res.json();
