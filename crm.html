@@ -336,14 +336,15 @@
                 <a href="#" id="btn-email" class="btn-contact btn-email">✉️ Почта</a>
             </div>
           
-            <!-- БЛОК УПРАВЛЕНИЯ БОТОМ (ТОЛЬКО ДЛЯ АДМИНА) -->
+            <!-- БЛОК УПРАВЛЕНИЯ БОТОМ -->
             <div id="bot-creation-block" style="margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
                 <h4 style="margin-bottom: 10px; color: var(--primary);">Управление ботом</h4>
                 
                 <div id="create-bot-fields">
                     <div class="form-group" style="margin-bottom: 8px;"><label>ID клиента (латиницей)</label><input type="text" id="bot-client-id" placeholder="например: salon1"></div>
-                    <div class="form-group" style="margin-bottom: 8px;"><label>Токен Telegram-бота</label><input type="text" id="bot-token" placeholder="123456:ABC-DEF..."></div>
+                    <div class="form-group" style="margin-bottom: 8px;"><label>Название бизнеса</label><input type="text" id="bot-business-name" placeholder="например: Салон красоты"></div>
                     <div class="form-group" style="margin-bottom: 8px;"><label>Ссылка на сайт</label><input type="text" id="bot-site-url" placeholder="https://..."></div>
+                    <div class="form-group" style="margin-bottom: 8px;"><label>Токен Telegram-бота</label><input type="text" id="bot-token" placeholder="123456:ABC-DEF..."></div>
                     <button class="btn btn-primary" style="width: 100%;" onclick="createBotFromCard()">🚀 Создать бота</button>
                 </div>
 
@@ -464,7 +465,6 @@
                     if (addBtn) addBtn.style.display = 'none';
                     const addBtnMobile = document.getElementById('add-client-btn-mobile');
                     if (addBtnMobile) addBtnMobile.style.display = 'none';
-                    // Скрываем весь блок управления ботом для клиентов
                     const botBlock = document.getElementById('bot-creation-block');
                     if (botBlock) botBlock.style.display = 'none';
                 }
@@ -713,7 +713,16 @@
             document.getElementById('btn-call').href = `tel:${lead.phone || ''}`;
             document.getElementById('btn-tg').href = cleanPhone.length > 5 ? `https://t.me/+${cleanPhone}` : '#';
 
-            // Проверка на наличие client_id (создан ли бот)
+            // Ссылка на почту (если есть email)
+            if (lead.email) {
+                document.getElementById('btn-email').href = `mailto:${lead.email}`;
+                document.getElementById('btn-email').style.opacity = '1';
+            } else {
+                document.getElementById('btn-email').removeAttribute('href');
+                document.getElementById('btn-email').style.opacity = '0.5';
+            }
+
+            // Проверка на наличие бота
             if (lead.client_id && lead.client_id !== 'tilda') {
                 document.getElementById('create-bot-fields').style.display = 'none';
                 document.getElementById('widget-download-container').style.display = 'block';
@@ -721,8 +730,9 @@
                 document.getElementById('create-bot-fields').style.display = 'block';
                 document.getElementById('widget-download-container').style.display = 'none';
                 document.getElementById('bot-client-id').value = '';
-                document.getElementById('bot-token').value = '';
+                document.getElementById('bot-business-name').value = '';
                 document.getElementById('bot-site-url').value = '';
+                document.getElementById('bot-token').value = '';
             }
             
             document.getElementById('clientModal').style.display = 'flex';
@@ -897,13 +907,13 @@
         // ФУНКЦИЯ СОЗДАНИЯ БОТА ИЗ КАРТОЧКИ
         async function createBotFromCard() {
             const client_id = document.getElementById('bot-client-id').value.trim();
-            const bot_token = document.getElementById('bot-token').value.trim();
+            const business_name = document.getElementById('bot-business-name').value.trim();
             const site_url = document.getElementById('bot-site-url').value.trim();
+            const bot_token = document.getElementById('bot-token').value.trim();
             
-            if (!client_id || !bot_token || !site_url) return alert('Заполните все поля для создания бота!');
+            if (!client_id || !business_name || !site_url || !bot_token) return alert('Заполните все поля для создания бота!');
 
             const lead = allLeads.find(l => l.id === currentLeadId);
-            const business_name = lead.name || 'Новый бизнес';
 
             try {
                 const res = await fetch('/api/create-client', {
