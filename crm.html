@@ -714,7 +714,7 @@
             document.getElementById('btn-tg').href = cleanPhone.length > 5 ? `https://t.me/+${cleanPhone}` : '#';
 
             // Проверка на наличие client_id (создан ли бот)
-            if (lead.client_id) {
+            if (lead.client_id && lead.client_id !== 'tilda') {
                 document.getElementById('create-bot-fields').style.display = 'none';
                 document.getElementById('widget-download-container').style.display = 'block';
             } else {
