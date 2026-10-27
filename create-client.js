@@ -12,18 +12,22 @@ const timezone = process.argv[5] || 'Europe/Moscow';
 const managerChatId = process.argv[6];
 const botToken = process.argv[7];
 
+// Генерируем "живой" промпт (как у Тильды)
 async function generatePrompt(businessName, siteUrl) {
   try {
     const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
       model: 'deepseek/deepseek-chat',
       messages: [
         { role: 'user', content: `Напиши системный промпт для ИИ-администратора компании "${businessName}" (сайт: ${siteUrl}). 
-Промпт должен:
-1. Называть бизнес по имени.
-2. Вежливо консультировать по услугам.
-3. Собирать заявки (имя и телефон).
-4. Быть коротким (3-4 предложения).
-5. Не упоминать другие бизнесы или ИИ-ботов.
+Промпт должен быть написан от первого лица, как живой человек.
+Правила:
+1. Называй бизнес по имени.
+2. Общайся максимально естественно, как в обычном чате.
+3. Отвечай ОЧЕНЬ коротко: строго 1-3 предложения.
+4. НЕ используй списки, тире, нумерацию.
+5. Задавай ОДИН вопрос за раз.
+6. Собирай заявки (имя и телефон).
+7. Не упоминай, что ты бот или ИИ.
 Верни только сам текст промпта, без кавычек и лишних слов.` }
       ],
       temperature: 0.7
@@ -33,7 +37,7 @@ async function generatePrompt(businessName, siteUrl) {
     return r.data.choices[0].message.content.trim();
   } catch (e) {
     console.log('Ошибка генерации промпта, использую стандартный.');
-    return `Ты — администратор компании «${businessName}». Консультируй по услугам, ценам и записи. Собирай заявки.`;
+    return `Ты — администратор компании «${businessName}». Консультируй по услугам, ценам и записи. Отвечай коротко, 1-2 предложения. Собирай заявки.`;
   }
 }
 
@@ -46,12 +50,25 @@ async function createClient() {
     const sRes = await axios.get(`https://api.github.com/repos/${SOURCE_REPO}/contents/server.js`, { headers: ghHeaders });
     let serverCode = Buffer.from(sRes.data.content, 'base64').toString('utf8');
 
+    // Подставляем данные
     serverCode = serverCode.replace(/const CLIENT_ID = .*?;/, `const CLIENT_ID = '${clientId}';`);
     serverCode = serverCode.replace(/const BUSINESS_NAME = .*?;/, `const BUSINESS_NAME = '${businessName}';`);
     serverCode = serverCode.replace(/const SITE_TO_CRAWL = .*?;/, `const SITE_TO_CRAWL = '${siteUrl}';`);
     serverCode = serverCode.replace(/const BASE_URL = .*?;/, `const BASE_URL = '${siteUrl}';`);
     serverCode = serverCode.replace(/const MANAGER_CHAT_ID = .*?;/, `const MANAGER_CHAT_ID = '${managerChatId}';`);
     
+    // ВЫРЕЗАЕМ СТАРЫЙ ДЛИННЫЙ ПРОМПТ И СТАВИМ ПРАВИЛЬНУЮ СТРОКУ
+    const cleanSystemPrompt = `const systemPrompt = \`\${clientConfig?.prompt || 'Ты — администратор компании «' + BUSINESS_NAME + '». Консультируй по услугам и собирай заявки.'}\n\nБАЗА ЗНАНИЙ:\n\${context || 'Информация временно недоступна.'}\`;`;
+    
+    // Ищем начало старого промпта и заменяем его
+    const promptStart = serverCode.indexOf("const systemPrompt = clientConfig?.prompt");
+    if (promptStart !== -1) {
+      const promptEnd = serverCode.indexOf("const messages = [");
+      if (promptEnd !== -1) {
+        serverCode = serverCode.slice(0, promptStart) + cleanSystemPrompt + "\n\n  " + serverCode.slice(promptEnd);
+      }
+    }
+
     const pRes = await axios.get(`https://api.github.com/repos/${SOURCE_REPO}/contents/package.json`, { headers: ghHeaders });
     const packageJson = Buffer.from(pRes.data.content, 'base64').toString('utf8');
 
