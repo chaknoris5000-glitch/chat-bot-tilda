@@ -190,9 +190,9 @@
 
         <div class="main-content">
             <div class="header-actions-mobile">
-                <button class="btn btn-primary" onclick="openCreateModal()">+ Клиент</button>
-                <button class="btn btn-outline" onclick="exportToExcel()">Excel</button>
-            </div>
+    <button class="btn btn-primary" id="add-client-btn-mobile" onclick="openCreateModal()">+ Клиент</button>
+    <button class="btn btn-outline" onclick="exportToExcel()">Excel</button>
+</div>
 
             <div class="header">
                 <h1 id="page-title">Воронка продаж</h1>
@@ -456,6 +456,7 @@
                 let url = `${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`;
                 if (currentUserTgId !== ADMIN_TELEGRAM_ID) {
     document.getElementById('add-client-btn').style.display = 'none';
+    document.getElementById('add-client-btn-mobile').style.display = 'none'; // <--- ДОБАВИТЬ ЭТО
     document.getElementById('widget-download-container').style.display = 'none';
 }
 
