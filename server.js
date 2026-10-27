@@ -1349,7 +1349,7 @@ app.all('/auth/telegram', async (req, res) => {
 // ========== СОЗДАНИЕ КЛИЕНТА ИЗ CRM ==========
 app.post('/api/create-client', async (req, res) => {
   try {
-        const { client_id, business_name, site_url, timezone, manager_chat_id, bot_token } = req.body;
+        const { client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id } = req.body;
     
     // Проверка, что запрос пришел от тебя (по ID)
     // (Для простоты мы доверяем запросу, так как страница CRM защищена входом)
@@ -1363,7 +1363,7 @@ app.post('/api/create-client', async (req, res) => {
       },
       body: JSON.stringify({
         ref: 'main',
-                inputs: { client_id, business_name, site_url, timezone, manager_chat_id, bot_token }
+                inputs: { client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id }
       })
     });
 
