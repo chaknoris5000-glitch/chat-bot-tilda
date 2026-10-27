@@ -442,7 +442,7 @@
                 document.getElementById('crm-container').style.display = 'flex';
                 if (currentUserTgId !== ADMIN_TELEGRAM_ID) {
                     document.querySelector('.logo').innerHTML = 'Кабинет';
-                    document.querySelector('.sidebar-actions').style.display = //'none';
+                    // document.querySelector('.sidebar-actions').style.display = 'none';
                 }
                 loadLeads();
                 window.history.replaceState({}, document.title, "/crm");
