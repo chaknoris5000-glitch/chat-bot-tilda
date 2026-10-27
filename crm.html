@@ -149,7 +149,6 @@
 
     <div id="crm-container" style="display: none; width: 100%;">
         
-        <!-- МОБИЛЬНЫЕ КНОПКИ -->
         <div class="header-actions-mobile">
             <button class="btn btn-primary" id="add-client-btn-mobile" onclick="openCreateModal()">+ Клиент</button>
             <button class="btn btn-outline" onclick="exportToExcel()">Excel</button>
@@ -209,10 +208,8 @@
                 <div class="stat-card"><div class="stat-title">Выполнено</div><div class="stat-value" id="stat-closed" style="color: #15803d;">0</div></div>
                 <div class="stat-card" style="background: #f1f5f9; border-color: #e2e8f0;"><div class="stat-title" style="color: #475569;">Архив</div><div class="stat-value" id="stat-archive" style="color: #475569;">0</div></div>
             </div>
-            <!-- KANBAN VIEW -->
             <div id="kanban-view" class="kanban-board"></div>
 
-            <!-- ALL LEADS VIEW -->
             <div id="list-view" style="display: none;">
                 <div class="filters-bar">
                     <button class="filter-btn active" onclick="filterLeadsByStatus('all', this)">Все</button>
@@ -231,7 +228,6 @@
                 </div>
             </div>
 
-            <!-- CLIENTS BASE VIEW (Уникальные клиенты) -->
             <div id="clients-view" style="display: none;">
                 <div class="filters-bar">
                     <input type="text" class="filter-input" id="client-filter-name" placeholder="Поиск по имени" oninput="applyClientBaseFilters()">
@@ -246,7 +242,6 @@
                 </div>
             </div>
 
-            <!-- TASKS VIEW -->
             <div id="tasks-view" style="display: none;">
                 <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
                     <button class="btn btn-primary" onclick="openTaskModal()">+ Добавить задачу</button>
@@ -259,26 +254,16 @@
                 </div>
             </div>
 
-            <!-- SETTINGS VIEW -->
             <div id="settings-view" style="display: none;">
                 <div class="settings-section">
                     <h3>Профиль владельца</h3>
-                    <div class="settings-row">
-                        <span>Имя</span>
-                        <input type="text" class="filter-input" value="Владелец" style="width: 200px;">
-                    </div>
-                    <div class="settings-row">
-                        <span>Контакт</span>
-                        <input type="text" class="filter-input" value="+7 (999) 000-00-00" style="width: 200px;">
-                    </div>
+                    <div class="settings-row"><span>Имя</span><input type="text" class="filter-input" value="Владелец" style="width: 200px;"></div>
+                    <div class="settings-row"><span>Контакт</span><input type="text" class="filter-input" value="+7 (999) 000-00-00" style="width: 200px;"></div>
                 </div>
 
                 <div class="settings-section">
                     <h3>Внешний вид</h3>
-                    <div class="settings-row">
-                        <span>Тёмная тема</span>
-                        <input type="checkbox" id="theme-toggle" onchange="toggleTheme()" style="width: 20px; height: 20px;">
-                    </div>
+                    <div class="settings-row"><span>Тёмная тема</span><input type="checkbox" id="theme-toggle" onchange="toggleTheme()" style="width: 20px; height: 20px;"></div>
                 </div>
 
                 <div class="settings-section">
@@ -290,26 +275,14 @@
 
                 <div class="settings-section">
                     <h3>Интеграции</h3>
-                    <div class="settings-row">
-                        <span>Почта</span>
-                        <button class="btn btn-outline" onclick="alert('Для подключения почты нужен SMTP-сервер. Мы работаем над этим!')">Подключить</button>
-                    </div>
-                    <div class="settings-row">
-                        <span>WhatsApp</span>
-                        <button class="btn btn-outline" onclick="alert('Для подключения WhatsApp нужен API. Мы работаем над этим!')">Подключить</button>
-                    </div>
+                    <div class="settings-row"><span>Почта</span><button class="btn btn-outline" onclick="alert('Для подключения почты нужен SMTP-сервер. Мы работаем над этим!')">Подключить</button></div>
+                    <div class="settings-row"><span>WhatsApp</span><button class="btn btn-outline" onclick="alert('Для подключения WhatsApp нужен API. Мы работаем над этим!')">Подключить</button></div>
                 </div>
 
                 <div class="settings-section">
                     <h3>Обратная связь</h3>
-                    <div class="settings-row">
-                        <span>Оставить отзыв о работе</span>
-                        <button class="btn btn-outline" onclick="window.open('https://t.me/vadim602_bot', '_blank')">Написать</button>
-                    </div>
-                    <div class="settings-row">
-                        <span>Сообщить о проблеме</span>
-                        <button class="btn btn-outline" onclick="window.open('https://t.me/vadim602_bot', '_blank')">Написать</button>
-                    </div>
+                    <div class="settings-row"><span>Оставить отзыв о работе</span><button class="btn btn-outline" onclick="window.open('https://t.me/vadim602_bot', '_blank')">Написать</button></div>
+                    <div class="settings-row"><span>Сообщить о проблеме</span><button class="btn btn-outline" onclick="window.open('https://t.me/vadim602_bot', '_blank')">Написать</button></div>
                 </div>
 
                 <button class="btn btn-danger" style="width: 100%; margin-top: 10px;" onclick="window.location.reload()">Выйти</button>
@@ -317,7 +290,6 @@
         </div>
     </div>
 
-    <!-- Client Card Modal -->
     <div id="clientModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -336,7 +308,6 @@
                 <a href="#" id="btn-email" class="btn-contact btn-email">✉️ Почта</a>
             </div>
           
-            <!-- БЛОК УПРАВЛЕНИЯ БОТОМ -->
             <div id="bot-creation-block" style="margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
                 <h4 style="margin-bottom: 10px; color: var(--primary);">Управление ботом</h4>
                 
@@ -388,7 +359,6 @@
         </div>
     </div>
 
-    <!-- Create Modal -->
     <div id="createModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -409,7 +379,6 @@
         </div>
     </div>
 
-    <!-- Task Modal -->
     <div id="taskModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -429,15 +398,23 @@
     </div>
 
     <script>
-        // МЕНЯЕМ URL НА LOANS-BOT
-        const SUPABASE_URL = 'https://ggmshdfplrqsybnchvha.supabase.co';
-        const SUPABASE_KEY = 'твой_ключ_от_loans_bot'; // ВСТАВЬ КЛЮЧ ОТ LOANS-BOT
+        // ДВА НАБОРА КЛЮЧЕЙ
+        const TILDA_URL = 'https://ozutjnwextahorvzdbpl.supabase.co';
+        const TILDA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96dXRqbndleHRhaG9ydnpkYnBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MTQ3MzUsImV4cCI6MjEwNzE5MDczNX0.8L3adhQ9gUR5iSly1afSQN6HeEhkj9QQ4NtUyZUQx28';
+        
+        const LOANS_URL = 'https://ggmshdfplrqsybnchvha.supabase.co';
+        const LOANS_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnbXNoZGZwbHJxc3libmNodmhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3MDA4MTUsImV4cCI6MjEwNzI3NjgxNX0.BXfy8ECjzp1g0-uuM_CeXOOB46fWm9KD7VERSX8tYJs';
+
         const ADMIN_TELEGRAM_ID = 5818548555; 
         
         let allLeads = [];
         let currentLeadId = null;
         let currentUserTgId = null;
         let currentListStatus = 'all';
+        
+        // ДИНАМИЧЕСКИЕ ПЕРЕМЕННЫЕ (заполнятся после проверки)
+        let SUPABASE_URL = TILDA_URL;
+        let SUPABASE_KEY = TILDA_KEY;
 
         // AUTH
         function onTelegramAuth(user) {
@@ -467,11 +444,11 @@
                 const isAdmin = currentUserTgId === ADMIN_TELEGRAM_ID;
                 let isOwner = false;
                 
-                // Если не админ, проверяем, есть ли ID в базе как владелец
+                // Если не админ, проверяем, есть ли ID в базе LOANS как владелец
                 if (!isAdmin) {
                     try {
-                        const r = await fetch(`${SUPABASE_URL}/rest/v1/clients?owner_telegram_id=eq.${currentUserTgId}&select=client_id`, {
-                            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                        const r = await fetch(`${LOANS_URL}/rest/v1/clients?owner_telegram_id=eq.${currentUserTgId}&select=client_id`, {
+                            headers: { 'apikey': LOANS_KEY, 'Authorization': `Bearer ${LOANS_KEY}` }
                         });
                         const rows = await r.json();
                         if (rows && rows.length > 0) {
@@ -495,6 +472,15 @@
                     document.querySelector('.sidebar').style.display = 'none';
                     document.querySelector('.header-actions-mobile').style.display = 'none';
                     return;
+                }
+                
+                // ВЫБИРАЕМ БАЗУ В ЗАВИСИМОСТИ ОТ ТОГО, КТО ЗАШЕЛ
+                if (isAdmin) {
+                    SUPABASE_URL = TILDA_URL;
+                    SUPABASE_KEY = TILDA_KEY;
+                } else {
+                    SUPABASE_URL = LOANS_URL;
+                    SUPABASE_KEY = LOANS_KEY;
                 }
                 
                 loadLeads();
