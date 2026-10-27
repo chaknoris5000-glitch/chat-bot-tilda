@@ -148,7 +148,7 @@
             <div class="logo">AI CRM</div>
             
             <div class="sidebar-actions">
-                <button class="btn btn-primary" onclick="openCreateModal()">+ Добавить клиента</button>
+                <button class="btn btn-primary" id="add-client-btn" onclick="openCreateModal()">+ Добавить клиента</button>
                 <button class="btn btn-outline" onclick="exportToExcel()">Скачать Excel</button>
             </div>
 
@@ -329,7 +329,9 @@
             </div>
           
             <div style="margin-bottom: 20px;">
-                <button class="btn btn-primary" style="width: 100%;" onclick="downloadWidget()">📥 Скачать код виджета</button>
+                <div id="widget-download-container" style="margin-bottom: 20px;">
+    <button class="btn btn-primary" style="width: 100%;" onclick="downloadWidget()">📥 Скачать код виджета</button>
+</div>
             </div>
             
             <div class="form-grid">
@@ -440,7 +442,7 @@
                 document.getElementById('crm-container').style.display = 'flex';
                 if (currentUserTgId !== ADMIN_TELEGRAM_ID) {
                     document.querySelector('.logo').innerHTML = 'Кабинет';
-                    document.querySelector('.sidebar-actions').style.display = 'none';
+                    document.querySelector('.sidebar-actions').style.display = //'none';
                 }
                 loadLeads();
                 window.history.replaceState({}, document.title, "/crm");
@@ -452,7 +454,10 @@
         async function loadLeads() {
             try {
                 let url = `${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`;
-                if (currentUserTgId !== ADMIN_TELEGRAM_ID) url += `&client_id=eq.demo-client`; 
+                if (currentUserTgId !== ADMIN_TELEGRAM_ID) {
+    document.getElementById('add-client-btn').style.display = 'none';
+    document.getElementById('widget-download-container').style.display = 'none';
+}
 
                 const res = await fetch(url, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
                 const data = await res.json();
