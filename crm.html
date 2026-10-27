@@ -110,17 +110,21 @@
         @media (max-width: 768px) {
             .mobile-small-btn { font-size: 10px !important; }
             body { flex-direction: column; padding-bottom: 64px; }
-            .sidebar { width: 100%; height: 60px; flex-direction: row; bottom: 0; top: auto; padding: 0; justify-content: space-around; }
-            .logo, .menu-label, .sidebar-actions { display: none; }
+            .sidebar { width: 100%; height: 60px; flex-direction: row; bottom: 0; top: auto; padding: 0; justify-content: space-around; z-index: 1000; }
+            .logo, .menu-label, .sidebar-actions { display: none !important; }
             .menu-item { flex-direction: column; font-size: 10px; padding: 8px; margin: 0; gap: 4px; }
             .menu-item svg { margin: 0; width: 20px; height: 20px; }
             .menu-item.active { background: none; color: var(--primary-light); }
-            .main-content { margin-left: 0; padding: 16px; }
+            .main-content { margin-left: 0; padding: 16px; padding-top: 70px; }
             .header { flex-direction: column; align-items: flex-start; gap: 12px; }
-            .header-actions-mobile { display: flex; gap: 10px; width: 100%; margin-bottom: 16px; }
+            .header-actions-mobile { 
+                display: flex !important; gap: 10px; width: 100%; margin-bottom: 0; 
+                position: fixed; top: 0; left: 0; right: 0; z-index: 990; 
+                background: #f4f6f8; padding: 12px 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            }
             .btn { flex: 1; justify-content: center; }
             .stats-grid { grid-template-columns: 1fr 1fr; }
-                        .kanban-board { flex-direction: row; overflow-x: hidden; gap: 4px; padding-bottom: 10px; }
+            .kanban-board { flex-direction: row; overflow-x: hidden; gap: 4px; padding-bottom: 10px; }
             .kanban-col { flex: 1; min-width: 0; padding: 4px; margin-right: 0; }
             .kanban-card { padding: 8px; }
             .col-header { font-size: 10px; padding: 2px 4px; }
@@ -144,6 +148,13 @@
     </div>
 
     <div id="crm-container" style="display: none; width: 100%;">
+        
+        <!-- МОБИЛЬНЫЕ КНОПКИ (ВЫНЕСЕНЫ НАВЕРХ, ЧТОБЫ НЕ ИСЧЕЗАЛИ) -->
+        <div class="header-actions-mobile">
+            <button class="btn btn-primary" id="add-client-btn-mobile" onclick="openCreateModal()">+ Клиент</button>
+            <button class="btn btn-outline" onclick="exportToExcel()">Excel</button>
+        </div>
+
         <div class="sidebar">
             <div class="logo">AI CRM</div>
             
@@ -189,11 +200,6 @@
         </div>
 
         <div class="main-content">
-            <div class="header-actions-mobile">
-    <button class="btn btn-primary" id="add-client-btn-mobile" onclick="openCreateModal()">+ Клиент</button>
-    <button class="btn btn-outline" onclick="exportToExcel()">Excel</button>
-</div>
-
             <div class="header">
                 <h1 id="page-title">Воронка продаж</h1>
             </div>
@@ -253,7 +259,7 @@
                 </div>
             </div>
 
-                        <!-- SETTINGS VIEW -->
+            <!-- SETTINGS VIEW -->
             <div id="settings-view" style="display: none;">
                 <div class="settings-section">
                     <h3>Профиль владельца</h3>
@@ -308,6 +314,8 @@
 
                 <button class="btn btn-danger" style="width: 100%; margin-top: 10px;" onclick="window.location.reload()">Выйти</button>
             </div>
+        </div>
+    </div>
 
     <!-- Client Card Modal -->
     <div id="clientModal" class="modal-overlay">
@@ -330,8 +338,8 @@
           
             <div style="margin-bottom: 20px;">
                 <div id="widget-download-container" style="margin-bottom: 20px;">
-    <button class="btn btn-primary" style="width: 100%;" onclick="downloadWidget()">📥 Скачать код виджета</button>
-</div>
+                    <button class="btn btn-primary" style="width: 100%;" onclick="downloadWidget()">📥 Скачать код виджета</button>
+                </div>
             </div>
             
             <div class="form-grid">
@@ -408,7 +416,6 @@
     </div>
 
     <script>
-             
         const SUPABASE_URL = 'https://ozutjnwextahorvzdbpl.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96dXRqbndleHRhaG9ydnpkYnBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MTQ3MzUsImV4cCI6MjEwNzE5MDczNX0.8L3adhQ9gUR5iSly1afSQN6HeEhkj9QQ4NtUyZUQx28';
         const ADMIN_TELEGRAM_ID = 5818548555; 
@@ -440,10 +447,18 @@
             if (currentUserTgId) {
                 document.getElementById('auth-container').style.display = 'none';
                 document.getElementById('crm-container').style.display = 'flex';
+                
                 if (currentUserTgId !== ADMIN_TELEGRAM_ID) {
                     document.querySelector('.logo').innerHTML = 'Кабинет';
-                    // document.querySelector('.sidebar-actions').style.display = 'none';
+                    // Скрываем кнопки для клиентов
+                    const addBtn = document.getElementById('add-client-btn');
+                    if (addBtn) addBtn.style.display = 'none';
+                    const addBtnMobile = document.getElementById('add-client-btn-mobile');
+                    if (addBtnMobile) addBtnMobile.style.display = 'none';
+                    const widgetBtn = document.getElementById('widget-download-container');
+                    if (widgetBtn) widgetBtn.style.display = 'none';
                 }
+                
                 loadLeads();
                 window.history.replaceState({}, document.title, "/crm");
             }
@@ -454,12 +469,6 @@
         async function loadLeads() {
             try {
                 let url = `${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`;
-                if (currentUserTgId !== ADMIN_TELEGRAM_ID) {
-    document.getElementById('add-client-btn').style.display = 'none';
-    document.getElementById('add-client-btn-mobile').style.display = 'none'; // <--- ДОБАВИТЬ ЭТО
-    document.getElementById('widget-download-container').style.display = 'none';
-}
-
                 const res = await fetch(url, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
                 const data = await res.json();
                 allLeads = data; 
@@ -473,13 +482,14 @@
         }
 
         // RENDER
-                function updateStats(data) {
+        function updateStats(data) {
             document.getElementById('stat-total').innerText = data.length;
             document.getElementById('stat-progress').innerText = data.filter(l => l.status === 'in_progress').length;
             document.getElementById('stat-closed').innerText = data.filter(l => l.status === 'closed').length;
             document.getElementById('stat-archive').innerText = data.filter(l => l.status === 'archived').length;
         }
-               function renderKanban(data) {
+
+        function renderKanban(data) {
             const board = document.getElementById('kanban-view');
             board.innerHTML = '';
             const columns = [
@@ -504,7 +514,7 @@
                     let actionBtn = '';
                     if (col.id === 'new') {
                         actionBtn = `<button class="btn btn-outline btn-sm" onclick="event.stopPropagation(); changeStatusFromCard(${lead.id}, 'in_progress')">→ В работу</button>`;
-                                       } else if (col.id === 'in_progress') {
+                    } else if (col.id === 'in_progress') {
                         actionBtn = `
                             <div style="display:flex; gap:5px;">
                                 <button class="btn btn-outline btn-sm" onclick="event.stopPropagation(); changeStatusFromCard(${lead.id}, 'new')">← Новые</button>
@@ -538,7 +548,6 @@
             const tbody = document.getElementById('leadsBody');
             tbody.innerHTML = '';
             
-            // Фильтрация для списка
             const dateVal = document.getElementById('list-filter-date').value;
             const searchVal = document.getElementById('list-filter-search').value.toLowerCase();
             
@@ -569,7 +578,6 @@
             const tbody = document.getElementById('clientsBaseBody');
             tbody.innerHTML = '';
 
-            // Объединение в уникальных клиентов (по телефону)
             const uniqueClients = {};
             data.forEach(lead => {
                 const phone = lead.phone || (lead.phones && lead.phones[0]) || 'unknown';
@@ -582,7 +590,6 @@
 
             const clientsArray = Object.values(uniqueClients);
 
-            // Фильтрация
             const nameVal = document.getElementById('client-filter-name').value.toLowerCase();
             const phoneVal = document.getElementById('client-filter-phone').value;
             const dateVal = document.getElementById('client-filter-date').value;
@@ -652,7 +659,7 @@
             }
         }
 
-                async function changeStatusFromCard(id, newStatus) {
+        async function changeStatusFromCard(id, newStatus) {
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
                 method: 'PATCH',
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
@@ -662,7 +669,7 @@
             loadLeads();
         }
 
-                async function archiveFromKanban(id) {
+        async function archiveFromKanban(id) {
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
                 method: 'PATCH',
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
@@ -796,7 +803,8 @@
         // TABS
         function switchTab(tab) {
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.main-content > div').forEach(el => el.style.display = 'none');
+            // Скрываем все блоки КРОМЕ мобильных кнопок
+            document.querySelectorAll('.main-content > div:not(.header-actions-mobile)').forEach(el => el.style.display = 'none');
             document.getElementById('stats-block').style.display = 'grid';
             if (tab === 'kanban') {
                 document.querySelectorAll('.menu-item')[0].classList.add('active');
@@ -863,23 +871,25 @@
                 const data = await res.json();
                 if (data.ok) { alert('🚀 Задача запущена!'); closeCreateClientModal(); } else { alert('Ошибка: ' + data.error); }
             } catch (e) { alert('Ошибка сети: ' + e.message); }
-        }        function toggleTheme() {
+        }
+
+        function toggleTheme() {
             const isDark = document.getElementById('theme-toggle').checked;
             if (isDark) {
                 document.body.style.background = '#000000';
-                document.body.style.color = '#e2e8f0'; // Мягкий текст
+                document.body.style.color = '#e2e8f0';
                 
                 document.querySelectorAll('.stat-card, .table-container, .sidebar, .settings-section, .modal-content, .kanban-col').forEach(el => {
                     el.style.background = '#1c1c1e';
                     el.style.borderColor = '#2c2c2e';
-                    el.style.color = '#e2e8f0'; // Мягкий текст
+                    el.style.color = '#e2e8f0';
                 });
                 document.querySelectorAll('h1, h2, h3, .stat-title, .stat-value, .settings-row, .k-title').forEach(el => {
-                    el.style.color = '#e2e8f0'; // Мягкий текст
+                    el.style.color = '#e2e8f0';
                 });
                 document.querySelectorAll('input, select, textarea').forEach(el => {
                     el.style.background = '#2c2c2e';
-                    el.style.color = '#e2e8f0'; // Мягкий текст
+                    el.style.color = '#e2e8f0';
                     el.style.borderColor = '#3a3a3c';
                 });
             } else {
@@ -901,14 +911,11 @@
                 });
             }
         }
-                       function downloadWidget() {
-            // Берем данные текущего клиента
+
+        function downloadWidget() {
             const lead = allLeads.find(l => l.id === currentLeadId);
             if (!lead) return;
-
-            // Если у заявки нет client_id, используем 'tilda' (для твоих заявок)
             const clientId = lead.client_id || 'tilda';
-            
             const serverUrl = `https://chat-bot-${clientId}.onrender.com/message`;
             const botName = `vadim602_bot`;
 
