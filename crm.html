@@ -400,6 +400,7 @@
                 <div class="form-group full"><label>Название бизнеса</label><input type="text" id="newBusinessName" placeholder="Салон красоты"></div>
                 <div class="form-group full"><label>Ссылка на сайт</label><input type="text" id="newSiteUrl" placeholder="https://..."></div>
                 <div class="form-group full"><label>Токен Telegram-бота</label><input type="text" id="newBotToken" placeholder="123456:ABC-DEF..."></div>
+                <div class="form-group full"><label>Telegram ID владельца (для доступа)</label><input type="text" id="newOwnerId" placeholder="Например: 123456789"></div>
             </div>
             <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
                 <button class="btn btn-outline" onclick="closeCreateClientModal()">Отмена</button>
@@ -448,7 +449,7 @@
             });
         }
 
-        function checkAuth() {
+        async function checkAuth() {
             const urlParams = new URLSearchParams(window.location.search);
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user) {
                 currentUserTgId = window.Telegram.WebApp.initDataUnsafe.user.id;
@@ -456,27 +457,48 @@
             } else if (urlParams.get('auth_success') === '1') {
                 currentUserTgId = Number(urlParams.get('telegram_id'));
             }
+            
             if (currentUserTgId) {
                 document.getElementById('auth-container').style.display = 'none';
                 document.getElementById('crm-container').style.display = 'flex';
                 
-               if (currentUserTgId !== ADMIN_TELEGRAM_ID) {
-    document.querySelector('.logo').innerHTML = 'Кабинет';
-    const addBtn = document.getElementById('add-client-btn');
-    if (addBtn) addBtn.style.display = 'none';
-    const addBtnMobile = document.getElementById('add-client-btn-mobile');
-    if (addBtnMobile) addBtnMobile.style.display = 'none';
-    const botBlock = document.getElementById('bot-creation-block');
-    if (botBlock) botBlock.style.display = 'none';
-    
-    // ЗАГЛУШКА ДЛЯ НЕ-АДМИНОВ
-    document.querySelector('.main-content').innerHTML = '<div style="text-align:center; padding:50px;"><h2>Доступ только для владельца</h2><p>Пожалуйста, войдите под аккаунтом администратора.</p></div>';
-    document.querySelector('.sidebar').style.display = 'none';
-    document.querySelector('.header-actions-mobile').style.display = 'none';
-    return;
-}
-loadLeads();
-window.history.replaceState({}, document.title, "/crm");
+                // ПРОВЕРКА ПРАВ
+                const isAdmin = currentUserTgId === ADMIN_TELEGRAM_ID;
+                let isOwner = false;
+                
+                // Если не админ, проверяем, есть ли ID в базе как владелец
+                if (!isAdmin) {
+                    try {
+                        const r = await fetch(`${SUPABASE_URL}/rest/v1/clients?owner_telegram_id=eq.${currentUserTgId}&select=client_id`, {
+                            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                        });
+                        const rows = await r.json();
+                        if (rows && rows.length > 0) {
+                            isOwner = true;
+                            // Запоминаем client_id, чтобы фильтровать заявки
+                            window.currentClientId = rows[0].client_id;
+                        }
+                    } catch(e) {}
+                }
+                
+                if (!isAdmin && !isOwner) {
+                    // ЗАГЛУШКА
+                    document.querySelector('.logo').innerHTML = 'Кабинет';
+                    const addBtn = document.getElementById('add-client-btn');
+                    if (addBtn) addBtn.style.display = 'none';
+                    const addBtnMobile = document.getElementById('add-client-btn-mobile');
+                    if (addBtnMobile) addBtnMobile.style.display = 'none';
+                    const botBlock = document.getElementById('bot-creation-block');
+                    if (botBlock) botBlock.style.display = 'none';
+                    
+                    document.querySelector('.main-content').innerHTML = '<div style="text-align:center; padding:50px;"><h2>Доступ только для владельца</h2><p>Пожалуйста, войдите под аккаунтом администратора или владельца.</p></div>';
+                    document.querySelector('.sidebar').style.display = 'none';
+                    document.querySelector('.header-actions-mobile').style.display = 'none';
+                    return;
+                }
+                
+                loadLeads();
+                window.history.replaceState({}, document.title, "/crm");
             }
         }
         window.onload = checkAuth;
@@ -485,6 +507,11 @@ window.history.replaceState({}, document.title, "/crm");
         async function loadLeads() {
             try {
                 let url = `${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`;
+                // Если это не админ, но владелец - фильтруем
+                if (currentUserTgId !== ADMIN_TELEGRAM_ID && window.currentClientId) {
+                    url += `&client_id=eq.${window.currentClientId}`;
+                }
+                
                 const res = await fetch(url, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
                 const data = await res.json();
                 allLeads = data; 
@@ -719,7 +746,6 @@ window.history.replaceState({}, document.title, "/crm");
             document.getElementById('btn-call').href = `tel:${lead.phone || ''}`;
             document.getElementById('btn-tg').href = cleanPhone.length > 5 ? `https://t.me/+${cleanPhone}` : '#';
 
-            // Ссылка на почту (если есть email)
             if (lead.email) {
                 document.getElementById('btn-email').href = `mailto:${lead.email}`;
                 document.getElementById('btn-email').style.opacity = '1';
@@ -728,7 +754,6 @@ window.history.replaceState({}, document.title, "/crm");
                 document.getElementById('btn-email').style.opacity = '0.5';
             }
 
-            // Проверка на наличие бота
             if (lead.client_id && lead.client_id !== 'tilda') {
                 document.getElementById('create-bot-fields').style.display = 'none';
                 document.getElementById('widget-download-container').style.display = 'block';
@@ -739,6 +764,7 @@ window.history.replaceState({}, document.title, "/crm");
                 document.getElementById('bot-business-name').value = '';
                 document.getElementById('bot-site-url').value = '';
                 document.getElementById('bot-token').value = '';
+                document.getElementById('bot-owner-id').value = '';
             }
             
             document.getElementById('clientModal').style.display = 'flex';
@@ -897,13 +923,14 @@ window.history.replaceState({}, document.title, "/crm");
             const business_name = document.getElementById('newBusinessName').value.trim();
             const site_url = document.getElementById('newSiteUrl').value.trim();
             const bot_token = document.getElementById('newBotToken').value.trim();
+            const owner_telegram_id = document.getElementById('newOwnerId').value.trim();
             if (!client_id || !business_name || !site_url || !bot_token) return alert('Заполните все поля!');
 
             try {
                 const res = await fetch('/api/create-client', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ client_id, business_name, site_url, timezone: 'Europe/Moscow', manager_chat_id: ADMIN_TELEGRAM_ID.toString(), bot_token })
+                    body: JSON.stringify({ client_id, business_name, site_url, timezone: 'Europe/Moscow', manager_chat_id: ADMIN_TELEGRAM_ID.toString(), bot_token, owner_telegram_id })
                 });
                 const data = await res.json();
                 if (data.ok) { alert('🚀 Задача запущена!'); closeCreateClientModal(); } else { alert('Ошибка: ' + data.error); }
@@ -916,6 +943,7 @@ window.history.replaceState({}, document.title, "/crm");
             const business_name = document.getElementById('bot-business-name').value.trim();
             const site_url = document.getElementById('bot-site-url').value.trim();
             const bot_token = document.getElementById('bot-token').value.trim();
+            const owner_telegram_id = document.getElementById('bot-owner-id').value.trim();
             
             if (!client_id || !business_name || !site_url || !bot_token) return alert('Заполните все поля для создания бота!');
 
@@ -931,8 +959,8 @@ window.history.replaceState({}, document.title, "/crm");
                         site_url, 
                         timezone: 'Europe/Moscow', 
                         manager_chat_id: ADMIN_TELEGRAM_ID.toString(), 
-                        bot_token 
-                        owner_telegram_id: Number(document.getElementById('bot-owner-id').value.trim()) //
+                        bot_token,
+                        owner_telegram_id: Number(owner_telegram_id)
                     })
                 });
                 const data = await res.json();
