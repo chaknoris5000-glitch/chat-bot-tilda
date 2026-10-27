@@ -916,7 +916,7 @@
                 const res = await fetch('/api/create-client', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ client_id, business_name, site_url, timezone: 'Europe/Moscow', manager_chat_id: ADMIN_TELEGRAM_ID.toString(), bot_token, owner_telegram_id })
+                    body: JSON.stringify({ client_id, business_name, site_url, timezone: 'Europe/Moscow', manager_chat_id: owner_telegram_id || ADMIN_TELEGRAM_ID.toString(), bot_token, owner_telegram_id })
                 });
                 const data = await res.json();
                 if (data.ok) { alert('🚀 Задача запущена!'); closeCreateClientModal(); } else { alert('Ошибка: ' + data.error); }
@@ -944,7 +944,7 @@
                         business_name, 
                         site_url, 
                         timezone: 'Europe/Moscow', 
-                        manager_chat_id: ADMIN_TELEGRAM_ID.toString(), 
+                        manager_chat_id: owner_telegram_id || ADMIN_TELEGRAM_ID.toString(), 
                         bot_token,
                         owner_telegram_id: Number(owner_telegram_id)
                     })
