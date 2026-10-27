@@ -20,6 +20,9 @@ on:
       bot_token:
         description: 'Токен Telegram-бота'
         required: true
+      owner_telegram_id:
+        description: 'Telegram ID владельца'
+        required: false
 jobs:
   create:
     runs-on: ubuntu-latest
@@ -45,4 +48,4 @@ jobs:
           COMMON_OPENROUTER_KEY: ${{ secrets.COMMON_OPENROUTER_KEY }}
           COMMON_FIRECRAWL_KEY: ${{ secrets.COMMON_FIRECRAWL_KEY }}
         run: |
-                    node create-client.js "${{ github.event.inputs.client_id }}" "${{ github.event.inputs.business_name }}" "${{ github.event.inputs.site_url }}" "${{ github.event.inputs.timezone }}" "${{ github.event.inputs.manager_chat_id }}" "${{ github.event.inputs.bot_token }}"
+          node create-client.js "${{ github.event.inputs.client_id }}" "${{ github.event.inputs.business_name }}" "${{ github.event.inputs.site_url }}" "${{ github.event.inputs.timezone }}" "${{ github.event.inputs.manager_chat_id }}" "${{ github.event.inputs.bot_token }}" "${{ github.event.inputs.owner_telegram_id }}"
