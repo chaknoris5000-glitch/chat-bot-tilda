@@ -11,8 +11,8 @@ const siteUrl = process.argv[4];
 const timezone = process.argv[5] || 'Europe/Moscow';
 const managerChatId = process.argv[6];
 const botToken = process.argv[7];
+const ownerTelegramId = process.argv[8]; // ID владельца
 
-// Генерируем "живой" промпт (как у Тильды)
 async function generatePrompt(businessName, siteUrl) {
   try {
     const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
@@ -50,7 +50,6 @@ async function createClient() {
     const sRes = await axios.get(`https://api.github.com/repos/${SOURCE_REPO}/contents/server.js`, { headers: ghHeaders });
     let serverCode = Buffer.from(sRes.data.content, 'base64').toString('utf8');
 
-    // Подставляем данные
     serverCode = serverCode.replace(/const CLIENT_ID = .*?;/, `const CLIENT_ID = '${clientId}';`);
     serverCode = serverCode.replace(/const BUSINESS_NAME = .*?;/, `const BUSINESS_NAME = '${businessName}';`);
     serverCode = serverCode.replace(/const SITE_TO_CRAWL = .*?;/, `const SITE_TO_CRAWL = '${siteUrl}';`);
@@ -60,7 +59,6 @@ async function createClient() {
     // ВЫРЕЗАЕМ СТАРЫЙ ДЛИННЫЙ ПРОМПТ И СТАВИМ ПРАВИЛЬНУЮ СТРОКУ
     const cleanSystemPrompt = `const systemPrompt = \`\${clientConfig?.prompt || 'Ты — администратор компании «' + BUSINESS_NAME + '». Консультируй по услугам и собирай заявки.'}\n\nБАЗА ЗНАНИЙ:\n\${context || 'Информация временно недоступна.'}\`;`;
     
-    // Ищем начало старого промпта и заменяем его
     const promptStart = serverCode.indexOf("const systemPrompt = clientConfig?.prompt");
     if (promptStart !== -1) {
       const promptEnd = serverCode.indexOf("const messages = [");
@@ -94,7 +92,8 @@ async function createClient() {
         chat_id: parseInt(managerChatId, 10),
         paid_until: new Date(Date.now() + 7 * 86400000).toISOString(),
         timezone: timezone,
-        prompt: generatedPrompt
+        prompt: generatedPrompt,
+        owner_telegram_id: ownerTelegramId ? Number(ownerTelegramId) : null // ДОБАВЛЕНО
       }, {
         headers: { 
           'apikey': commonSupabaseKey, 
