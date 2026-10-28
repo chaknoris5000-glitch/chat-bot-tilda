@@ -491,24 +491,25 @@
 
         // DATA
         async function loadLeads() {
-            try {
-                let url = `${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`;
-                // Если это владелец, фильтруем по его client_id
-                if (currentUserTgId !== ADMIN_TELEGRAM_ID && window.currentClientId) {
-                    url += `&client_id=eq.${window.currentClientId}`;
-                }
-                
-                const res = await fetch(url, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
-                const data = await res.json();
-                allLeads = data; 
-                updateStats(data);
-                renderKanban(data);
-                renderList(data);
-                renderClientBase(data);
-                renderTasks(data);
-                populateTaskClientSelect(data);
-            } catch (e) { console.error(e); }
+    try {
+        let url = `/api/get-leads`;
+        if (currentUserTgId !== ADMIN_TELEGRAM_ID && window.currentClientId) {
+            url += `?client_id=${window.currentClientId}`;
+        } else if (currentUserTgId !== ADMIN_TELEGRAM_ID) {
+            url += `?client_id=NONE`;
         }
+        
+        const res = await fetch(url);
+        const data = await res.json();
+        allLeads = Array.isArray(data) ? data : []; 
+        updateStats(allLeads);
+        renderKanban(allLeads);
+        renderList(allLeads);
+        renderClientBase(allLeads);
+        renderTasks(allLeads);
+        populateTaskClientSelect(allLeads);
+    } catch (e) { console.error(e); }
+}
 
         // RENDER
         function updateStats(data) {
