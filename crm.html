@@ -447,15 +447,13 @@
                 // Если не админ, проверяем, есть ли ID в базе LOANS как владелец
                 if (!isAdmin) {
                     try {
-                        const r = await fetch(`${LOANS_URL}/rest/v1/clients?owner_telegram_id=eq.${currentUserTgId}&select=client_id`, {
-                            headers: { 'apikey': LOANS_KEY, 'Authorization': `Bearer ${LOANS_KEY}` }
-                        });
+                        const r = await fetch(`/api/get-client-by-owner?owner_telegram_id=${currentUserTgId}`);
                         const rows = await r.json();
                         if (rows && rows.length > 0) {
                             isOwner = true;
                             window.currentClientId = rows[0].client_id; // Запоминаем, чьи заявки грузить
                         }
-                    } catch(e) {}
+                    } catch(e) { console.error(e); }
                 }
                 
                 if (!isAdmin && !isOwner) {
@@ -491,25 +489,36 @@
 
         // DATA
         async function loadLeads() {
-    try {
-        let url = `/api/get-leads`;
-        if (currentUserTgId !== ADMIN_TELEGRAM_ID && window.currentClientId) {
-            url += `?client_id=${window.currentClientId}`;
-        } else if (currentUserTgId !== ADMIN_TELEGRAM_ID) {
-            url += `?client_id=NONE`;
+            try {
+                let data = [];
+                
+                if (currentUserTgId === ADMIN_TELEGRAM_ID) {
+                    // Админ грузит напрямую из Tilda_bot
+                    const res = await fetch(`${TILDA_URL}/rest/v1/leads?select=*&order=id.desc`, {
+                        headers: { 'apikey': TILDA_KEY, 'Authorization': `Bearer ${TILDA_KEY}` }
+                    });
+                    data = await res.json();
+                } else {
+                    // Клиент грузит через сервер (из loans-bot)
+                    let url = `/api/get-leads`;
+                    if (window.currentClientId) {
+                        url += `?client_id=${window.currentClientId}`;
+                    } else {
+                        url += `?client_id=NONE`;
+                    }
+                    const res = await fetch(url);
+                    data = await res.json();
+                }
+                
+                allLeads = Array.isArray(data) ? data : [];
+                updateStats(allLeads);
+                renderKanban(allLeads);
+                renderList(allLeads);
+                renderClientBase(allLeads);
+                renderTasks(allLeads);
+                populateTaskClientSelect(allLeads);
+            } catch (e) { console.error(e); }
         }
-        
-        const res = await fetch(url);
-        const data = await res.json();
-        allLeads = Array.isArray(data) ? data : []; 
-        updateStats(allLeads);
-        renderKanban(allLeads);
-        renderList(allLeads);
-        renderClientBase(allLeads);
-        renderTasks(allLeads);
-        populateTaskClientSelect(allLeads);
-    } catch (e) { console.error(e); }
-}
 
         // RENDER
         function updateStats(data) {
