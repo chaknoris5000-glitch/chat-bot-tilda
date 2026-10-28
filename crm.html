@@ -750,22 +750,24 @@
                 document.getElementById('btn-email').style.opacity = '0.5';
             }
 
-            if (lead.client_id && lead.client_id !== 'tilda') {
-                document.getElementById('create-bot-fields').style.display = 'none';
-                document.getElementById('widget-download-container').style.display = 'block';
+                        // Показываем управление ботом только Админу
+            if (currentUserTgId === ADMIN_TELEGRAM_ID) {
+                if (lead.client_id && lead.client_id !== 'tilda') {
+                    document.getElementById('create-bot-fields').style.display = 'none';
+                    document.getElementById('widget-download-container').style.display = 'block';
+                } else {
+                    document.getElementById('create-bot-fields').style.display = 'block';
+                    document.getElementById('widget-download-container').style.display = 'none';
+                    document.getElementById('bot-client-id').value = '';
+                    document.getElementById('bot-business-name').value = '';
+                    document.getElementById('bot-site-url').value = '';
+                    document.getElementById('bot-token').value = '';
+                    document.getElementById('bot-owner-id').value = '';
+                }
             } else {
-                document.getElementById('create-bot-fields').style.display = 'block';
-                document.getElementById('widget-download-container').style.display = 'none';
-                document.getElementById('bot-client-id').value = '';
-                document.getElementById('bot-business-name').value = '';
-                document.getElementById('bot-site-url').value = '';
-                document.getElementById('bot-token').value = '';
-                document.getElementById('bot-owner-id').value = '';
-            }
-            
-            document.getElementById('clientModal').style.display = 'flex';
-        }
-
+                // У клиентов (Екатерины) этого блока вообще не будет
+                document.getElementById('bot-creation-block').style.display = 'none';
+          
         function addPhoneField(value = '') {
             const container = document.getElementById('phones-container');
             const div = document.createElement('div');
