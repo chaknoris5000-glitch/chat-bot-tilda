@@ -1422,8 +1422,23 @@ app.post('/api/connect-result', async (req, res) => {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
-
-// А ВОТ ТЕПЕРЬ ДОЛЖЕН ИДТИ ЗАПУСК СЕРВЕРА
+app.get('/api/get-leads', async (req, res) => {
+  try {
+    const { client_id } = req.query;
+    const url = `${process.env.COMMON_SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc${client_id ? `&client_id=eq.${client_id}` : ''}`;
+    
+    const r = await fetch(url, {
+      headers: {
+        'apikey': process.env.COMMON_SUPABASE_KEY,
+        'Authorization': `Bearer ${process.env.COMMON_SUPABASE_KEY}`
+      }
+    });
+    const data = await r.json();
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 app.listen(PORT, () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
 });
