@@ -1439,6 +1439,23 @@ app.get('/api/get-leads', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+app.get('/api/get-client-by-owner', async (req, res) => {
+  try {
+    const { owner_telegram_id } = req.query;
+    const url = `${process.env.COMMON_SUPABASE_URL}/rest/v1/clients?select=*&owner_telegram_id=eq.${owner_telegram_id}`;
+    const r = await fetch(url, {
+      headers: {
+        'apikey': process.env.COMMON_SUPABASE_KEY,
+        'Authorization': `Bearer ${process.env.COMMON_SUPABASE_KEY}`
+      }
+    });
+    const data = await r.json();
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}); //
+
 app.listen(PORT, () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
 });
