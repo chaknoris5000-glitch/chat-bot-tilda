@@ -911,7 +911,7 @@ app.post('/telegram-webhook', async (req, res) => {
         return;
       }
 
-            if (CLIENT_ID === 'tilda') {
+                  if (CLIENT_ID === 'tilda') {
         // Твоё личное, неизменное приветствие
         await sendTelegram(chatId, 
           `Здравствуйте! 👋\n\n` +
@@ -928,6 +928,8 @@ app.post('/telegram-webhook', async (req, res) => {
           [[{ text: '🌐 Перейти на сайт', url: BASE_URL }]]
         );
       }
+      return; //
+    } //
 
     // --- ПОШАГОВОЕ СОЗДАНИЕ КЛИЕНТА ---
     if (isManager && text === '/newclient') {
