@@ -46,42 +46,47 @@ async function createClient() {
   const ghHeaders = { Authorization: `token ${GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3+json' };
 
   try {
-    // 1. СКАЧИВАЕМ И ОБРАБАТЫВАЕМ КОД
-    const sRes = await axios.get(`https://api.github.com/repos/${SOURCE_REPO}/contents/server.js`, { headers: ghHeaders });
-    let serverCode = Buffer.from(sRes.data.content, 'base64').toString('utf8');
+    // 1. СКАЧИВАЕМ ФАЙЛЫ ИЗ ЭТАЛОНА
+    const [sRes, pRes, cRes, aRes] = await Promise.all([
+      axios.get(`https://api.github.com/repos/${SOURCE_REPO}/contents/server.js`, { headers: ghHeaders }),
+      axios.get(`https://api.github.com/repos/${SOURCE_REPO}/contents/package.json`, { headers: ghHeaders }),
+      axios.get(`https://api.github.com/repos/${SOURCE_REPO}/contents/crm.html`, { headers: ghHeaders }),
+      axios.get(`https://api.github.com/repos/${SOURCE_REPO}/contents/app.html`, { headers: ghHeaders })
+    ]);
 
+    let serverCode = Buffer.from(sRes.data.content, 'base64').toString('utf8');
+    const packageJson = Buffer.from(pRes.data.content, 'base64').toString('utf8');
+    const crmHtml = Buffer.from(cRes.data.content, 'base64').toString('utf8');
+    const appHtml = Buffer.from(aRes.data.content, 'base64').toString('utf8');
+
+    // Заменяем переменные в server.js
     serverCode = serverCode.replace(/const CLIENT_ID = .*?;/, `const CLIENT_ID = '${clientId}';`);
     serverCode = serverCode.replace(/const BUSINESS_NAME = .*?;/, `const BUSINESS_NAME = '${businessName}';`);
     serverCode = serverCode.replace(/const SITE_TO_CRAWL = .*?;/, `const SITE_TO_CRAWL = '${siteUrl}';`);
     serverCode = serverCode.replace(/const BASE_URL = .*?;/, `const BASE_URL = '${siteUrl}';`);
-    serverCode = serverCode.replace(/const MANAGER_CHAT_ID = .*?;/, `const MANAGER_CHAT_ID = '${managerChatId}';`);
     
-    // ВЫРЕЗАЕМ СТАРЫЙ ДЛИННЫЙ ПРОМПТ И СТАВИМ ПРАВИЛЬНУЮ СТРОКУ
-    const cleanSystemPrompt = `const systemPrompt = \`\${clientConfig?.prompt || 'Ты — администратор компании «' + BUSINESS_NAME + '». Консультируй по услугам и собирай заявки.'}\n\nБАЗА ЗНАНИЙ:\n\${context || 'Информация временно недоступна.'}\`;`;
-    
-    const promptStart = serverCode.indexOf("const systemPrompt = clientConfig?.prompt");
-    if (promptStart !== -1) {
-      const promptEnd = serverCode.indexOf("const messages = [");
-      if (promptEnd !== -1) {
-        serverCode = serverCode.slice(0, promptStart) + cleanSystemPrompt + "\n\n  " + serverCode.slice(promptEnd);
-      }
-    }
-
-    const pRes = await axios.get(`https://api.github.com/repos/${SOURCE_REPO}/contents/package.json`, { headers: ghHeaders });
-    const packageJson = Buffer.from(pRes.data.content, 'base64').toString('utf8');
+    // Генерируем промпт
+    const generatedPrompt = await generatePrompt(businessName, siteUrl);
 
     // 2. СОЗДАЕМ РЕПОЗИТОРИЙ
     const ghRes = await axios.post(`https://api.github.com/user/repos`, { name: `chat-bot-${clientId}`, private: false }, { headers: ghHeaders });
     const githubRepoUrl = ghRes.data.html_url;
 
-    // 3. ЗАЛИВАЕМ ФАЙЛЫ
-    await axios.put(`https://api.github.com/repos/${GITHUB_OWNER}/chat-bot-${clientId}/contents/server.js`, { message: "Add server.js", content: Buffer.from(serverCode).toString('base64') }, { headers: ghHeaders });
-    await axios.put(`https://api.github.com/repos/${GITHUB_OWNER}/chat-bot-${clientId}/contents/package.json`, { message: "Add package.json", content: Buffer.from(packageJson).toString('base64') }, { headers: ghHeaders });
-    console.log(`✅ GitHub готов`);
+    // 3. ЗАЛИВАЕМ ФАЙЛЫ (server, package, crm, app)
+    const uploadFile = async (path, content, message) => {
+      await axios.put(`https://api.github.com/repos/${GITHUB_OWNER}/chat-bot-${clientId}/contents/${path}`, {
+        message: message,
+        content: Buffer.from(content).toString('base64')
+      }, { headers: ghHeaders });
+    };
 
-    // 4. ГЕНЕРИРУЕМ ПРОМПТ И ЗАПИСЫВАЕМ В БАЗУ
-    const generatedPrompt = await generatePrompt(businessName, siteUrl);
-    
+    await uploadFile('server.js', serverCode, 'Add server.js');
+    await uploadFile('package.json', packageJson, 'Add package.json');
+    await uploadFile('crm.html', crmHtml, 'Add crm.html');
+    await uploadFile('app.html', appHtml, 'Add app.html');
+    console.log(`✅ GitHub готов (с CRM и Mini App)`);
+
+    // 4. ЗАПИСЫВАЕМ В БАЗУ
     const commonSupabaseUrl = process.env.COMMON_SUPABASE_URL;
     const commonSupabaseKey = process.env.COMMON_SUPABASE_KEY;
     
@@ -93,7 +98,7 @@ async function createClient() {
         paid_until: new Date(Date.now() + 7 * 86400000).toISOString(),
         timezone: timezone,
         prompt: generatedPrompt,
-        owner_telegram_id: ownerTelegramId ? Number(ownerTelegramId) : null // ДОБАВЛЕНО
+        owner_telegram_id: ownerTelegramId ? Number(ownerTelegramId) : null
       }, {
         headers: { 
           'apikey': commonSupabaseKey, 
@@ -102,7 +107,7 @@ async function createClient() {
           'Prefer': 'return=minimal'
         }
       });
-      console.log(`✅ Клиент и промпт добавлены в базу`);
+      console.log(`✅ Клиент добавлен в базу`);
     } catch (e) {
       console.log(`❌ Ошибка при записи в базу: ${e.response?.data?.message || e.message}`);
     }
