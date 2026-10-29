@@ -429,18 +429,25 @@
 
         async function checkAuth() {
             const urlParams = new URLSearchParams(window.location.search);
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user) {
-                currentUserTgId = window.Telegram.WebApp.initDataUnsafe.user.id;
-                document.getElementById('telegram-login-btn').style.display = 'none';
-            } else if (urlParams.get('auth_success') === '1') {
+            
+            // 1. Если в ссылке есть telegram_id — берем его
+            if (urlParams.get('auth_success') === '1' && urlParams.get('telegram_id')) {
                 currentUserTgId = Number(urlParams.get('telegram_id'));
+            } 
+            // 2. Если открыто в Telegram (Mini App) — берем оттуда
+            else if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user) {
+                currentUserTgId = window.Telegram.WebApp.initDataUnsafe.user.id;
+            }
+            // 3. НОВОЕ: Режим Админа. Если ты зашел под своим ID, но хочешь посмотреть Лизу
+            else if (urlParams.get('view_client')) {
+                currentUserTgId = ADMIN_TELEGRAM_ID; // Притворяемся админом
+                window.currentClientId = urlParams.get('view_client'); // Запоминаем, чью CRM смотрим
             }
             
             if (currentUserTgId) {
                 document.getElementById('auth-container').style.display = 'none';
                 document.getElementById('crm-container').style.display = 'flex';
                 
-                // ПРОВЕРКА ПРАВ
                 const isAdmin = currentUserTgId === ADMIN_TELEGRAM_ID;
                 let isOwner = false;
                 
@@ -451,7 +458,7 @@
                         const rows = await r.json();
                         if (rows && rows.length > 0) {
                             isOwner = true;
-                            window.currentClientId = rows[0].client_id; // Запоминаем, чьи заявки грузить
+                            window.currentClientId = rows[0].client_id;
                         }
                     } catch(e) { console.error(e); }
                 }
@@ -463,8 +470,6 @@
                     if (addBtn) addBtn.style.display = 'none';
                     const addBtnMobile = document.getElementById('add-client-btn-mobile');
                     if (addBtnMobile) addBtnMobile.style.display = 'none';
-                    const botBlock = document.getElementById('bot-creation-block');
-                    if (botBlock) botBlock.style.display = 'none';
                     
                     document.querySelector('.main-content').innerHTML = '<div style="text-align:center; padding:50px;"><h2>Доступ только для владельца</h2><p>Пожалуйста, войдите под аккаунтом администратора или владельца.</p></div>';
                     document.querySelector('.sidebar').style.display = 'none';
@@ -472,11 +477,13 @@
                     return;
                 }
                 
-                // ВЫБИРАЕМ БАЗУ В ЗАВИСИМОСТИ ОТ ТОГО, КТО ЗАШЕЛ
-                if (isAdmin) {
+                // Выбираем базу
+                if (isAdmin && !window.currentClientId) {
+                    // Ты как админ без параметров — грузим Tilda
                     SUPABASE_URL = TILDA_URL;
                     SUPABASE_KEY = TILDA_KEY;
                 } else {
+                    // Если это Лиза (или ты в режиме view_client) — грузим Loans
                     SUPABASE_URL = LOANS_URL;
                     SUPABASE_KEY = LOANS_KEY;
                 }
@@ -492,14 +499,14 @@
             try {
                 let data = [];
                 
-                if (currentUserTgId === ADMIN_TELEGRAM_ID) {
-                    // Админ грузит напрямую из Tilda_bot
+                // Если ты Админ и смотришь Tilda (без view_client)
+                if (currentUserTgId === ADMIN_TELEGRAM_ID && !window.currentClientId) {
                     const res = await fetch(`${TILDA_URL}/rest/v1/leads?select=*&order=id.desc`, {
                         headers: { 'apikey': TILDA_KEY, 'Authorization': `Bearer ${TILDA_KEY}` }
                     });
                     data = await res.json();
                 } else {
-                    // Клиент грузит через сервер (из loans-bot)
+                    // Иначе — грузим через сервер из loans-bot
                     let url = `/api/get-leads`;
                     if (window.currentClientId) {
                         url += `?client_id=${window.currentClientId}`;
@@ -750,7 +757,7 @@
                 document.getElementById('btn-email').style.opacity = '0.5';
             }
 
-                        // Показываем управление ботом только Админу
+            // Показываем управление ботом только Админу
             if (currentUserTgId === ADMIN_TELEGRAM_ID) {
                 if (lead.client_id && lead.client_id !== 'tilda') {
                     document.getElementById('create-bot-fields').style.display = 'none';
@@ -767,7 +774,11 @@
             } else {
                 // У клиентов (Екатерины) этого блока вообще не будет
                 document.getElementById('bot-creation-block').style.display = 'none';
-          
+            }
+            
+            document.getElementById('clientModal').style.display = 'flex';
+        }
+
         function addPhoneField(value = '') {
             const container = document.getElementById('phones-container');
             const div = document.createElement('div');
