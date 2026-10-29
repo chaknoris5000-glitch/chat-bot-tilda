@@ -28,6 +28,7 @@ async function generatePrompt(businessName, siteUrl) {
 5. Задавай ОДИН вопрос за раз.
 6. Собирай заявки (имя и телефон).
 7. Не упоминай, что ты бот или ИИ.
+8. ВАЖНО: Когда клиент назвал имя и телефон, ОБЯЗАТЕЛЬНО добавь в самом конце ответа: [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:суть]
 Верни только сам текст промпта, без кавычек и лишних слов.` }
       ],
       temperature: 0.7
@@ -37,7 +38,7 @@ async function generatePrompt(businessName, siteUrl) {
     return r.data.choices[0].message.content.trim();
   } catch (e) {
     console.log('Ошибка генерации промпта, использую стандартный.');
-    return `Ты — администратор компании «${businessName}». Консультируй по услугам, ценам и записи. Отвечай коротко, 1-2 предложения. Собирай заявки.`;
+    return `Ты — администратор компании «${businessName}». Консультируй по услугам, ценам и записи. Отвечай коротко, 1-2 предложения. Собирай заявки. Когда клиент назвал имя и телефон, добавь в конце: [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:суть]`;
   }
 }
 
@@ -65,8 +66,8 @@ async function createClient() {
     serverCode = serverCode.replace(/const SITE_TO_CRAWL = .*?;/, `const SITE_TO_CRAWL = '${siteUrl}';`);
     serverCode = serverCode.replace(/const BASE_URL = .*?;/, `const BASE_URL = '${siteUrl}';`);
     
-    // Генерируем промпт
-    const generatedPrompt = await generatePrompt(businessName, siteUrl);
+    // Генерируем промпт (но в базу его НЕ пишем, чтобы он не перебивал server.js)
+    await generatePrompt(businessName, siteUrl);
 
     // 2. СОЗДАЕМ РЕПОЗИТОРИЙ
     const ghRes = await axios.post(`https://api.github.com/user/repos`, { name: `chat-bot-${clientId}`, private: false }, { headers: ghHeaders });
@@ -97,7 +98,7 @@ async function createClient() {
         chat_id: parseInt(managerChatId, 10),
         paid_until: new Date(Date.now() + 7 * 86400000).toISOString(),
         timezone: timezone,
-        prompt: generatedPrompt,
+        prompt: null, // <--- ВАЖНО: оставляем пустым, чтобы бот брал код из server.js
         owner_telegram_id: ownerTelegramId ? Number(ownerTelegramId) : null
       }, {
         headers: { 
@@ -119,16 +120,18 @@ async function createClient() {
     await axios.post('https://api.render.com/v1/services', {
       type: 'web_service', name: `chat-bot-${clientId}`, repo: githubRepoUrl, branch: 'main', ownerId: ownerId,
       envVars: [
-        { key: 'CLIENT_ID', value: clientId }, { key: 'BUSINESS_NAME', value: businessName },
-        { key: 'SITE_TO_CRAWL', value: siteUrl }, { key: 'BASE_URL', value: siteUrl },
+        { key: 'CLIENT_ID', value: clientId }, 
+        { key: 'BUSINESS_NAME', value: businessName },
+        { key: 'SITE_TO_CRAWL', value: siteUrl }, 
+        { key: 'BASE_URL', value: siteUrl },
         { key: 'MANAGER_CHAT_ID', value: managerChatId }, 
         { key: 'SUPABASE_URL', value: process.env.COMMON_SUPABASE_URL },
         { key: 'SUPABASE_KEY', value: process.env.COMMON_SUPABASE_KEY }, 
+        { key: 'COMMON_SUPABASE_URL', value: process.env.COMMON_SUPABASE_URL },
+        { key: 'COMMON_SUPABASE_KEY', value: process.env.COMMON_SUPABASE_KEY },
         { key: 'TELEGRAM_TOKEN', value: botToken },
         { key: 'OPENROUTER_KEY', value: process.env.COMMON_OPENROUTER_KEY }, 
         { key: 'FIRECRAWL_KEY', value: process.env.COMMON_FIRECRAWL_KEY }
-        { key: 'COMMON_SUPABASE_URL', value: process.env.COMMON_SUPABASE_URL },
-        { key: 'COMMON_SUPABASE_KEY', value: process.env.COMMON_SUPABASE_KEY },
       ],
       serviceDetails: { env: 'node', plan: 'free', region: 'frankfurt', envSpecificDetails: { buildCommand: 'npm install', startCommand: 'node server.js' } }
     }, { headers: { Authorization: `Bearer ${RENDER_API_KEY}`, 'Content-Type': 'application/json' } });
