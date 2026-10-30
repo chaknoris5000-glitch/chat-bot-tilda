@@ -831,7 +831,7 @@ app.post('/telegram-webhook', async (req, res) => {
       const parts = text.split(' ');
       const payload = parts[1] || '';
 
-                  if (payload.startsWith('sess_')) {
+                        if (payload.startsWith('sess_')) {
         const sessId = payload;
         await getOrCreateSession(sessId);
         await updateSession(sessId, { telegram_chat_id: chatId });
@@ -840,21 +840,31 @@ app.post('/telegram-webhook', async (req, res) => {
         const history = sessionData.history || [];
         
         if (history.length > 0) {
-          // Берем ПОСЛЕДНЕЕ сообщение от клиента в виджете
-          const lastUserMsg = [...history].reverse().find(m => m.role === 'user');
+          // Берем последние 4 сообщения из виджета
+          const lastMessages = history.slice(-4).map(m => `${m.role === 'user' ? 'Клиент' : 'Бот'}: ${m.content}`).join('\n');
           
-          if (lastUserMsg) {
-            // Просто задаем вопрос, основываясь на последнем сообщении, без длинных размышлений
-            await sendTelegram(chatId, `👋 Продолжаем диалог. Как я понял, вас интересует «${lastUserMsg.content}». Расскажите об этом подробнее.`);
-          } else {
-            await sendTelegram(chatId, '👋 Продолжаем. Что вас интересует?');
+          // ПРОМПТ: строго 1-2 предложения, без вариантов, с опорой на суть
+          const prompt = `Клиент перешел с сайта в Telegram. Вот последние сообщения из их диалога:\n${lastMessages}\n\nНапиши ОДНО короткое (1-2 предложения) приветствие, которое логично продолжит этот диалог. Опирайся на то, что клиент хотел (например, настройка бота, тарифы, спорт). НЕ пиши варианты ответов, НЕ пиши "Или...", НЕ пиши списки. Просто напиши естественное приветствие, которое укладывается в лимит.`;
+          
+          try {
+             const aiResp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+               method: 'POST',
+               headers: { 'Authorization': `Bearer ${OPENROUTER_KEY}`, 'Content-Type': 'application/json' },
+               // Увеличиваем лимит токенов до 150, чтобы точно хватило на 1-2 предложения
+               body: JSON.stringify({ model: AI_MODEL_CHAT, messages: [{ role: 'user', content: prompt }], max_tokens: 150 })
+             });
+             const aiData = await aiResp.json();
+             const aiGreeting = aiData.choices?.[0]?.message?.content || '👋 Продолжаем диалог. Чем помочь?';
+             await sendTelegram(chatId, cleanReply(aiGreeting));
+          } catch (e) {
+             await sendTelegram(chatId, '👋 Продолжаем диалог. Чем помочь?');
           }
         } else {
-          await sendTelegram(chatId, '👋 Привет! Чем могу помочь?');
+          await sendTelegram(chatId, '👋 Привет! Продолжаем. Что вас интересует?');
         }
         return;
       }
-
+      
       if (payload.startsWith('pay_')) {
         const payParts = payload.split('_');
         const tariffKey = payParts[1];
