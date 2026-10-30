@@ -1169,13 +1169,26 @@ app.post('/telegram-webhook', async (req, res) => {
 
 app.get('/crawl', async (req, res) => {
   try {
-    // Используем бесплатный парсер Jina AI Reader
-    const r = await fetch(`https://r.jina.ai/${SITE_TO_CRAWL}`);
-    const text = await r.text();
+    // ИСПОЛЬЗУЕМ FIRECRAWL: Он умеет забирать футер (контакты), в отличие от Jina
+    const scrape = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${FIRECRAWL_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        url: SITE_TO_CRAWL, 
+        formats: ['markdown'],
+        onlyMainContent: false // <--- ГЛАВНЫЙ ФИКС: Забирает весь текст, включая подвал
+      })
+    });
     
-    if (!text || text.includes('error')) {
-      return res.status(500).json({ error: 'Jina Reader вернул пустоту или ошибку' });
+    const scrapeData = await scrape.json();
+    
+    if (!scrape.ok) {
+        console.log('Firecrawl error:', scrapeData);
+        return res.status(500).json({ error: 'Firecrawl error', details: scrapeData });
     }
+    
+    const text = scrapeData.data?.markdown || '';
+    if (!text) return res.status(500).json({ error: 'Empty text from Firecrawl' });
 
     const chunks = [];
     for (let i = 0; i < text.length; i += 1000) chunks.push(text.slice(i, i + 1000));
@@ -1192,7 +1205,7 @@ app.get('/crawl', async (req, res) => {
     res.json({ ok: true, saved, total: chunks.length });
   } catch (error) {
     console.log('Crawl error:', error.message);
-    res.status(500).json({ error: 'Ошибка Jina Reader' });
+    res.status(500).json({ error: 'Ошибка Firecrawl' });
   }
 });
 
