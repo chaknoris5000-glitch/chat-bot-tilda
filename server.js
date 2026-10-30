@@ -831,7 +831,7 @@ app.post('/telegram-webhook', async (req, res) => {
       const parts = text.split(' ');
       const payload = parts[1] || '';
 
-            if (payload.startsWith('sess_')) {
+                  if (payload.startsWith('sess_')) {
         const sessId = payload;
         await getOrCreateSession(sessId);
         await updateSession(sessId, { telegram_chat_id: chatId });
@@ -840,26 +840,17 @@ app.post('/telegram-webhook', async (req, res) => {
         const history = sessionData.history || [];
         
         if (history.length > 0) {
-          // Берем последние 4 сообщения из виджета
-          const lastMessages = history.slice(-4).map(m => `${m.role === 'user' ? 'Клиент' : 'Бот'}: ${m.content}`).join('\n');
+          // Берем ПОСЛЕДНЕЕ сообщение от клиента в виджете
+          const lastUserMsg = [...history].reverse().find(m => m.role === 'user');
           
-          // Просим ИИ продолжить именно с того места, где остановились
-          const prompt = `Клиент только что перешел с сайта в Telegram. Вот последние сообщения из их диалога:\n${lastMessages}\n\nНапиши короткое (1-2 предложения) приветствие, которое логично продолжит этот диалог. Не пиши шаблонное "Чем помочь", а сошлись на прошлую тему (например, если спрашивали про тарифы, спроси, определились ли они).`;
-          
-          try {
-             const aiResp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-               method: 'POST',
-               headers: { 'Authorization': `Bearer ${OPENROUTER_KEY}`, 'Content-Type': 'application/json' },
-               body: JSON.stringify({ model: AI_MODEL_CHAT, messages: [{ role: 'user', content: prompt }], max_tokens: 100 })
-             });
-             const aiData = await aiResp.json();
-             const aiGreeting = aiData.choices?.[0]?.message?.content || '👋 Продолжаем диалог с сайта. Чем помочь?';
-             await sendTelegram(chatId, cleanReply(aiGreeting));
-          } catch (e) {
-             await sendTelegram(chatId, '👋 Продолжаем диалог с сайта. Чем помочь?');
+          if (lastUserMsg) {
+            // Просто задаем вопрос, основываясь на последнем сообщении, без длинных размышлений
+            await sendTelegram(chatId, `👋 Продолжаем диалог. Как я понял, вас интересует «${lastUserMsg.content}». Расскажите об этом подробнее.`);
+          } else {
+            await sendTelegram(chatId, '👋 Продолжаем. Что вас интересует?');
           }
         } else {
-          await sendTelegram(chatId, '👋 Привет! Продолжаем. Что вас интересует?');
+          await sendTelegram(chatId, '👋 Привет! Чем могу помочь?');
         }
         return;
       }
