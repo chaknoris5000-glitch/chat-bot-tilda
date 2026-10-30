@@ -67,8 +67,13 @@ const newClientStates = {}; // Память для пошагового созд
 
 async function getClient(clientId) {
   try {
-    const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/clients?client_id=eq.${clientId}&select=*&limit=1`, {
-      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
+    // Если это главный бот Тильда, он ищет себя в СВОЕЙ базе Tilda_bot (используя старые переменные)
+    const isTilda = clientId === 'tilda';
+    const url = isTilda ? SUPABASE_URL : COMMON_SUPABASE_URL;
+    const key = isTilda ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
+
+    const r = await fetch(`${url}/rest/v1/clients?client_id=eq.${clientId}&select=*&limit=1`, {
+      headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
     });
     const rows = await r.json();
     return Array.isArray(rows) && rows[0] ? rows[0] : null;
