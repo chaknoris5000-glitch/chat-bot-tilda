@@ -494,7 +494,15 @@ ${context || 'Информация временно недоступна.'}`;
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:demos]';
     if (!reply.includes(BASE_URL)) reply += `\n\nПримеры работ: ${BASE_URL}/?go=demos`;
   }
+  
+  if (lowerMsg.includes('пример') || lowerMsg.includes('демо') || lowerMsg.includes('покажи')) {
+    reply = `Вы можете посмотреть живые примеры работы бота на нашем сайте. Там есть 4 демо-сайта: салон красоты, стоматология, автосервис и магазин запчастей.\n\nПосмотреть их можно здесь: ${BASE_URL}/?go=demos\nНажмите на любую карточку и протестируйте бота в действии.`;
+  }
 
+  if (lowerMsg.includes('ссылка') || lowerMsg.includes('сайт') || lowerMsg.includes('адрес')) {
+    reply = `Наш официальный сайт: ${BASE_URL}\n\nТам вы можете посмотреть тарифы, примеры работ и оставить заявку.`;
+  }
+ 
   if (lowerMsg.includes('гаранти')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:guarantee]';
     if (!reply.includes(BASE_URL)) reply += `\n\nО гарантиях: ${BASE_URL}/?go=guarantee`;
