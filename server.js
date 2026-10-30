@@ -480,9 +480,17 @@ ${context || 'Информация временно недоступна.'}`;
 
   const lowerMsg = message.toLowerCase();
   
-  if (lowerMsg.includes('тариф') || lowerMsg.includes('цен') || lowerMsg.includes('стоимост') || lowerMsg.includes('подробн')) {
-    if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:tariffs]';
-    if (!reply.includes(BASE_URL)) reply += `\n\nПосмотреть тарифы: ${BASE_URL}/?go=tariffs`;
+    if (lowerMsg.includes('тариф') || lowerMsg.includes('цен') || lowerMsg.includes('стоимост') || lowerMsg.includes('подробн')) {
+    reply = `Есть 4 тарифа:
+    
+1. <b>Старт</b> — ${TARIFFS.start.amountMonth} ₽/мес (до 100 заявок)
+2. <b>Бизнес</b> — ${TARIFFS.business.amountMonth} ₽/мес (до 300 заявок)
+3. <b>Безлимит</b> — ${TARIFFS.unlimited.amountMonth} ₽/мес (без ограничений)
+4. <b>За результат</b> — ${PRICE_PER_LEAD} ₽ за заявку
+
+Первая неделя и настройка бесплатно. Какой объём заявок у вас обычно?
+
+Посмотреть тарифы: ${BASE_URL}/?go=tariffs`;
   }
   
   if (lowerMsg.includes('как работает') || lowerMsg.includes('как это работает')) {
