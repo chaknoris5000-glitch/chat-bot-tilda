@@ -404,11 +404,8 @@ async function notifyManager(lead, leadId) {
 
 async function askAI(message, history, sessionId) {
   let context = '';
-
-// Берем промпт из кода (BUSINESS_PROMPT). Если в базе есть промпт — берем его, но код в приоритете. 
-  let context = '';
   try {
-    const emb = await getEmbedding(message);
+        const emb = await getEmbedding(message);
     const matches = await searchDocuments(emb, 8);
     if (matches.length > 0) {
       context = matches.map(m => m.content).join('\n\n---\n\n');
