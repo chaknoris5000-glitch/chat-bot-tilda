@@ -142,6 +142,8 @@ async function createClient() {
         { key: 'TELEGRAM_TOKEN', value: botToken },
         { key: 'OPENROUTER_KEY', value: process.env.COMMON_OPENROUTER_KEY }, 
         { key: 'FIRECRAWL_KEY', value: process.env.COMMON_FIRECRAWL_KEY }
+        { key: 'YOOKASSA_SHOP_ID', value: process.env.COMMON_YOOKASSA_SHOP_ID },
+        { key: 'YOOKASSA_SECRET_KEY', value: process.env.COMMON_YOOKASSA_SECRET_KEY },
       ],
       serviceDetails: { env: 'node', plan: 'free', region: 'frankfurt', envSpecificDetails: { buildCommand: 'npm install', startCommand: 'node server.js' } }
     }, { headers: { Authorization: `Bearer ${RENDER_API_KEY}`, 'Content-Type': 'application/json' } });
