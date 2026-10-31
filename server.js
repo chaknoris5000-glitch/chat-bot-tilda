@@ -464,8 +464,8 @@ async function askAI(message, history, sessionId) {
 БАЗА ЗНАНИЙ:
 ${context || 'Информация временно недоступна.'}`;
 
-  const messages = [
-    { role: 'system', content: systemPrompt },
+  const limitPrompt = systemPrompt + "\n\nУ тебя есть жесткий лимит: твой ответ должен быть не более 150 токенов (около 5-6 предложений). Укладывайся в этот лимит, чтобы сообщение не оборвалось. Пиши только законченные предложения."; = [
+    { role: 'system', content: limitPrompt },
     ...(history || []).slice(-10),
     { role: 'user', content: message }
   ];
