@@ -62,6 +62,7 @@ const TARIFFS = {
 
 const processedUpdates = new Set();
 const newClientStates = {}; // Память для пошагового создания
+const BUSINESS_PROMPT = process.env.BUSINESS_PROMPT || `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам... (остальной дефолтный текст)`;
 
 // ========== КЛИЕНТЫ И ОПЛАТА ==========
 
@@ -401,7 +402,7 @@ async function notifyManager(lead, leadId) {
 
 // ========== ИИ ==========
 
-async function askAI(message, history, sessionId) {
+// Берем промпт из кода (BUSINESS_PROMPT). Если в базе есть промпт — берем его, но код в приоритете. 
   let context = '';
   try {
     const emb = await getEmbedding(message);
@@ -412,7 +413,7 @@ async function askAI(message, history, sessionId) {
   } catch (e) { console.log('Контекст не собран:', e.message); }
   
   const clientConfig = await getClient(CLIENT_ID);
-    const systemPrompt = clientConfig?.prompt || `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте и в Telegram. Твоя цель — продать услугу, собрать заявку и мягко работать с возражениями.
+  const systemPrompt = clientConfig?.prompt || BUSINESS_PROMPT || `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте и в Telegram. Твоя цель — продать услугу, собрать заявку и мягко работать с возражениями.
 1. Ты — живой человек, а не робот. Общайся максимально естественно, как в обычном чате. Используй слова вроде «Отлично», «Понял», «Да, это решаемо».
 2. Отвечай ОЧЕНЬ коротко: строго 1-3 предложения. Никаких длинных текстов и простыней.
 3. НЕ используй списки, тире, нумерацию, звёздочки. Только обычный текст.
