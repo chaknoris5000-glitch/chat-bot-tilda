@@ -56,6 +56,14 @@ async function createClient() {
     ]);
 
         let serverCode = Buffer.from(sRes.data.content, 'base64').toString('utf8');
+        // 1. Генерируем уникальный промпт для этого бизнеса
+    const generatedPrompt = await generatePrompt(businessName, siteUrl);
+
+    // 2. Вшиваем этот промпт прямо в код server.js нового бота
+    serverCode = serverCode.replace(
+        /const BUSINESS_PROMPT = .*?;/s, 
+        `const BUSINESS_PROMPT = ${JSON.stringify(generatedPrompt)};`
+    );
     const packageJson = Buffer.from(pRes.data.content, 'base64').toString('utf8');
     const crmHtml = Buffer.from(cRes.data.content, 'base64').toString('utf8');
     const appHtml = Buffer.from(aRes.data.content, 'base64').toString('utf8');
