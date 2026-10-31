@@ -402,6 +402,9 @@ async function notifyManager(lead, leadId) {
 
 // ========== ИИ ==========
 
+async function askAI(message, history, sessionId) {
+  let context = '';
+
 // Берем промпт из кода (BUSINESS_PROMPT). Если в базе есть промпт — берем его, но код в приоритете. 
   let context = '';
   try {
