@@ -55,7 +55,7 @@ async function createClient() {
       axios.get(`https://api.github.com/repos/${SOURCE_REPO}/contents/app.html`, { headers: ghHeaders })
     ]);
 
-    let serverCode = Buffer.from(sRes.data.content, 'base64').toString('utf8');
+        let serverCode = Buffer.from(sRes.data.content, 'base64').toString('utf8');
     const packageJson = Buffer.from(pRes.data.content, 'base64').toString('utf8');
     const crmHtml = Buffer.from(cRes.data.content, 'base64').toString('utf8');
     const appHtml = Buffer.from(aRes.data.content, 'base64').toString('utf8');
@@ -65,6 +65,16 @@ async function createClient() {
     serverCode = serverCode.replace(/const BUSINESS_NAME = .*?;/, `const BUSINESS_NAME = '${businessName}';`);
     serverCode = serverCode.replace(/const SITE_TO_CRAWL = .*?;/, `const SITE_TO_CRAWL = '${siteUrl}';`);
     serverCode = serverCode.replace(/const BASE_URL = .*?;/, `const BASE_URL = '${siteUrl}';`);
+
+    // ВЫРЕЗАЕМ БЛОКИ ТИЛЬДЫ (тарифы и демо), чтобы они не попали к клиенту
+    // 1. Вырезаем блок с тарифами (от "if (lowerMsg.includes('тариф')" до закрывающей скобки "}")
+    serverCode = serverCode.replace(/if \(lowerMsg\.includes\('тариф'\).*?\}\n/s, '');
+    
+    // 2. Вырезаем блок с примерами/демо
+    serverCode = serverCode.replace(/if \(lowerMsg\.includes\('пример'\).*?\}\n/s, '');
+    
+    // 3. Вырезаем блок с проверкой на "ссылку" (он тоже специфичен для Тильды, если не нужен — оставь)
+    // serverCode = serverCode.replace(/if \(lowerMsg\.includes\('ссылка'\).*?\}\n/s, '');
     
     // Генерируем промпт (но в базу его НЕ пишем, чтобы он не перебивал server.js)
     await generatePrompt(businessName, siteUrl);
