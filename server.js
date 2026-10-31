@@ -105,7 +105,7 @@ async function disablePayment(clientId) {
   await fetch(`${COMMON_SUPABASE_URL}/rest/v1/clients?client_id=eq.${clientId}`, {
     method: 'PATCH',
     headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ paid_until: new Date(Date.now() - 86400000).toISOString(), updated_at: new Date().toISOString() })
+    body: JSON.stringify({ paid_until: new Date(Date.now() - 86000).toISOString(), updated_at: new Date().toISOString() })
   });
 }
 
@@ -415,7 +415,7 @@ async function askAI(message, history, sessionId) {
   const clientConfig = await getClient(CLIENT_ID);
   const systemPrompt = clientConfig?.prompt || BUSINESS_PROMPT || `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте и в Telegram. Твоя цель — продать услугу, собрать заявку и мягко работать с возражениями.
 1. Ты — живой человек, а не робот. Общайся максимально естественно, как в обычном чате. Используй слова вроде «Отлично», «Понял», «Да, это решаемо».
-2. Отвечай ОЧЕНЬ коротко: строго 1-3 предложения. Никаких длинных текстов и простыней.
+2. Отвечай ОЧЕНЬ коротко: строго 2-3 предложения. Никаких длинных текстов и простыней.
 3. НЕ используй списки, тире, нумерацию, звёздочки. Только обычный текст.
 4. Не повторяй вопрос клиента. Не используй шаблонные фразы.
 5. Задавай ОДИН наводящий вопрос за раз, чтобы поддерживать диалог.
@@ -473,7 +473,7 @@ ${context || 'Информация временно недоступна.'}`;
   const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${OPENROUTER_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: AI_MODEL_CHAT, messages, temperature: 0.6, max_tokens: 400 })
+    body: JSON.stringify({ model: AI_MODEL_CHAT, messages, temperature: 0.6, max_tokens: 150 })
   });
   const data = await r.json();
   if (!r.ok) throw new Error('OpenRouter error');
