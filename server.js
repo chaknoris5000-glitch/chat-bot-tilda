@@ -464,8 +464,7 @@ async function askAI(message, history, sessionId) {
 БАЗА ЗНАНИЙ:
 ${context || 'Информация временно недоступна.'}`;
 
-  const limitPrompt = systemPrompt + "\n\nУ тебя есть жесткий лимит: твой ответ должен быть не более 150 токенов (около 3-4 предложений). Укладывайся в этот лимит, чтобы сообщение не оборвалось. Пиши только законченные предложения.";
-
+    const limitPrompt = systemPrompt + "\n\nВАЖНО: Отвечай кратко (1-2 предложения). Твоя главная цель — узнать Имя, Телефон и суть запроса. Когда клиент их назвал — ОБЯЗАТЕЛЬНО добавь в самом конце: [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:суть]. Не пиши, что заявка оформлена, пока не добавишь этот тег.";
   const messages = [
     { role: 'system', content: limitPrompt },
     ...(history || []).slice(-10),
@@ -553,7 +552,7 @@ ${context || 'Информация временно недоступна.'}`;
   console.log('🔍 Проверка лида:', JSON.stringify(leadData));
     // Если ИИ не поставил тег, но в тексте есть телефон — сохраняем принудительно
   if (!leadData.save) {
-    const phoneMatch = reply.match(/(\+?\d[\d\s\-\(\)]{8,}\d)/);
+    const phoneMatch = reply.match(/(\+?\d{10,15})/);
     const nameMatch = reply.match(/(?:меня зовут|зовут|имя[:\s]+)\s*([А-ЯЁ][а-яё]+)/i);
     if (phoneMatch && nameMatch) {
       leadData.save = true;
