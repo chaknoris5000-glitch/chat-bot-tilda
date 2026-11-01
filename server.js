@@ -284,9 +284,11 @@ async function updateSession(sessionId, patch) {
 
 async function saveLead(sessionId, name, phone, problem, source = 'site') {
   try {
-    const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/leads`, {
+    const targetUrl = CLIENT_ID === 'tilda' ? SUPABASE_URL : COMMON_SUPABASE_URL;
+const targetKey = CLIENT_ID === 'tilda' ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
+const r = await fetch(`${targetUrl}/rest/v1/leads`, {
       method: 'POST',
-      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+              headers: { 'apikey': targetKey, 'Authorization': `Bearer ${targetKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
       body: JSON.stringify({ session_id: sessionId, client_id: CLIENT_ID, name: name || null, phone: phone || null, problem: problem || null, source, status: 'new' })
     });
     const inserted = await r.json();
