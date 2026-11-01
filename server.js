@@ -551,6 +551,17 @@ ${context || 'Информация временно недоступна.'}`;
 
   const leadData = extractLeadData(reply); 
   console.log('🔍 Проверка лида:', JSON.stringify(leadData));
+    // Если ИИ не поставил тег, но в тексте есть телефон — сохраняем принудительно
+  if (!leadData.save) {
+    const phoneMatch = reply.match(/(\+?\d[\d\s\-\(\)]{8,}\d)/);
+    const nameMatch = reply.match(/(?:меня зовут|зовут|имя[:\s]+)\s*([А-ЯЁ][а-яё]+)/i);
+    if (phoneMatch && nameMatch) {
+      leadData.save = true;
+      leadData.phone = phoneMatch[0];
+      leadData.name = nameMatch[1];
+      leadData.problem = 'Собран ИИ автоматически';
+    }
+  }
   
   if (leadData.save && isValidLead(leadData.name, leadData.phone)) {
     try {
