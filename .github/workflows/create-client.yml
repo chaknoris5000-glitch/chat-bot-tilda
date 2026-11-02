@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       client_id:
-        description: 'ID клиента (например: salon1)'
+        description: 'ID клиента'
         required: true
       business_name:
         description: 'Название бизнеса'
@@ -17,6 +17,12 @@ on:
       manager_chat_id:
         description: 'Chat ID менеджера'
         required: true
+      bot_token:
+        description: 'Токен Telegram-бота'
+        required: true
+      owner_telegram_id:
+        description: 'Telegram ID владельца'
+        required: false
 
 jobs:
   create:
@@ -39,4 +45,4 @@ jobs:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           SUPABASE_TOKEN: ${{ secrets.SUPABASE_TOKEN }}
         run: |
-          node create-client.js "${{ github.event.inputs.client_id }}" "${{ github.event.inputs.business_name }}" "${{ github.event.inputs.site_url }}" "${{ github.event.inputs.timezone }}" "${{ github.event.inputs.manager_chat_id }}"
+          node create-client.js "${{ github.event.inputs.client_id }}" "${{ github.event.inputs.business_name }}" "${{ github.event.inputs.site_url }}" "${{ github.event.inputs.timezone }}" "${{ github.event.inputs.manager_chat_id }}" "${{ github.event.inputs.bot_token }}" "${{ github.event.inputs.owner_telegram_id }}"
