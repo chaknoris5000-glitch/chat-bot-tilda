@@ -4,22 +4,22 @@ on:
     inputs:
       client_id:
         description: 'ID клиента (например: salon1)'
-        required: true
+        required: false
       business_name:
         description: 'Название бизнеса'
-        required: true
+        required: false
       site_url:
         description: 'Ссылка на сайт'
-        required: true
+        required: false
       timezone:
         description: 'Часовой пояс'
         default: 'Europe/Moscow'
       manager_chat_id:
         description: 'Chat ID менеджера'
-        required: true
+        required: false
       bot_token:
         description: 'Токен Telegram-бота'
-        required: true
+        required: false
       owner_telegram_id:
         description: 'Telegram ID владельца'
         required: false
