@@ -201,11 +201,8 @@ async function getTelegramFileUrl(fileId) {
 async function searchDocuments(queryEmbedding, limit = 8) {
   try {
     // ИСПРАВЛЕНО: Сначала фильтр client_id, потом select
-    const targetUrl = CLIENT_ID === 'tilda' ? SUPABASE_URL : COMMON_SUPABASE_URL;
-    const targetKey = CLIENT_ID === 'tilda' ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
-
-    const r = await fetch(`${targetUrl}/rest/v1/documents?client_id=eq.${CLIENT_ID}&select=id,content,url,embedding`, {
-      headers: { 'apikey': targetKey, 'Authorization': `Bearer ${targetKey}` }
+    const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/documents?client_id=eq.${CLIENT_ID}&select=id,content,url,embedding`, {
+      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
     });
     if (!r.ok) { console.log('Supabase fetch error'); return []; }
     const docs = await r.json();
@@ -239,18 +236,9 @@ async function searchDocuments(queryEmbedding, limit = 8) {
 }
 
 async function saveDocument(content, embedding, url) {
-  // Если это Тильда — пишем в её базу, иначе в общую
-  const targetUrl = CLIENT_ID === 'tilda' ? SUPABASE_URL : COMMON_SUPABASE_URL;
-  const targetKey = CLIENT_ID === 'tilda' ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
-
-  await fetch(`${targetUrl}/rest/v1/documents`, {
-    method: 'POST', 
-    headers: { 
-      'apikey': targetKey, 
-      'Authorization': `Bearer ${targetKey}`, 
-      'Content-Type': 'application/json', 
-      'Prefer': 'return=minimal' 
-    },
+  await fetch(`${COMMON_SUPABASE_URL}/rest/v1/documents`, {
+    method: 'POST',
+    headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
     body: JSON.stringify({ content, embedding, url, client_id: CLIENT_ID })
   });
 }
@@ -383,8 +371,7 @@ function isValidLead(name, phone) {
 function cleanReply(text) {
   return text
     .replace(/\[LEAD_SAVE\]/g, '').replace(/\[NAME:[^\]]*\]/g, '').replace(/\[PHONE:[^\]]*\]/g, '').replace(/\[PROBLEM:[^\]]*\]/g, '')
-    .replace(/\[SCROLL:[^\]]*\]/g, '')
-    // .replace(/\[LINK:[^\]]*\]/g, '') // <--- НЕ добавляй эту строку, иначе тег пропадет!
+    .replace(/\[SCROLL:[^\]]*\]/g, '') 
     .replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/__(.*?)__/g, '$1').replace(/_(.*?)_/g, '$1')
     .replace(/^#{1,6}\s+/gm, '').replace(/`/g, '')
     .replace(/^\s*[-•]\s+/gm, '')
@@ -479,16 +466,9 @@ async function askAI(message, history, sessionId) {
 БАЗА ЗНАНИЙ:
 ${context || 'Информация временно недоступна.'}`;
 
-  // --- НОВЫЙ БЛОК ПРОМПТА ДЛЯ ССЫЛОК ---
-  const finalPrompt = systemPrompt + `
-  
-ВАЖНО ПРО ССЫЛКИ:
-Если клиент спрашивает про конкретный товар (например, "есть ли у вас колодки") и в контексте (БАЗА ЗНАНИЙ) есть ссылка на этот товар — обязательно добавь её в конце ответа в формате [LINK:ссылка]. Не придумывай ссылки, бери только те, что есть в контексте.
-
-ВАЖНО: Отвечай кратко (1-2 предложения). Твоя главная цель — узнать Имя, Телефон и суть запроса. Когда клиент их назвал — ОБЯЗАТЕЛЬНО добавь в самом конце: [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:суть]. Не пиши, что заявка оформлена, пока не добавишь этот тег.`;
-
+    const limitPrompt = systemPrompt + "\n\nВАЖНО: Отвечай кратко (1-2 предложения). Твоя главная цель — узнать Имя, Телефон и суть запроса. Когда клиент их назвал — ОБЯЗАТЕЛЬНО добавь в самом конце: [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:суть]. Не пиши, что заявка оформлена, пока не добавишь этот тег.";
   const messages = [
-    { role: 'system', content: finalPrompt }, 
+    { role: 'system', content: limitPrompt },
     ...(history || []).slice(-10),
     { role: 'user', content: message }
   ];
@@ -502,18 +482,20 @@ ${context || 'Информация временно недоступна.'}`;
   if (!r.ok) throw new Error('OpenRouter error');
   let reply = data.choices?.[0]?.message?.content || 'Нет ответа';
 
-  // --- НОВЫЙ БЛОК ПРИНУДИТЕЛЬНЫХ ССЫЛОК ---
   const lowerMsg = message.toLowerCase();
-  if (lowerMsg.includes('товар') || lowerMsg.includes('цена') || lowerMsg.includes('стоимость') || lowerMsg.includes('купить') || lowerMsg.includes('ссылка')) {
-    const urlMatches = context.match(/https?:\/\/[^\s\)]+/g);
-    if (urlMatches && urlMatches.length > 0) {
-      const bestUrl = urlMatches[0];
-      if (!reply.includes('[LINK:')) {
-        reply += `\n\nВот ссылка на товар: [LINK:${bestUrl}]`;
-      }
-    }
+  
+    if (lowerMsg.includes('тариф') || lowerMsg.includes('цен') || lowerMsg.includes('стоимост') || lowerMsg.includes('подробн')) {
+    reply = `Есть 4 тарифа:
+    
+1. <b>Старт</b> — ${TARIFFS.start.amountMonth} ₽/мес (до 100 заявок)
+2. <b>Бизнес</b> — ${TARIFFS.business.amountMonth} ₽/мес (до 300 заявок)
+3. <b>Безлимит</b> — ${TARIFFS.unlimited.amountMonth} ₽/мес (без ограничений)
+4. <b>За результат</b> — ${PRICE_PER_LEAD} ₽ за заявку
+
+Первая неделя и настройка бесплатно. Какой объём заявок у вас обычно?
+
+Посмотреть тарифы: ${BASE_URL}/?go=tariffs`;
   }
-  // ------------------------------------------
   
   if (lowerMsg.includes('как работает') || lowerMsg.includes('как это работает')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:how]';
@@ -1359,7 +1341,6 @@ cron.schedule('0 7 1 * *', async () => {
 });
 
 // ========== НАПОМИНАНИЯ ОБ ОПЛАТЕ ==========
-// ========== НАПОМИНАНИЯ ОБ ОПЛАТЕ С КНОПКОЙ ==========
 cron.schedule('0 10 * * *', async () => { 
   try {
     const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/clients?select=*`, {
@@ -1380,22 +1361,13 @@ cron.schedule('0 10 * * *', async () => {
       const diffTime = paidDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      // Если остался 1 день (завтра конец)
       if (diffDays === 1) {
         const chatId = client.chat_id || MANAGER_CHAT_ID;
         if (chatId) {
-          const botUsername = TELEGRAM_TOKEN ? (await (await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getMe`)).json()).result.username : '';
-          
-          const keyboard = [];
-          if (botUsername) {
-             keyboard.push([{ text: '💳 Продлить подписку', url: `https://t.me/${botUsername}?start=pay_business_month` }]);
-          }
-
           await sendTelegram(chatId, 
             `⚠️ <b>Напоминание об оплате</b>\n\n` +
             `У клиента «${client.business_name || client.client_id}» завтра заканчивается подписка.\n` +
-            `Не забудьте продлить оплату, чтобы бот не перестал работать!`, 
-            keyboard.length > 0 ? keyboard : null
+            `Не забудьте продлить оплату, чтобы бот не перестал работать!`
           );
         }
       }
