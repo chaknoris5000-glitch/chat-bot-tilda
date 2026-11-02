@@ -371,7 +371,8 @@ function isValidLead(name, phone) {
 function cleanReply(text) {
   return text
     .replace(/\[LEAD_SAVE\]/g, '').replace(/\[NAME:[^\]]*\]/g, '').replace(/\[PHONE:[^\]]*\]/g, '').replace(/\[PROBLEM:[^\]]*\]/g, '')
-    .replace(/\[SCROLL:[^\]]*\]/g, '') 
+    .replace(/\[SCROLL:[^\]]*\]/g, '')
+    // .replace(/\[LINK:[^\]]*\]/g, '') // <--- НЕ добавляй эту строку, иначе тег пропадет!
     .replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/__(.*?)__/g, '$1').replace(/_(.*?)_/g, '$1')
     .replace(/^#{1,6}\s+/gm, '').replace(/`/g, '')
     .replace(/^\s*[-•]\s+/gm, '')
@@ -466,9 +467,16 @@ async function askAI(message, history, sessionId) {
 БАЗА ЗНАНИЙ:
 ${context || 'Информация временно недоступна.'}`;
 
-    const limitPrompt = systemPrompt + "\n\nВАЖНО: Отвечай кратко (1-2 предложения). Твоя главная цель — узнать Имя, Телефон и суть запроса. Когда клиент их назвал — ОБЯЗАТЕЛЬНО добавь в самом конце: [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:суть]. Не пиши, что заявка оформлена, пока не добавишь этот тег.";
+  // --- НОВЫЙ БЛОК ПРОМПТА ДЛЯ ССЫЛОК ---
+  const finalPrompt = systemPrompt + `
+  
+ВАЖНО ПРО ССЫЛКИ:
+Если клиент спрашивает про конкретный товар (например, "есть ли у вас колодки") и в контексте (БАЗА ЗНАНИЙ) есть ссылка на этот товар — обязательно добавь её в конце ответа в формате [LINK:ссылка]. Не придумывай ссылки, бери только те, что есть в контексте.
+
+ВАЖНО: Отвечай кратко (1-2 предложения). Твоя главная цель — узнать Имя, Телефон и суть запроса. Когда клиент их назвал — ОБЯЗАТЕЛЬНО добавь в самом конце: [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:суть]. Не пиши, что заявка оформлена, пока не добавишь этот тег.`;
+
   const messages = [
-    { role: 'system', content: limitPrompt },
+    { role: 'system', content: finalPrompt }, 
     ...(history || []).slice(-10),
     { role: 'user', content: message }
   ];
@@ -482,20 +490,18 @@ ${context || 'Информация временно недоступна.'}`;
   if (!r.ok) throw new Error('OpenRouter error');
   let reply = data.choices?.[0]?.message?.content || 'Нет ответа';
 
+  // --- НОВЫЙ БЛОК ПРИНУДИТЕЛЬНЫХ ССЫЛОК ---
   const lowerMsg = message.toLowerCase();
-  
-    if (lowerMsg.includes('тариф') || lowerMsg.includes('цен') || lowerMsg.includes('стоимост') || lowerMsg.includes('подробн')) {
-    reply = `Есть 4 тарифа:
-    
-1. <b>Старт</b> — ${TARIFFS.start.amountMonth} ₽/мес (до 100 заявок)
-2. <b>Бизнес</b> — ${TARIFFS.business.amountMonth} ₽/мес (до 300 заявок)
-3. <b>Безлимит</b> — ${TARIFFS.unlimited.amountMonth} ₽/мес (без ограничений)
-4. <b>За результат</b> — ${PRICE_PER_LEAD} ₽ за заявку
-
-Первая неделя и настройка бесплатно. Какой объём заявок у вас обычно?
-
-Посмотреть тарифы: ${BASE_URL}/?go=tariffs`;
+  if (lowerMsg.includes('товар') || lowerMsg.includes('цена') || lowerMsg.includes('стоимость') || lowerMsg.includes('купить') || lowerMsg.includes('ссылка')) {
+    const urlMatches = context.match(/https?:\/\/[^\s\)]+/g);
+    if (urlMatches && urlMatches.length > 0) {
+      const bestUrl = urlMatches[0];
+      if (!reply.includes('[LINK:')) {
+        reply += `\n\nВот ссылка на товар: [LINK:${bestUrl}]`;
+      }
+    }
   }
+  // ------------------------------------------
   
   if (lowerMsg.includes('как работает') || lowerMsg.includes('как это работает')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:how]';
