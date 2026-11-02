@@ -107,7 +107,20 @@ async function createClient() {
       serviceDetails: { env: 'node', plan: 'free', region: 'frankfurt', envSpecificDetails: { buildCommand: 'npm install', startCommand: 'node server.js' } }
     }, { headers: { Authorization: `Bearer ${RENDER_API_KEY}`, 'Content-Type': 'application/json' } });
     console.log(`✅ Render готов`);
-
+    // 7. АВТОМАТИЧЕСКИЙ ПАРСИНГ САЙТА
+    if (siteUrl) {
+      try {
+        console.log(`⏳ Запускаю парсинг сайта... Жду 10 секунд, чтобы сервер проснулся...`);
+        // Ждем 10 секунд, чтобы Render успел поднять сервер
+        await new Promise(resolve => setTimeout(resolve, 10000)); 
+        
+        // Отправляем запрос на парсинг
+        await axios.get(`https://chat-bot-${clientId}.onrender.com/crawl`);
+        console.log(`✅ Сайт успешно спарсен! База знаний заполнена.`);
+      } catch (e) {
+        console.log(`⚠️ Ошибка парсинга (сервер мог еще не проснуться): ${e.message}`);
+      }
+    }
     if (botToken && botToken !== 'НЕТ_ТОКЕНА') {
       try {
         const webhookUrl = `https://chat-bot-${clientId}.onrender.com/telegram-webhook`;
