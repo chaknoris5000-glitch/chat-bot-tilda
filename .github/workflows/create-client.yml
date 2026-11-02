@@ -45,8 +45,8 @@ jobs:
           SUPABASE_TOKEN: ${{ secrets.SUPABASE_TOKEN }}
           SUPABASE_URL: ${{ secrets.COMMON_SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.COMMON_SUPABASE_KEY }}
-          OPENROUTER_KEY: ${{ secrets.COMMON_OPENROUTER_KEY }}
-          FIRECRAWL_KEY: ${{ secrets.COMMON_FIRECRAWL_KEY }}
+          OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
+          FIRECRAWL_KEY: ${{ secrets.FIRECRAWL_KEY }}
           YOOKASSA_SHOP_ID: ${{ secrets.YOOKASSA_SHOP_ID }}
           YOOKASSA_SECRET_KEY: ${{ secrets.YOOKASSA_SECRET_KEY }}
         run: |
