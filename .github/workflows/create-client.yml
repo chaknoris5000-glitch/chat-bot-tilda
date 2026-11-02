@@ -47,7 +47,6 @@ jobs:
           COMMON_SUPABASE_KEY: ${{ secrets.COMMON_SUPABASE_KEY }}
           COMMON_OPENROUTER_KEY: ${{ secrets.COMMON_OPENROUTER_KEY }}
           COMMON_FIRECRAWL_KEY: ${{ secrets.COMMON_FIRECRAWL_KEY }}
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           YOOKASSA_SHOP_ID: ${{ secrets.YOOKASSA_SHOP_ID }}
           YOOKASSA_SECRET_KEY: ${{ secrets.YOOKASSA_SECRET_KEY }}
         run: |
