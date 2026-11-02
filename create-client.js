@@ -10,7 +10,7 @@ const businessName = process.argv[3];
 const siteUrl = process.argv[4];
 const timezone = process.argv[5] || 'Europe/Moscow';
 const managerChatId = process.argv[6];
-const botToken = process.argv[7];
+const botToken = (process.argv[7] || '').trim().replace(/['"]/g, '');
 const ownerTelegramId = process.argv[8];
 
 async function generatePrompt(businessName, siteUrl) {
