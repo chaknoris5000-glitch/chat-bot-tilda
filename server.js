@@ -1403,6 +1403,9 @@ cron.schedule('0 10 * * *', async () => {
   }
 });
 
+app.get('/crm', (req, res) => {
+  res.sendFile(path.join(__dirname, 'crm.html'));
+});
 app.get('/app', (req, res) => {
   res.sendFile(path.join(__dirname, 'app.html'));
 });
