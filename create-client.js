@@ -103,6 +103,10 @@ async function createClient() {
         { key: 'FIRECRAWL_KEY', value: process.env.FIRECRAWL_KEY },
         { key: 'YOOKASSA_SHOP_ID', value: process.env.YOOKASSA_SHOP_ID },
         { key: 'YOOKASSA_SECRET_KEY', value: process.env.YOOKASSA_SECRET_KEY }
+        { key: 'OPENROUTER_KEY', value: process.env.OPENROUTER_KEY || process.env.COMMON_OPENROUTER_KEY }, 
+        { key: 'FIRECRAWL_KEY', value: process.env.FIRECRAWL_KEY || process.env.COMMON_FIRECRAWL_KEY },
+        { key: 'YOOKASSA_SHOP_ID', value: process.env.YOOKASSA_SHOP_ID || process.env.COMMON_YOOKASSA_SHOP_ID },
+        { key: 'YOOKASSA_SECRET_KEY', value: process.env.YOOKASSA_SECRET_KEY || process.env.COMMON_YOOKASSA_SECRET_KEY }
       ],
       serviceDetails: { env: 'node', plan: 'free', region: 'frankfurt', envSpecificDetails: { buildCommand: 'npm install', startCommand: 'node server.js' } }
     }, { headers: { Authorization: `Bearer ${RENDER_API_KEY}`, 'Content-Type': 'application/json' } });
