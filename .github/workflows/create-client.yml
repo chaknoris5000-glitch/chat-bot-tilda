@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       client_id:
-        description: 'ID клиента'
+        description: 'ID клиента (например: salon1)'
         required: true
       business_name:
         description: 'Название бизнеса'
@@ -23,7 +23,6 @@ on:
       owner_telegram_id:
         description: 'Telegram ID владельца'
         required: false
-
 jobs:
   create:
     runs-on: ubuntu-latest
