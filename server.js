@@ -2,7 +2,6 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const cron = require('node-cron');
-// Добавляем библиотеку для проверки Telegram
 const { AuthDataValidator } = require('@telegram-auth/server');
 const { urlStrToAuthDataMap } = require('@telegram-auth/server/utils');
 
@@ -17,7 +16,6 @@ const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || '';
 const MANAGER_CHAT_ID = process.env.MANAGER_CHAT_ID || '';
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
-// ДОБАВЛЕНО ДЛЯ АВТОМАТИКИ: Используем общую базу для новых клиентов
 const COMMON_SUPABASE_URL = process.env.COMMON_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const COMMON_SUPABASE_KEY = process.env.COMMON_SUPABASE_KEY || process.env.SUPABASE_KEY || '';
 
@@ -38,37 +36,18 @@ const YOOKASSA_SECRET_KEY = process.env.YOOKASSA_SECRET_KEY || '';
 const YOOKASSA_RETURN_URL = process.env.YOOKASSA_RETURN_URL || 'https://t.me/vadim602_bot';
 
 const TARIFFS = {
-  'start': { 
-    name: 'Старт', 
-    amountMonth: Number(process.env.TARIFF_START_MONTH) || 1990, 
-    amountYear: Number(process.env.TARIFF_START_YEAR) || 14900 
-  },
-  'business': { 
-    name: 'Бизнес', 
-    amountMonth: Number(process.env.TARIFF_BUSINESS_MONTH) || 2490, 
-    amountYear: Number(process.env.TARIFF_BUSINESS_YEAR) || 19900 
-  },
-  'unlimited': { 
-    name: 'Безлимит', 
-    amountMonth: Number(process.env.TARIFF_UNLIMITED_MONTH) || 4990, 
-    amountYear: Number(process.env.TARIFF_UNLIMITED_YEAR) || 39900 
-  },
-  'result': { 
-    name: 'За результат', 
-    amountMonth: 25, 
-    amountYear: 25 
-  }
+  'start': { name: 'Старт', amountMonth: 1990, amountYear: 14900 },
+  'business': { name: 'Бизнес', amountMonth: 2490, amountYear: 19900 },
+  'unlimited': { name: 'Безлимит', amountMonth: 4990, amountYear: 39900 },
+  'result': { name: 'За результат', amountMonth: 25, amountYear: 25 }
 };
 
 const processedUpdates = new Set();
-const newClientStates = {}; // Память для пошагового создания
-const BUSINESS_PROMPT = process.env.BUSINESS_PROMPT || `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам... (остальной дефолтный текст)`;
-
-// ========== КЛИЕНТЫ И ОПЛАТА ==========
+const newClientStates = {};
+const BUSINESS_PROMPT = process.env.BUSINESS_PROMPT || `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам...`;
 
 async function getClient(clientId) {
   try {
-    // Если это главный бот Тильда, он ищет себя в СВОЕЙ базе Tilda_bot (используя старые переменные)
     const isTilda = clientId === 'tilda';
     const url = isTilda ? SUPABASE_URL : COMMON_SUPABASE_URL;
     const key = isTilda ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
@@ -159,8 +138,6 @@ async function createYookassaPayment(chatId, tariffKey, period = 'month') {
   }
 }
 
-// ========== БАЗОВЫЕ ФУНКЦИИ ==========
-
 async function getEmbedding(text) {
   const r = await fetch('https://openrouter.ai/api/v1/embeddings', {
     method: 'POST',
@@ -200,9 +177,11 @@ async function getTelegramFileUrl(fileId) {
 
 async function searchDocuments(queryEmbedding, limit = 8) {
   try {
-    // ИСПРАВЛЕНО: Сначала фильтр client_id, потом select
-    const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/documents?client_id=eq.${CLIENT_ID}&select=id,content,url,embedding`, {
-      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
+    const targetUrl = CLIENT_ID === 'tilda' ? SUPABASE_URL : COMMON_SUPABASE_URL;
+    const targetKey = CLIENT_ID === 'tilda' ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
+
+    const r = await fetch(`${targetUrl}/rest/v1/documents?client_id=eq.${CLIENT_ID}&select=id,content,url,embedding`, {
+      headers: { 'apikey': targetKey, 'Authorization': `Bearer ${targetKey}` }
     });
     if (!r.ok) { console.log('Supabase fetch error'); return []; }
     const docs = await r.json();
@@ -236,7 +215,6 @@ async function searchDocuments(queryEmbedding, limit = 8) {
 }
 
 async function saveDocument(content, embedding, url) {
-  // Если это Тильда — пишем в её базу, иначе в общую
   const targetUrl = CLIENT_ID === 'tilda' ? SUPABASE_URL : COMMON_SUPABASE_URL;
   const targetKey = CLIENT_ID === 'tilda' ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
 
@@ -275,11 +253,14 @@ async function getOrCreateSession(sessionId) {
     return { session_id: sessionId, history: [], client_id: CLIENT_ID };
   } catch (e) { return { session_id: sessionId, history: [], client_id: CLIENT_ID }; }
 }
+
 async function getSessionByTelegram(chatId) {
   try {
-    // ИСПРАВЛЕНО: добавлен фильтр client_id
-    const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/chat_sessions?telegram_chat_id=eq.${chatId}&client_id=eq.${CLIENT_ID}&select=*&order=updated_at.desc&limit=1`, {
-      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
+    const targetUrl = CLIENT_ID === 'tilda' ? SUPABASE_URL : COMMON_SUPABASE_URL;
+    const targetKey = CLIENT_ID === 'tilda' ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
+    
+    const r = await fetch(`${targetUrl}/rest/v1/chat_sessions?telegram_chat_id=eq.${chatId}&client_id=eq.${CLIENT_ID}&select=*&order=updated_at.desc&limit=1`, {
+      headers: { 'apikey': targetKey, 'Authorization': `Bearer ${targetKey}` }
     });
     const rows = await r.json();
     return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
@@ -302,10 +283,10 @@ async function updateSession(sessionId, patch) {
 async function saveLead(sessionId, name, phone, problem, source = 'site') {
   try {
     const targetUrl = CLIENT_ID === 'tilda' ? SUPABASE_URL : COMMON_SUPABASE_URL;
-const targetKey = CLIENT_ID === 'tilda' ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
-const r = await fetch(`${targetUrl}/rest/v1/leads`, {
+    const targetKey = CLIENT_ID === 'tilda' ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
+    const r = await fetch(`${targetUrl}/rest/v1/leads`, {
       method: 'POST',
-              headers: { 'apikey': targetKey, 'Authorization': `Bearer ${targetKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      headers: { 'apikey': targetKey, 'Authorization': `Bearer ${targetKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
       body: JSON.stringify({ session_id: sessionId, client_id: CLIENT_ID, name: name || null, phone: phone || null, problem: problem || null, source, status: 'new' })
     });
     const inserted = await r.json();
@@ -317,8 +298,6 @@ const r = await fetch(`${targetUrl}/rest/v1/leads`, {
     return 0;
   }
 }
-
-// ========== TELEGRAM API ==========
 
 async function sendTelegram(chatId, text, keyboard = null) {
   const body = { chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: false };
@@ -360,8 +339,6 @@ async function editMessage(chatId, messageId, text, keyboard = null) {
     body: JSON.stringify(body)
   });
 }
-
-// ========== ЛОГИКА ЗАЯВОК ==========
 
 function extractLeadData(text) {
   const data = { name: null, phone: null, problem: null, save: false };
@@ -419,12 +396,10 @@ async function notifyManager(lead, leadId) {
   }
 }
 
-// ========== ИИ ==========
-
 async function askAI(message, history, sessionId) {
   let context = '';
   try {
-        const emb = await getEmbedding(message);
+    const emb = await getEmbedding(message);
     const matches = await searchDocuments(emb, 8);
     if (matches.length > 0) {
       context = matches.map(m => m.content).join('\n\n---\n\n');
@@ -483,7 +458,7 @@ async function askAI(message, history, sessionId) {
 БАЗА ЗНАНИЙ:
 ${context || 'Информация временно недоступна.'}`;
 
-    const limitPrompt = systemPrompt + "\n\nВАЖНО: Отвечай кратко (1-2 предложения). Твоя главная цель — узнать Имя, Телефон и суть запроса. Когда клиент их назвал — ОБЯЗАТЕЛЬНО добавь в самом конце: [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:суть]. Не пиши, что заявка оформлена, пока не добавишь этот тег.";
+  const limitPrompt = systemPrompt + "\n\nВАЖНО: Отвечай кратко (1-2 предложения). Твоя главная цель — узнать Имя, Телефон и суть запроса. Когда клиент их назвал — ОБЯЗАТЕЛЬНО добавь в самом конце: [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:суть]. Не пиши, что заявка оформлена, пока не добавишь этот тег.";
   const messages = [
     { role: 'system', content: limitPrompt },
     ...(history || []).slice(-10),
@@ -501,7 +476,7 @@ ${context || 'Информация временно недоступна.'}`;
 
   const lowerMsg = message.toLowerCase();
   
-    if (lowerMsg.includes('тариф') || lowerMsg.includes('цен') || lowerMsg.includes('стоимост') || lowerMsg.includes('подробн')) {
+  if (lowerMsg.includes('тариф') || lowerMsg.includes('цен') || lowerMsg.includes('стоимост') || lowerMsg.includes('подробн')) {
     reply = `Есть 4 тарифа:
     
 1. <b>Старт</b> — ${TARIFFS.start.amountMonth} ₽/мес (до 100 заявок)
@@ -569,7 +544,7 @@ ${context || 'Информация временно недоступна.'}`;
 
   const leadData = extractLeadData(reply); 
   console.log('🔍 Проверка лида:', JSON.stringify(leadData));
-    // Если ИИ не поставил тег, но в тексте есть телефон — сохраняем принудительно
+  
   if (!leadData.save) {
     const phoneMatch = reply.match(/(\+?\d{10,15})/);
     const nameMatch = reply.match(/(?:меня зовут|зовут|имя[:\s]+)\s*([А-ЯЁ][а-яё]+)/i);
@@ -590,8 +565,6 @@ ${context || 'Информация временно недоступна.'}`;
 
   return cleanReply(reply);
 }
-
-// ========== ЭКСПОРТ XLSX ==========
 
 async function buildXlsx(leads, title = 'Заявки') {
   const ExcelJS = require('exceljs');
@@ -671,8 +644,6 @@ function statsBlock(leads, periodLabel) {
     `💰 По тарифу «за результат»: <b>${total} × ${PRICE_PER_LEAD} ₽ = ${sum} ₽</b>`;
 }
 
-// ========== HEALTH ==========
-
 app.get('/health', (req, res) => {
   res.json({ ok: true, time: new Date().toISOString(), uptime: process.uptime(), client_id: CLIENT_ID });
 });
@@ -680,8 +651,6 @@ app.get('/health', (req, res) => {
 app.get('/', (req, res) => {
   res.json({ ok: true, service: 'AI-Администратор Tilda', client_id: CLIENT_ID, time: new Date().toISOString() });
 });
-
-// ========== ВЕБХУКИ ==========
 
 app.post('/yookassa-webhook', async (req, res) => {
   res.sendStatus(200);
@@ -752,10 +721,9 @@ app.post('/telegram-webhook', async (req, res) => {
   res.sendStatus(200);
 
   try {
-        const updateId = req.body.update_id;
+    const updateId = req.body.update_id;
     if (updateId) {
       if (processedUpdates.has(updateId)) {
-        console.log('♻️ Дубль пропущен:', updateId);
         return;
       }
       processedUpdates.add(updateId);
@@ -879,7 +847,7 @@ app.post('/telegram-webhook', async (req, res) => {
       const parts = text.split(' ');
       const payload = parts[1] || '';
 
-                        if (payload.startsWith('sess_')) {
+      if (payload.startsWith('sess_')) {
         const sessId = payload;
         await getOrCreateSession(sessId);
         await updateSession(sessId, { telegram_chat_id: chatId });
@@ -888,17 +856,13 @@ app.post('/telegram-webhook', async (req, res) => {
         const history = sessionData.history || [];
         
         if (history.length > 0) {
-          // Берем последние 4 сообщения из виджета
           const lastMessages = history.slice(-4).map(m => `${m.role === 'user' ? 'Клиент' : 'Бот'}: ${m.content}`).join('\n');
-          
-          // ПРОМПТ: строго 1-2 предложения, без вариантов, с опорой на суть
           const prompt = `Клиент перешел с сайта в Telegram. Вот последние сообщения из их диалога:\n${lastMessages}\n\nНапиши ОДНО короткое (1-2 предложения) приветствие, которое логично продолжит этот диалог. Опирайся на то, что клиент хотел (например, настройка бота, тарифы, спорт). НЕ пиши варианты ответов, НЕ пиши "Или...", НЕ пиши списки. Просто напиши естественное приветствие, которое укладывается в лимит.`;
           
           try {
              const aiResp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                method: 'POST',
                headers: { 'Authorization': `Bearer ${OPENROUTER_KEY}`, 'Content-Type': 'application/json' },
-               // Увеличиваем лимит токенов до 150, чтобы точно хватило на 1-2 предложения
                body: JSON.stringify({ model: AI_MODEL_CHAT, messages: [{ role: 'user', content: prompt }], max_tokens: 150 })
              });
              const aiData = await aiResp.json();
@@ -968,7 +932,6 @@ app.post('/telegram-webhook', async (req, res) => {
       }
 
       if (CLIENT_ID === 'tilda') {
-        // Твоё личное, неизменное приветствие
         await sendTelegram(chatId, 
           `Здравствуйте! 👋\n\n` +
           `Я AI-Администратор — отвечаю клиентам 24/7, собираю заявки и помогаю с ними работать.\n\n` +
@@ -976,7 +939,6 @@ app.post('/telegram-webhook', async (req, res) => {
           [[{ text: '💳 Посмотреть тарифы', callback_data: 'menu_bill' }], [{ text: '🌐 Открыть сайт', url: BASE_URL }]]
         );
       } else {
-        // Приветствие для клиентов (Лиза и все будущие)
         await sendTelegram(chatId, 
           `Здравствуйте! 👋\n\n` +
           `Я AI-Администратор компании «${BUSINESS_NAME}». Отвечаю на вопросы, помогаю с записью и собираю заявки.\n\n` +
@@ -984,10 +946,9 @@ app.post('/telegram-webhook', async (req, res) => {
           [[{ text: '🌐 Перейти на сайт', url: BASE_URL }]]
         );
       }
-      return; //
-    } //
+      return; 
+    } 
 
-    // --- ПОШАГОВОЕ СОЗДАНИЕ КЛИЕНТА ---
     if (isManager && text === '/newclient') {
       newClientStates[chatId] = { step: 'waiting_for_id' };
       await sendTelegram(chatId, 'Шаг 1 из 4. Напиши ID клиента (латиницей, без пробелов, например: salon1):');
@@ -1041,7 +1002,6 @@ app.post('/telegram-webhook', async (req, res) => {
       }
     }
 
-    // --- ОСТАЛЬНЫЕ КОМАНДЫ ---
     if (isManager && text === '/leads') {
       const leads = (await fetchLeads()).slice(0, 10);
       if (leads.length === 0) { await sendTelegram(chatId, 'Заявок пока нет.'); return; }
@@ -1219,14 +1179,13 @@ app.post('/telegram-webhook', async (req, res) => {
 
 app.get('/crawl', async (req, res) => {
   try {
-    // ИСПОЛЬЗУЕМ FIRECRAWL: Он умеет забирать футер (контакты), в отличие от Jina
     const scrape = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${FIRECRAWL_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         url: SITE_TO_CRAWL, 
         formats: ['markdown'],
-        onlyMainContent: false // <--- ГЛАВНЫЙ ФИКС: Забирает весь текст, включая подвал
+        onlyMainContent: false
       })
     });
     
@@ -1258,8 +1217,6 @@ app.get('/crawl', async (req, res) => {
     res.status(500).json({ error: 'Ошибка Firecrawl' });
   }
 });
-
-// ========== АВТОСВОДКИ С ЧАСОВЫМ ПОЯСОМ ==========
 
 function getLocalTime(timezone) {
   try {
@@ -1357,7 +1314,6 @@ cron.schedule('0 7 1 * *', async () => {
   } catch (e) { console.log('cron month error:', e.message); }
 });
 
-// ========== НАПОМИНАНИЯ ОБ ОПЛАТЕ С КНОПКОЙ ==========
 cron.schedule('0 10 * * *', async () => { 
   try {
     const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/clients?select=*`, {
@@ -1378,7 +1334,6 @@ cron.schedule('0 10 * * *', async () => {
       const diffTime = paidDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      // Если остался 1 день (завтра конец)
       if (diffDays === 1) {
         const chatId = client.chat_id || MANAGER_CHAT_ID;
         if (chatId) {
@@ -1406,9 +1361,11 @@ cron.schedule('0 10 * * *', async () => {
 app.get('/crm', (req, res) => {
   res.sendFile(path.join(__dirname, 'crm.html'));
 });
+
 app.get('/app', (req, res) => {
   res.sendFile(path.join(__dirname, 'app.html'));
 });
+
 app.all('/auth/telegram', async (req, res) => {
   try {
     const params = req.method === 'GET' ? req.query : req.body;
@@ -1429,7 +1386,6 @@ app.all('/auth/telegram', async (req, res) => {
       throw new Error('Неверная подпись');
     }
 
-    // Возвращаем JSON, а не редирект
     res.json({ ok: true, telegram_id: data.id, first_name: data.first_name });
     
   } catch (e) {
@@ -1437,13 +1393,10 @@ app.all('/auth/telegram', async (req, res) => {
     res.status(401).json({ ok: false, error: 'Неверная подпись' });
   }
 });
-// ========== СОЗДАНИЕ КЛИЕНТА ИЗ CRM ==========
+
 app.post('/api/create-client', async (req, res) => {
   try {
-        const { client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id } = req.body;
-    
-    // Проверка, что запрос пришел от тебя (по ID)
-    // (Для простоты мы доверяем запросу, так как страница CRM защищена входом)
+    const { client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id } = req.body;
     
     const ghRes = await fetch(`https://api.github.com/repos/chaknoris5000-glitch/chat-bot-tilda/actions/workflows/create-client.yml/dispatches`, {
       method: 'POST',
@@ -1454,7 +1407,15 @@ app.post('/api/create-client', async (req, res) => {
       },
       body: JSON.stringify({
         ref: 'main',
-                inputs: { client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id }
+        inputs: { 
+          client_id, 
+          business_name, 
+          site_url, 
+          timezone, 
+          manager_chat_id, 
+          bot_token: bot_token || "",
+          owner_telegram_id: String(owner_telegram_id || "").trim()
+        }
       })
     });
 
@@ -1469,12 +1430,12 @@ app.post('/api/create-client', async (req, res) => {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
+
 app.post('/api/support', async (req, res) => {
   try {
     const { message, user_id, name } = req.body;
     if (!message) return res.status(400).json({ ok: false });
 
-    // Отправляем сообщение тебе (Админу)
     if (MANAGER_CHAT_ID) {
       await sendTelegram(MANAGER_CHAT_ID, `🆘 <b>Обращение в поддержку</b>\n\nОт: ${name} (ID: ${user_id})\n\nСообщение:\n${message}`);
     }
@@ -1484,7 +1445,6 @@ app.post('/api/support', async (req, res) => {
   }
 });
 
- // 1. Создание платежа ЮKassa
 app.post('/api/create-payment', async (req, res) => {
   try {
     const { chat_id, tariff, period } = req.body;
@@ -1499,12 +1459,10 @@ app.post('/api/create-payment', async (req, res) => {
   }
 });
 
-// 2. Уведомление о подключении тарифа "За результат"
 app.post('/api/connect-result', async (req, res) => {
   try {
     const { chat_id, name, manager_id } = req.body;
     
-    // Отправляем уведомление Админу (менеджеру)
     if (manager_id) {
       await sendTelegram(manager_id, `🔥 <b>Новое подключение!</b>\n\nКлиент: ${name} (ID: ${chat_id})\nТариф: За результат (25 ₽/заявка)\n\n<i>Оплата будет формироваться по факту заявок.</i>`);
     }
@@ -1513,6 +1471,7 @@ app.post('/api/connect-result', async (req, res) => {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
+
 app.get('/api/get-leads', async (req, res) => {
   try {
     const { client_id } = req.query;
@@ -1530,6 +1489,7 @@ app.get('/api/get-leads', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
 app.get('/api/get-client-by-owner', async (req, res) => {
   try {
     const { owner_telegram_id } = req.query;
@@ -1545,7 +1505,7 @@ app.get('/api/get-client-by-owner', async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
-}); //
+});
 
 app.listen(PORT, () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
