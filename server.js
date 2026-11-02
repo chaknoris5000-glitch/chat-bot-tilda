@@ -972,6 +972,7 @@ app.post('/telegram-webhook', async (req, res) => {
 
     // --- ПОШАГОВОЕ СОЗДАНИЕ КЛИЕНТА ---
     if (isManager && text === '/newclient') {
+      
       newClientStates[chatId] = { step: 'waiting_for_id' };
       await sendTelegram(chatId, 'Шаг 1 из 4. Напиши ID клиента (латиницей, без пробелов, например: salon1):');
       return;
@@ -1012,17 +1013,22 @@ app.post('/telegram-webhook', async (req, res) => {
         await sendTelegram(chatId, `⏳ Отправляю запрос на GitHub...`);
         
         try {
-          const res = await fetch(`https://api.github.com/repos/chaknoris5000-glitch/chat-bot-tilda/actions/workflows/create-client.yml/dispatches`, {
+                    const res = await fetch(`https://api.github.com/repos/.../dispatches`, {
             method: 'POST',
-            headers: { 'Authorization': `token ${process.env.MY_GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ref: 'main', inputs: { client_id: cid, business_name: bname, site_url: site, timezone: tz, manager_chat_id: chatId.toString() } })
+            headers: { ... },
+            body: JSON.stringify({ 
+              ref: 'main', 
+              inputs: { 
+                client_id: cid, 
+                business_name: bname, 
+                site_url: site, 
+                timezone: tz, 
+                manager_chat_id: chatId.toString(),
+                bot_token: '', 
+                owner_telegram_id: chatId.toString() // <--- ВОТ СЮДА НУЖНО ДОБАВИТЬ
+              } 
+            })
           });
-          if (res.ok) await sendTelegram(chatId, `🚀 Задача запущена на серверах GitHub! Проверь папку "Действия" (Actions).`);
-          else await sendTelegram(chatId, `❌ Ошибка GitHub: ${await res.text()}`);
-        } catch (e) { await sendTelegram(chatId, `❌ Ошибка связи: ${e.message}`); }
-        return;
-      }
-    }
 
     // --- ОСТАЛЬНЫЕ КОМАНДЫ ---
     if (isManager && text === '/leads') {
@@ -1504,22 +1510,19 @@ app.get('/api/get-leads', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-app.get('/api/get-client-by-owner', async (req, res) => {
+app.get('/api/get-my-client', async (req, res) => {
   try {
     const { owner_telegram_id } = req.query;
-    const url = `${COMMON_SUPABASE_URL}/rest/v1/clients?select=*&owner_telegram_id=eq.${owner_telegram_id}`;
+    const url = `${COMMON_SUPABASE_URL}/rest/v1/clients?select=*&owner_telegram_id=eq.${owner_telegram_id}&limit=1`;
     const r = await fetch(url, {
-      headers: {
-        'apikey': COMMON_SUPABASE_KEY,
-        'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`
-      }
+      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
     });
     const data = await r.json();
-    res.json(data);
+    res.json(Array.isArray(data) && data.length > 0 ? data[0] : null);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
-}); //
+});
 
 app.listen(PORT, () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
