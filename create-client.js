@@ -19,7 +19,7 @@ async function generatePrompt(businessName, siteUrl) {
       model: 'deepseek/deepseek-chat',
       messages: [{ role: 'user', content: `Напиши системный промпт для ИИ-администратора компании "${businessName}" (сайт: ${siteUrl}). Промпт от первого лица. Правила: 1. Называй бизнес по имени. 2. Общайся естественно. 3. Отвечай ОЧЕНЬ коротко: 1-3 предложения. 4. НЕ используй списки. 5. Задавай ОДИН вопрос за раз. 6. Собирай заявки. 7. Не упоминай, что ты бот. 8. ОБЯЗАТЕЛЬНО добавь в конце: [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:суть]. Верни только текст.` }],
       temperature: 0.7
-    }, { headers: { 'Authorization': `Bearer ${process.env.COMMON_OPENROUTER_KEY}`, 'Content-Type': 'application/json' } });
+    }, { headers: { 'Authorization': `Bearer ${process.env.OPENROUTER_KEY}`, 'Content-Type': 'application/json' } });
     return r.data.choices[0].message.content.trim();
   } catch (e) {
     return `Ты — администратор компании «${businessName}». Отвечай коротко. Собирай заявки. Когда клиент назвал имя и телефон, добавь в конце: [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:суть]`;
@@ -99,10 +99,10 @@ async function createClient() {
         { key: 'COMMON_SUPABASE_URL', value: process.env.COMMON_SUPABASE_URL },
         { key: 'COMMON_SUPABASE_KEY', value: process.env.COMMON_SUPABASE_KEY },
         { key: 'TELEGRAM_TOKEN', value: botToken },
-        { key: 'OPENROUTER_KEY', value: process.env.COMMON_OPENROUTER_KEY }, 
-        { key: 'FIRECRAWL_KEY', value: process.env.COMMON_FIRECRAWL_KEY }, // <--- ЗАПЯТАЯ ЗДЕСЬ!
-        { key: 'YOOKASSA_SHOP_ID', value: process.env.COMMON_YOOKASSA_SHOP_ID },
-        { key: 'YOOKASSA_SECRET_KEY', value: process.env.COMMON_YOOKASSA_SECRET_KEY }
+        { key: 'OPENROUTER_KEY', value: process.env.OPENROUTER_KEY },
+        { key: 'FIRECRAWL_KEY', value: process.env.FIRECRAWL_KEY },
+        { key: 'YOOKASSA_SHOP_ID', value: process.env.YOOKASSA_SHOP_ID },
+        { key: 'YOOKASSA_SECRET_KEY', value: process.env.YOOKASSA_SECRET_KEY }
       ],
       serviceDetails: { env: 'node', plan: 'free', region: 'frankfurt', envSpecificDetails: { buildCommand: 'npm install', startCommand: 'node server.js' } }
     }, { headers: { Authorization: `Bearer ${RENDER_API_KEY}`, 'Content-Type': 'application/json' } });
