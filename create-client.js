@@ -149,7 +149,7 @@ async function createClient() {
         { key: 'COMMON_SUPABASE_KEY', value: process.env.COMMON_SUPABASE_KEY },
         { key: 'TELEGRAM_TOKEN', value: botToken },
         { key: 'OPENROUTER_KEY', value: process.env.COMMON_OPENROUTER_KEY }, 
-        { key: 'FIRECRAWL_KEY', value: process.env.COMMON_FIRECRAWL_KEY }
+        { key: 'FIRECRAWL_KEY', value: process.env.COMMON_FIRECRAWL_KEY },
         { key: 'YOOKASSA_SHOP_ID', value: process.env.COMMON_YOOKASSA_SHOP_ID },
         { key: 'YOOKASSA_SECRET_KEY', value: process.env.COMMON_YOOKASSA_SECRET_KEY },
       ],
