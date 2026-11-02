@@ -4,25 +4,25 @@ on:
     inputs:
       client_id:
         description: 'ID клиента (например: salon1)'
-        required: false
+        required: true
       business_name:
         description: 'Название бизнеса'
-        required: false
+        required: true
       site_url:
         description: 'Ссылка на сайт'
-        required: false
+        required: true
       timezone:
         description: 'Часовой пояс'
         default: 'Europe/Moscow'
       manager_chat_id:
         description: 'Chat ID менеджера'
-        required: false
+        required: true
       bot_token:
         description: 'Токен Telegram-бота'
-        required: false
+        required: true
       owner_telegram_id:
         description: 'Telegram ID владельца'
-        required: false
+        required: true
 jobs:
   create:
     runs-on: ubuntu-latest
