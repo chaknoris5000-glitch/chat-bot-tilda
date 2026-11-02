@@ -11,7 +11,7 @@ const siteUrl = process.argv[4];
 const timezone = process.argv[5] || 'Europe/Moscow';
 const managerChatId = process.argv[6];
 const botToken = process.argv[7];
-const ownerTelegramId = process.argv[8]; 
+const ownerTelegramId = process.argv[8];
 
 async function generatePrompt(businessName, siteUrl) {
   try {
@@ -19,7 +19,7 @@ async function generatePrompt(businessName, siteUrl) {
       model: 'deepseek/deepseek-chat',
       messages: [{ role: 'user', content: `Напиши системный промпт для ИИ-администратора компании "${businessName}" (сайт: ${siteUrl}). Промпт от первого лица. Правила: 1. Называй бизнес по имени. 2. Общайся естественно. 3. Отвечай ОЧЕНЬ коротко: 1-3 предложения. 4. НЕ используй списки. 5. Задавай ОДИН вопрос за раз. 6. Собирай заявки. 7. Не упоминай, что ты бот. 8. ОБЯЗАТЕЛЬНО добавь в конце: [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:суть]. Верни только текст.` }],
       temperature: 0.7
-    }, { headers: { 'Authorization': `Bearer ${process.env.OPENROUTER_KEY}`, 'Content-Type': 'application/json' } });
+    }, { headers: { 'Authorization': `Bearer ${process.env.COMMON_OPENROUTER_KEY}`, 'Content-Type': 'application/json' } });
     return r.data.choices[0].message.content.trim();
   } catch (e) {
     return `Ты — администратор компании «${businessName}». Отвечай коротко. Собирай заявки. Когда клиент назвал имя и телефон, добавь в конце: [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:суть]`;
@@ -51,6 +51,7 @@ async function createClient() {
     serverCode = serverCode.replace(/const SITE_TO_CRAWL = .*?;/, `const SITE_TO_CRAWL = '${siteUrl}';`);
     serverCode = serverCode.replace(/const BASE_URL = .*?;/, `const BASE_URL = '${siteUrl}';`);
 
+    // Вырезаем блоки Тильды (тарифы и демо)
     serverCode = serverCode.replace(/if \(lowerMsg\.includes\('тариф'\).*?\}\n/s, '');
     serverCode = serverCode.replace(/if \(lowerMsg\.includes\('пример'\).*?\}\n/s, '');
 
@@ -77,7 +78,6 @@ async function createClient() {
         paid_until: new Date(Date.now() + 7 * 86400000).toISOString(),
         timezone: timezone,
         prompt: null,
-        // БЕЗОПАСНАЯ ПРОВЕРКА ID
         owner_telegram_id: (ownerTelegramId && !isNaN(ownerTelegramId) && ownerTelegramId !== 'НЕТ_ТОКЕНА') ? Number(ownerTelegramId) : null
       }, { headers: { 'apikey': commonSupabaseKey, 'Authorization': `Bearer ${commonSupabaseKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' } });
       console.log(`✅ Клиент добавлен в базу`);
@@ -99,32 +99,26 @@ async function createClient() {
         { key: 'COMMON_SUPABASE_URL', value: process.env.COMMON_SUPABASE_URL },
         { key: 'COMMON_SUPABASE_KEY', value: process.env.COMMON_SUPABASE_KEY },
         { key: 'TELEGRAM_TOKEN', value: botToken },
-        { key: 'OPENROUTER_KEY', value: process.env.OPENROUTER_KEY },
-        { key: 'FIRECRAWL_KEY', value: process.env.FIRECRAWL_KEY },
+        { key: 'OPENROUTER_KEY', value: process.env.COMMON_OPENROUTER_KEY },
+        { key: 'FIRECRAWL_KEY', value: process.env.COMMON_FIRECRAWL_KEY },
         { key: 'YOOKASSA_SHOP_ID', value: process.env.YOOKASSA_SHOP_ID },
         { key: 'YOOKASSA_SECRET_KEY', value: process.env.YOOKASSA_SECRET_KEY }
-        { key: 'OPENROUTER_KEY', value: process.env.OPENROUTER_KEY || process.env.COMMON_OPENROUTER_KEY }, 
-        { key: 'FIRECRAWL_KEY', value: process.env.FIRECRAWL_KEY || process.env.COMMON_FIRECRAWL_KEY },
-        { key: 'YOOKASSA_SHOP_ID', value: process.env.YOOKASSA_SHOP_ID || process.env.COMMON_YOOKASSA_SHOP_ID },
-        { key: 'YOOKASSA_SECRET_KEY', value: process.env.YOOKASSA_SECRET_KEY || process.env.COMMON_YOOKASSA_SECRET_KEY }
       ],
       serviceDetails: { env: 'node', plan: 'free', region: 'frankfurt', envSpecificDetails: { buildCommand: 'npm install', startCommand: 'node server.js' } }
     }, { headers: { Authorization: `Bearer ${RENDER_API_KEY}`, 'Content-Type': 'application/json' } });
     console.log(`✅ Render готов`);
-    // 7. АВТОМАТИЧЕСКИЙ ПАРСИНГ САЙТА
+
     if (siteUrl) {
       try {
         console.log(`⏳ Запускаю парсинг сайта... Жду 10 секунд, чтобы сервер проснулся...`);
-        // Ждем 10 секунд, чтобы Render успел поднять сервер
         await new Promise(resolve => setTimeout(resolve, 10000)); 
-        
-        // Отправляем запрос на парсинг
         await axios.get(`https://chat-bot-${clientId}.onrender.com/crawl`);
         console.log(`✅ Сайт успешно спарсен! База знаний заполнена.`);
       } catch (e) {
         console.log(`⚠️ Ошибка парсинга (сервер мог еще не проснуться): ${e.message}`);
       }
     }
+
     if (botToken && botToken !== 'НЕТ_ТОКЕНА') {
       try {
         const webhookUrl = `https://chat-bot-${clientId}.onrender.com/telegram-webhook`;
@@ -133,18 +127,9 @@ async function createClient() {
       } catch (e) { console.log(`❌ Ошибка вебхука: ${e.message}`); }
     }
 
-    if (siteUrl) {
-      try {
-        console.log(`⏳ Парсинг сайта... Жду 10 сек...`);
-        await new Promise(resolve => setTimeout(resolve, 10000)); 
-        await axios.get(`https://chat-bot-${clientId}.onrender.com/crawl`);
-        console.log(`✅ Сайт спарсен!`);
-      } catch (e) { console.log(`⚠️ Ошибка парсинга: ${e.message}`); }
-    }
-
-        } catch (e) { 
+  } catch (e) { 
     console.log(`❌ ОШИБКА: ${JSON.stringify(e.response?.data || e.message)}`); 
   }
 }
-createClient();
+// ВАЖНО: Только ОДИН вызов в конце файла!
 createClient();
