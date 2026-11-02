@@ -236,45 +236,31 @@ async function searchDocuments(queryEmbedding, limit = 8) {
 }
 
 async function saveDocument(content, embedding, url) {
-  // Если это Тильда — пишем в её базу, иначе в общую
-  const targetUrl = CLIENT_ID === 'tilda' ? SUPABASE_URL : COMMON_SUPABASE_URL;
-  const targetKey = CLIENT_ID === 'tilda' ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
-
-  await fetch(`${targetUrl}/rest/v1/documents`, {
-    method: 'POST', 
-    headers: { 
-      'apikey': targetKey, 
-      'Authorization': `Bearer ${targetKey}`, 
-      'Content-Type': 'application/json', 
-      'Prefer': 'return=minimal' 
-    },
+  await fetch(`${COMMON_SUPABASE_URL}/rest/v1/documents`, {
+    method: 'POST',
+    headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
     body: JSON.stringify({ content, embedding, url, client_id: CLIENT_ID })
   });
 }
 
 async function getOrCreateSession(sessionId) {
   try {
-    const targetUrl = CLIENT_ID === 'tilda' ? SUPABASE_URL : COMMON_SUPABASE_URL;
-    const targetKey = CLIENT_ID === 'tilda' ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
-
-    const r = await fetch(`${targetUrl}/rest/v1/chat_sessions?session_id=eq.${sessionId}&select=*`, {
-      headers: { 'apikey': targetKey, 'Authorization': `Bearer ${targetKey}` }
+    const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sessionId}&select=*`, {
+      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
     });
-    
     const rows = await r.json();
     if (Array.isArray(rows) && rows.length > 0) return rows[0];
-    
-    const ins = await fetch(`${targetUrl}/rest/v1/chat_sessions`, {
+    const ins = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/chat_sessions`, {
       method: 'POST',
-      headers: { 'apikey': targetKey, 'Authorization': `Bearer ${targetKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
       body: JSON.stringify({ session_id: sessionId, history: [], client_id: CLIENT_ID })
     });
-    
     const created = await ins.json();
     if (Array.isArray(created) && created.length > 0) return created[0];
     return { session_id: sessionId, history: [], client_id: CLIENT_ID };
   } catch (e) { return { session_id: sessionId, history: [], client_id: CLIENT_ID }; }
 }
+
 async function getSessionByTelegram(chatId) {
   try {
     // ИСПРАВЛЕНО: добавлен фильтр client_id
@@ -288,12 +274,9 @@ async function getSessionByTelegram(chatId) {
 
 async function updateSession(sessionId, patch) {
   try {
-    const targetUrl = CLIENT_ID === 'tilda' ? SUPABASE_URL : COMMON_SUPABASE_URL;
-    const targetKey = CLIENT_ID === 'tilda' ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
-
-    await fetch(`${targetUrl}/rest/v1/chat_sessions?session_id=eq.${sessionId}`, {
+    await fetch(`${COMMON_SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sessionId}`, {
       method: 'PATCH',
-      headers: { 'apikey': targetKey, 'Authorization': `Bearer ${targetKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ ...patch, updated_at: new Date().toISOString() })
     });
   } catch (e) {}
@@ -1357,7 +1340,7 @@ cron.schedule('0 7 1 * *', async () => {
   } catch (e) { console.log('cron month error:', e.message); }
 });
 
-// ========== НАПОМИНАНИЯ ОБ ОПЛАТЕ С КНОПКОЙ ==========
+// ========== НАПОМИНАНИЯ ОБ ОПЛАТЕ ==========
 cron.schedule('0 10 * * *', async () => { 
   try {
     const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/clients?select=*`, {
@@ -1378,22 +1361,13 @@ cron.schedule('0 10 * * *', async () => {
       const diffTime = paidDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      // Если остался 1 день (завтра конец)
       if (diffDays === 1) {
         const chatId = client.chat_id || MANAGER_CHAT_ID;
         if (chatId) {
-          const botUsername = TELEGRAM_TOKEN ? (await (await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getMe`)).json()).result.username : '';
-          
-          const keyboard = [];
-          if (botUsername) {
-             keyboard.push([{ text: '💳 Продлить подписку', url: `https://t.me/${botUsername}?start=pay_business_month` }]);
-          }
-
           await sendTelegram(chatId, 
             `⚠️ <b>Напоминание об оплате</b>\n\n` +
             `У клиента «${client.business_name || client.client_id}» завтра заканчивается подписка.\n` +
-            `Не забудьте продлить оплату, чтобы бот не перестал работать!`, 
-            keyboard.length > 0 ? keyboard : null
+            `Не забудьте продлить оплату, чтобы бот не перестал работать!`
           );
         }
       }
@@ -1402,10 +1376,10 @@ cron.schedule('0 10 * * *', async () => {
     console.log('Ошибка при проверке напоминаний:', e.message);
   }
 });
-
 app.get('/crm', (req, res) => {
   res.sendFile(path.join(__dirname, 'crm.html'));
 });
+
 app.get('/app', (req, res) => {
   res.sendFile(path.join(__dirname, 'app.html'));
 });
@@ -1546,13 +1520,6 @@ app.get('/api/get-client-by-owner', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 }); //
-app.get('/crm', (req, res) => {
-  res.sendFile(path.join(__dirname, 'crm.html'));
-});
-
-app.get('/app', (req, res) => {
-  res.sendFile(path.join(__dirname, 'app.html'));
-});
 
 app.listen(PORT, () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
