@@ -1454,7 +1454,7 @@ app.post('/api/create-client', async (req, res) => {
       },
       body: JSON.stringify({
         ref: 'main',
-                inputs: { client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id }
+                inputs: { client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id: String(owner_telegram_id || "").trim() }
       })
     });
 
