@@ -145,8 +145,8 @@ async function createClient() {
         { key: 'MANAGER_CHAT_ID', value: managerChatId }, 
         
         // Для клиентов используем общую базу (loans-bot)
-        { key: 'SUPABASE_URL', value: process.env.SUPABASE_URL },
-        { key: 'SUPABASE_KEY', value: process.env.SUPABASE_KEY }, 
+        { key: 'SUPABASE_URL', value: process.env.COMMON_SUPABASE_URL },
+        { key: 'SUPABASE_KEY', value: process.env.COMMON_SSUPABASE_KEY }, 
         
         { key: 'TELEGRAM_TOKEN', value: botToken },
         { key: 'OPENROUTER_KEY', value: process.env.OPENROUTER_KEY }, 
