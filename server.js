@@ -17,7 +17,6 @@ const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || '';
 const MANAGER_CHAT_ID = process.env.MANAGER_CHAT_ID || '';
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
-// ДОБАВЛЕНО ДЛЯ АВТОМАТИКИ: Используем общую базу для новых клиентов
 const COMMON_SUPABASE_URL = process.env.COMMON_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const COMMON_SUPABASE_KEY = process.env.COMMON_SUPABASE_KEY || process.env.SUPABASE_KEY || '';
 
@@ -68,7 +67,6 @@ const BUSINESS_PROMPT = process.env.BUSINESS_PROMPT || `Ты — AI-Админи
 
 async function getClient(clientId) {
   try {
-    // Если это главный бот Тильда, он ищет себя в СВОЕЙ базе Tilda_bot (используя старые переменные)
     const isTilda = clientId === 'tilda';
     const url = isTilda ? SUPABASE_URL : COMMON_SUPABASE_URL;
     const key = isTilda ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
@@ -200,7 +198,6 @@ async function getTelegramFileUrl(fileId) {
 
 async function searchDocuments(queryEmbedding, limit = 8) {
   try {
-    // ИСПРАВЛЕНО: Сначала фильтр client_id, потом select
     const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/documents?client_id=eq.${CLIENT_ID}&select=id,content,url,embedding`, {
       headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
     });
@@ -263,7 +260,6 @@ async function getOrCreateSession(sessionId) {
 
 async function getSessionByTelegram(chatId) {
   try {
-    // ИСПРАВЛЕНО: добавлен фильтр client_id
     const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/chat_sessions?telegram_chat_id=eq.${chatId}&client_id=eq.${CLIENT_ID}&select=*&order=updated_at.desc&limit=1`, {
       headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
     });
@@ -552,7 +548,6 @@ ${context || 'Информация временно недоступна.'}`;
 
   const leadData = extractLeadData(reply); 
   console.log('🔍 Проверка лида:', JSON.stringify(leadData));
-    // Если ИИ не поставил тег, но в тексте есть телефон — сохраняем принудительно
   if (!leadData.save) {
     const phoneMatch = reply.match(/(\+?\d{10,15})/);
     const nameMatch = reply.match(/(?:меня зовут|зовут|имя[:\s]+)\s*([А-ЯЁ][а-яё]+)/i);
@@ -871,17 +866,13 @@ app.post('/telegram-webhook', async (req, res) => {
         const history = sessionData.history || [];
         
         if (history.length > 0) {
-          // Берем последние 4 сообщения из виджета
           const lastMessages = history.slice(-4).map(m => `${m.role === 'user' ? 'Клиент' : 'Бот'}: ${m.content}`).join('\n');
-          
-          // ПРОМПТ: строго 1-2 предложения, без вариантов, с опорой на суть
           const prompt = `Клиент перешел с сайта в Telegram. Вот последние сообщения из их диалога:\n${lastMessages}\n\nНапиши ОДНО короткое (1-2 предложения) приветствие, которое логично продолжит этот диалог. Опирайся на то, что клиент хотел (например, настройка бота, тарифы, спорт). НЕ пиши варианты ответов, НЕ пиши "Или...", НЕ пиши списки. Просто напиши естественное приветствие, которое укладывается в лимит.`;
           
           try {
              const aiResp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                method: 'POST',
                headers: { 'Authorization': `Bearer ${OPENROUTER_KEY}`, 'Content-Type': 'application/json' },
-               // Увеличиваем лимит токенов до 150, чтобы точно хватило на 1-2 предложения
                body: JSON.stringify({ model: AI_MODEL_CHAT, messages: [{ role: 'user', content: prompt }], max_tokens: 150 })
              });
              const aiData = await aiResp.json();
@@ -951,7 +942,6 @@ app.post('/telegram-webhook', async (req, res) => {
       }
 
       if (CLIENT_ID === 'tilda') {
-        // Твоё личное, неизменное приветствие
         await sendTelegram(chatId, 
           `Здравствуйте! 👋\n\n` +
           `Я AI-Администратор — отвечаю клиентам 24/7, собираю заявки и помогаю с ними работать.\n\n` +
@@ -959,7 +949,6 @@ app.post('/telegram-webhook', async (req, res) => {
           [[{ text: '💳 Посмотреть тарифы', callback_data: 'menu_bill' }], [{ text: '🌐 Открыть сайт', url: BASE_URL }]]
         );
       } else {
-        // Приветствие для клиентов (Лиза и все будущие)
         await sendTelegram(chatId, 
           `Здравствуйте! 👋\n\n` +
           `Я AI-Администратор компании «${BUSINESS_NAME}». Отвечаю на вопросы, помогаю с записью и собираю заявки.\n\n` +
@@ -1013,9 +1002,13 @@ app.post('/telegram-webhook', async (req, res) => {
         await sendTelegram(chatId, `⏳ Отправляю запрос на GitHub...`);
         
         try {
-                    const res = await fetch(`https://api.github.com/repos/.../dispatches`, {
+                    const res = await fetch(`https://api.github.com/repos/chaknoris5000-glitch/chat-bot-tilda/actions/workflows/create-client.yml/dispatches`, {
             method: 'POST',
-            headers: { ... },
+            headers: { 
+              'Authorization': `token ${process.env.MY_GITHUB_TOKEN}`, 
+              'Accept': 'application/vnd.github.v3+json', 
+              'Content-Type': 'application/json' 
+            },
             body: JSON.stringify({ 
               ref: 'main', 
               inputs: { 
@@ -1025,10 +1018,16 @@ app.post('/telegram-webhook', async (req, res) => {
                 timezone: tz, 
                 manager_chat_id: chatId.toString(),
                 bot_token: '', 
-                owner_telegram_id: chatId.toString() // <--- ВОТ СЮДА НУЖНО ДОБАВИТЬ
+                owner_telegram_id: chatId.toString()
               } 
             })
           });
+          if (res.ok) await sendTelegram(chatId, `🚀 Задача запущена на серверах GitHub! Проверь папку "Действия" (Actions).`);
+          else await sendTelegram(chatId, `❌ Ошибка GitHub: ${await res.text()}`);
+        } catch (e) { await sendTelegram(chatId, `❌ Ошибка связи: ${e.message}`); }
+        return;
+      }
+    }
 
     // --- ОСТАЛЬНЫЕ КОМАНДЫ ---
     if (isManager && text === '/leads') {
@@ -1208,14 +1207,13 @@ app.post('/telegram-webhook', async (req, res) => {
 
 app.get('/crawl', async (req, res) => {
   try {
-    // ИСПОЛЬЗУЕМ FIRECRAWL: Он умеет забирать футер (контакты), в отличие от Jina
     const scrape = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${FIRECRAWL_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         url: SITE_TO_CRAWL, 
         formats: ['markdown'],
-        onlyMainContent: false // <--- ГЛАВНЫЙ ФИКС: Забирает весь текст, включая подвал
+        onlyMainContent: false
       })
     });
     
@@ -1409,7 +1407,6 @@ app.all('/auth/telegram', async (req, res) => {
       throw new Error('Неверная подпись');
     }
 
-    // Возвращаем JSON, а не редирект
     res.json({ ok: true, telegram_id: data.id, first_name: data.first_name });
     
   } catch (e) {
@@ -1417,13 +1414,10 @@ app.all('/auth/telegram', async (req, res) => {
     res.status(401).json({ ok: false, error: 'Неверная подпись' });
   }
 });
-// ========== СОЗДАНИЕ КЛИЕНТА ИЗ CRM ==========
+
 app.post('/api/create-client', async (req, res) => {
   try {
         const { client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id } = req.body;
-    
-    // Проверка, что запрос пришел от тебя (по ID)
-    // (Для простоты мы доверяем запросу, так как страница CRM защищена входом)
     
     const ghRes = await fetch(`https://api.github.com/repos/chaknoris5000-glitch/chat-bot-tilda/actions/workflows/create-client.yml/dispatches`, {
       method: 'POST',
@@ -1454,7 +1448,6 @@ app.post('/api/support', async (req, res) => {
     const { message, user_id, name } = req.body;
     if (!message) return res.status(400).json({ ok: false });
 
-    // Отправляем сообщение тебе (Админу)
     if (MANAGER_CHAT_ID) {
       await sendTelegram(MANAGER_CHAT_ID, `🆘 <b>Обращение в поддержку</b>\n\nОт: ${name} (ID: ${user_id})\n\nСообщение:\n${message}`);
     }
@@ -1464,7 +1457,6 @@ app.post('/api/support', async (req, res) => {
   }
 });
 
- // 1. Создание платежа ЮKassa
 app.post('/api/create-payment', async (req, res) => {
   try {
     const { chat_id, tariff, period } = req.body;
@@ -1479,12 +1471,9 @@ app.post('/api/create-payment', async (req, res) => {
   }
 });
 
-// 2. Уведомление о подключении тарифа "За результат"
 app.post('/api/connect-result', async (req, res) => {
   try {
     const { chat_id, name, manager_id } = req.body;
-    
-    // Отправляем уведомление Админу (менеджеру)
     if (manager_id) {
       await sendTelegram(manager_id, `🔥 <b>Новое подключение!</b>\n\nКлиент: ${name} (ID: ${chat_id})\nТариф: За результат (25 ₽/заявка)\n\n<i>Оплата будет формироваться по факту заявок.</i>`);
     }
