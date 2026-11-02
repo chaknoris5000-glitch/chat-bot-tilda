@@ -1546,7 +1546,13 @@ app.get('/api/get-client-by-owner', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 }); //
+app.get('/crm', (req, res) => {
+  res.sendFile(path.join(__dirname, 'crm.html'));
+});
 
+app.get('/app', (req, res) => {
+  res.sendFile(path.join(__dirname, 'app.html'));
+});
 app.listen(PORT, () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
 });
