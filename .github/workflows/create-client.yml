@@ -5,31 +5,24 @@ on:
       client_id:
         description: 'ID клиента'
         required: true
-        type: string
       business_name:
         description: 'Название бизнеса'
         required: true
-        type: string
       site_url:
         description: 'Ссылка на сайт'
         required: true
-        type: string
       timezone:
         description: 'Часовой пояс'
         default: 'Europe/Moscow'
-        type: string
       manager_chat_id:
         description: 'Chat ID менеджера'
         required: true
-        type: string
       bot_token:
         description: 'Токен Telegram-бота'
         required: true
-        type: string
       owner_telegram_id:
         description: 'Telegram ID владельца'
         required: false
-        type: string
 
 jobs:
   create:
