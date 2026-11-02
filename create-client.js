@@ -51,7 +51,6 @@ async function createClient() {
     serverCode = serverCode.replace(/const SITE_TO_CRAWL = .*?;/, `const SITE_TO_CRAWL = '${siteUrl}';`);
     serverCode = serverCode.replace(/const BASE_URL = .*?;/, `const BASE_URL = '${siteUrl}';`);
 
-    // Вырезаем блоки Тильды (тарифы и демо)
     serverCode = serverCode.replace(/if \(lowerMsg\.includes\('тариф'\).*?\}\n/s, '');
     serverCode = serverCode.replace(/if \(lowerMsg\.includes\('пример'\).*?\}\n/s, '');
 
@@ -108,9 +107,7 @@ async function createClient() {
     }, { headers: { Authorization: `Bearer ${RENDER_API_KEY}`, 'Content-Type': 'application/json' } });
     console.log(`✅ Render готов`);
 
-    if (siteUrl) {
-      try {
-           console.log(`⏳ Жду 60 секунд, чтобы Render полностью запустился...`);
+    console.log(`⏳ Жду 60 секунд, чтобы Render полностью запустился...`);
     await new Promise(resolve => setTimeout(resolve, 60000)); 
 
     if (botToken && botToken !== 'НЕТ_ТОКЕНА') {
@@ -130,3 +127,9 @@ async function createClient() {
         console.log(`⚠️ Ошибка парсинга (сервер мог еще не проснуться): ${e.message}`);
       }
     }
+
+  } catch (e) { 
+    console.log(`❌ ОШИБКА: ${JSON.stringify(e.response?.data || e.message)}`); 
+  }
+}
+createClient();
