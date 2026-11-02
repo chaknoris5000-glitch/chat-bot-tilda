@@ -236,9 +236,18 @@ async function searchDocuments(queryEmbedding, limit = 8) {
 }
 
 async function saveDocument(content, embedding, url) {
-  await fetch(`${COMMON_SUPABASE_URL}/rest/v1/documents`, {
-    method: 'POST',
-    headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+  // Если это Тильда — пишем в её базу, иначе в общую
+  const targetUrl = CLIENT_ID === 'tilda' ? SUPABASE_URL : COMMON_SUPABASE_URL;
+  const targetKey = CLIENT_ID === 'tilda' ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
+
+  await fetch(`${targetUrl}/rest/v1/documents`, {
+    method: 'POST', 
+    headers: { 
+      'apikey': targetKey, 
+      'Authorization': `Bearer ${targetKey}`, 
+      'Content-Type': 'application/json', 
+      'Prefer': 'return=minimal' 
+    },
     body: JSON.stringify({ content, embedding, url, client_id: CLIENT_ID })
   });
 }
