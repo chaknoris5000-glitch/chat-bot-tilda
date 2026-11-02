@@ -5,24 +5,32 @@ on:
       client_id:
         description: 'ID клиента (например: salon1)'
         required: true
+        type: string
       business_name:
         description: 'Название бизнеса'
         required: true
+        type: string
       site_url:
         description: 'Ссылка на сайт'
         required: true
+        type: string
       timezone:
         description: 'Часовой пояс'
         default: 'Europe/Moscow'
+        type: string
       manager_chat_id:
         description: 'Chat ID менеджера'
         required: true
+        type: string
       bot_token:
         description: 'Токен Telegram-бота'
         required: true
+        type: string
       owner_telegram_id:
         description: 'Telegram ID владельца'
-        required: true
+        required: false
+        default: ""
+        type: string
 jobs:
   create:
     runs-on: ubuntu-latest
