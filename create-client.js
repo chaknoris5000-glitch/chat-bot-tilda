@@ -110,14 +110,8 @@ async function createClient() {
 
     if (siteUrl) {
       try {
-        console.log(`⏳ Запускаю парсинг сайта... Жду 10 секунд, чтобы сервер проснулся...`);
-        await new Promise(resolve => setTimeout(resolve, 10000)); 
-        await axios.get(`https://chat-bot-${clientId}.onrender.com/crawl`);
-        console.log(`✅ Сайт успешно спарсен! База знаний заполнена.`);
-      } catch (e) {
-        console.log(`⚠️ Ошибка парсинга (сервер мог еще не проснуться): ${e.message}`);
-      }
-    }
+           console.log(`⏳ Жду 60 секунд, чтобы Render полностью запустился...`);
+    await new Promise(resolve => setTimeout(resolve, 60000)); 
 
     if (botToken && botToken !== 'НЕТ_ТОКЕНА') {
       try {
@@ -127,9 +121,12 @@ async function createClient() {
       } catch (e) { console.log(`❌ Ошибка вебхука: ${e.message}`); }
     }
 
-  } catch (e) { 
-    console.log(`❌ ОШИБКА: ${JSON.stringify(e.response?.data || e.message)}`); 
-  }
-}
-// ВАЖНО: Только ОДИН вызов в конце файла!
-createClient();
+    if (siteUrl) {
+      try {
+        console.log(`⏳ Запускаю парсинг сайта...`);
+        await axios.get(`https://chat-bot-${clientId}.onrender.com/crawl`);
+        console.log(`✅ Сайт успешно спарсен! База знаний заполнена.`);
+      } catch (e) {
+        console.log(`⚠️ Ошибка парсинга (сервер мог еще не проснуться): ${e.message}`);
+      }
+    }
