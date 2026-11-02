@@ -1341,6 +1341,7 @@ cron.schedule('0 7 1 * *', async () => {
 });
 
 // ========== НАПОМИНАНИЯ ОБ ОПЛАТЕ ==========
+// ========== НАПОМИНАНИЯ ОБ ОПЛАТЕ С КНОПКОЙ ==========
 cron.schedule('0 10 * * *', async () => { 
   try {
     const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/clients?select=*`, {
@@ -1361,13 +1362,22 @@ cron.schedule('0 10 * * *', async () => {
       const diffTime = paidDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
+      // Если остался 1 день (завтра конец)
       if (diffDays === 1) {
         const chatId = client.chat_id || MANAGER_CHAT_ID;
         if (chatId) {
+          const botUsername = TELEGRAM_TOKEN ? (await (await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getMe`)).json()).result.username : '';
+          
+          const keyboard = [];
+          if (botUsername) {
+             keyboard.push([{ text: '💳 Продлить подписку', url: `https://t.me/${botUsername}?start=pay_business_month` }]);
+          }
+
           await sendTelegram(chatId, 
             `⚠️ <b>Напоминание об оплате</b>\n\n` +
             `У клиента «${client.business_name || client.client_id}» завтра заканчивается подписка.\n` +
-            `Не забудьте продлить оплату, чтобы бот не перестал работать!`
+            `Не забудьте продлить оплату, чтобы бот не перестал работать!`, 
+            keyboard.length > 0 ? keyboard : null
           );
         }
       }
