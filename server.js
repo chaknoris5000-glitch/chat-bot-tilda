@@ -17,6 +17,12 @@ const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || '';
 const MANAGER_CHAT_ID = process.env.MANAGER_CHAT_ID || '';
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
+
+// Для Тильды используем только её базу, для остальных — общую
+const IS_TILDA = (process.env.CLIENT_ID || 'tilda') === 'tilda';
+
+const COMMON_SUPABASE_URL = IS_TILDA ? SUPABASE_URL : (process.env.COMMON_SUPABASE_URL || process.env.SUPABASE_URL || '');
+const COMMON_SUPABASE_KEY = IS_TILDA ? SUPABASE_KEY : (process.env.COMMON_SUPABASE_KEY || process.env.SUPABASE_KEY || '');
 // ДОБАВЛЕНО ДЛЯ АВТОМАТИКИ: Используем общую базу для новых клиентов
 const COMMON_SUPABASE_URL = process.env.COMMON_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const COMMON_SUPABASE_KEY = process.env.COMMON_SUPABASE_KEY || process.env.SUPABASE_KEY || '';
