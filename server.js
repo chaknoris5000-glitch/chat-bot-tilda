@@ -254,22 +254,27 @@ async function saveDocument(content, embedding, url) {
 
 async function getOrCreateSession(sessionId) {
   try {
-    const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sessionId}&select=*`, {
-      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
+    const targetUrl = CLIENT_ID === 'tilda' ? SUPABASE_URL : COMMON_SUPABASE_URL;
+    const targetKey = CLIENT_ID === 'tilda' ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
+
+    const r = await fetch(`${targetUrl}/rest/v1/chat_sessions?session_id=eq.${sessionId}&select=*`, {
+      headers: { 'apikey': targetKey, 'Authorization': `Bearer ${targetKey}` }
     });
+    
     const rows = await r.json();
     if (Array.isArray(rows) && rows.length > 0) return rows[0];
-    const ins = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/chat_sessions`, {
+    
+    const ins = await fetch(`${targetUrl}/rest/v1/chat_sessions`, {
       method: 'POST',
-      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      headers: { 'apikey': targetKey, 'Authorization': `Bearer ${targetKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
       body: JSON.stringify({ session_id: sessionId, history: [], client_id: CLIENT_ID })
     });
+    
     const created = await ins.json();
     if (Array.isArray(created) && created.length > 0) return created[0];
     return { session_id: sessionId, history: [], client_id: CLIENT_ID };
   } catch (e) { return { session_id: sessionId, history: [], client_id: CLIENT_ID }; }
 }
-
 async function getSessionByTelegram(chatId) {
   try {
     // ИСПРАВЛЕНО: добавлен фильтр client_id
@@ -283,9 +288,12 @@ async function getSessionByTelegram(chatId) {
 
 async function updateSession(sessionId, patch) {
   try {
-    await fetch(`${COMMON_SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sessionId}`, {
+    const targetUrl = CLIENT_ID === 'tilda' ? SUPABASE_URL : COMMON_SUPABASE_URL;
+    const targetKey = CLIENT_ID === 'tilda' ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
+
+    await fetch(`${targetUrl}/rest/v1/chat_sessions?session_id=eq.${sessionId}`, {
       method: 'PATCH',
-      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { 'apikey': targetKey, 'Authorization': `Bearer ${targetKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ ...patch, updated_at: new Date().toISOString() })
     });
   } catch (e) {}
