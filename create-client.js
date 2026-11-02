@@ -125,7 +125,9 @@ async function createClient() {
       } catch (e) { console.log(`⚠️ Ошибка парсинга: ${e.message}`); }
     }
 
-      } catch (e) { 
+        } catch (e) { 
     console.log(`❌ ОШИБКА: ${JSON.stringify(e.response?.data || e.message)}`); 
   }
+}
+createClient();
 createClient();
