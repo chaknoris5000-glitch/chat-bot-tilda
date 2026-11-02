@@ -498,12 +498,7 @@ ${context || 'Информация временно недоступна.'}`;
     if (!reply.includes(BASE_URL)) reply += `\n\nКак это работает: ${BASE_URL}/?go=how`;
   }
   
-  if (lowerMsg.includes('пример') || lowerMsg.includes('демо')) {
-    if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:demos]';
-    if (!reply.includes(BASE_URL)) reply += `\n\nПримеры работ: ${BASE_URL}/?go=demos`;
-  }
-  
-  if (lowerMsg.includes('пример') || lowerMsg.includes('демо') || lowerMsg.includes('покажи')) {
+    if (lowerMsg.includes('пример') || lowerMsg.includes('демо') || lowerMsg.includes('покажи')) {
     reply = `Вы можете посмотреть живые примеры работы бота на нашем сайте. Там есть 4 демо-сайта: салон красоты, стоматология, автосервис и магазин запчастей.\n\nПосмотреть их можно здесь: ${BASE_URL}/?go=demos\nНажмите на любую карточку и протестируйте бота в действии.`;
   }
 
