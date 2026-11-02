@@ -137,22 +137,21 @@ async function createClient() {
     
     await axios.post('https://api.render.com/v1/services', {
       type: 'web_service', name: `chat-bot-${clientId}`, repo: githubRepoUrl, branch: 'main', ownerId: ownerId,
-            envVars: [
+      envVars: [
         { key: 'CLIENT_ID', value: clientId }, 
         { key: 'BUSINESS_NAME', value: businessName },
         { key: 'SITE_TO_CRAWL', value: siteUrl }, 
         { key: 'BASE_URL', value: siteUrl },
         { key: 'MANAGER_CHAT_ID', value: managerChatId }, 
-        
-        // Для клиентов используем общую базу (loans-bot)
         { key: 'SUPABASE_URL', value: process.env.COMMON_SUPABASE_URL },
-        { key: 'SUPABASE_KEY', value: process.env.COMMON_SSUPABASE_KEY }, 
-        
+        { key: 'SUPABASE_KEY', value: process.env.COMMON_SUPABASE_KEY }, 
+        { key: 'COMMON_SUPABASE_URL', value: process.env.COMMON_SUPABASE_URL },
+        { key: 'COMMON_SUPABASE_KEY', value: process.env.COMMON_SUPABASE_KEY },
         { key: 'TELEGRAM_TOKEN', value: botToken },
-        { key: 'OPENROUTER_KEY', value: process.env.OPENROUTER_KEY }, 
-        { key: 'FIRECRAWL_KEY', value: process.env.FIRECRAWL_KEY },
-        { key: 'YOOKASSA_SHOP_ID', value: process.env.YOOKASSA_SHOP_ID },
-        { key: 'YOOKASSA_SECRET_KEY', value: process.env.YOOKASSA_SECRET_KEY }
+        { key: 'OPENROUTER_KEY', value: process.env.COMMON_OPENROUTER_KEY }, 
+        { key: 'FIRECRAWL_KEY', value: process.env.COMMON_FIRECRAWL_KEY }
+        { key: 'YOOKASSA_SHOP_ID', value: process.env.COMMON_YOOKASSA_SHOP_ID },
+        { key: 'YOOKASSA_SECRET_KEY', value: process.env.COMMON_YOOKASSA_SECRET_KEY },
       ],
       serviceDetails: { env: 'node', plan: 'free', region: 'frankfurt', envSpecificDetails: { buildCommand: 'npm install', startCommand: 'node server.js' } }
     }, { headers: { Authorization: `Bearer ${RENDER_API_KEY}`, 'Content-Type': 'application/json' } });
