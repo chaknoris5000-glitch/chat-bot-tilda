@@ -70,12 +70,30 @@ async function createClient() {
     const commonSupabaseKey = process.env.COMMON_SUPABASE_KEY;
     
     try {
+          // АВТООПРЕДЕЛЕНИЕ ЧАСОВОГО ПОЯСА ПО САЙТУ
+    let detectedTimezone = 'Europe/Moscow'; // По умолчанию
+    try {
+      // Скачиваем текст главной страницы (очень быстро)
+      const siteRes = await axios.get(siteUrl, { timeout: 5000 });
+      const siteText = siteRes.data.toLowerCase();
+
+      // Ищем маркеры городов
+      if (siteText.includes('новосибирск') || siteText.includes('нск')) detectedTimezone = 'Asia/Novosibirsk';
+      else if (siteText.includes('екатеринбург') || siteText.includes('екб')) detectedTimezone = 'Asia/Yekaterinburg';
+      else if (siteText.includes('кемерово') || siteText.includes('кузбасс') || siteText.includes('белово')) detectedTimezone = 'Asia/Novokuznetsk';
+      else if (siteText.includes('красноярск')) detectedTimezone = 'Asia/Krasnoyarsk';
+      else if (siteText.includes('владивосток')) detectedTimezone = 'Asia/Vladivostok';
+      else if (siteText.includes('санкт-петербург') || siteText.includes('спб')) detectedTimezone = 'Europe/Moscow';
+      console.log(`🕒 Определен часовой пояс: ${detectedTimezone}`);
+    } catch (e) {
+      console.log(`⚠️ Не удалось прочитать сайт для определения пояса. Ставлю Москву.`);
+    }
       await axios.post(`${commonSupabaseUrl}/rest/v1/clients`, {
         client_id: clientId,
         business_name: businessName,
         chat_id: parseInt(managerChatId, 10),
         paid_until: new Date(Date.now() + 7 * 86400000).toISOString(),
-        timezone: timezone,
+        timezone: detectedTimezone,
         prompt: null,
         owner_telegram_id: (ownerTelegramId && !isNaN(ownerTelegramId) && ownerTelegramId !== 'НЕТ_ТОКЕНА') ? Number(ownerTelegramId) : null
       }, { headers: { 'apikey': commonSupabaseKey, 'Authorization': `Bearer ${commonSupabaseKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' } });
