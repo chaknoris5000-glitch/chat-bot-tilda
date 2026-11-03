@@ -418,7 +418,7 @@ async function askAI(message, history, sessionId) {
     timeZone: clientTz, 
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour: '2-digit', minute: '2-digit'
   });
-    const systemPrompt = clientConfig?.prompt || BUSINESS_PROMPT || `СЕГОДНЯШНЯЯ ДАТА И ВРЕМЯ: ${currentDate}.\n\n` + basePrompt;
+      const systemPrompt = `СЕГОДНЯШНЯЯ ДАТА И ВРЕМЯ: ${currentDate}.\n\n` + (clientConfig?.prompt || BUSINESS_PROMPT || `
 Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте и в Telegram. Твоя цель — продать услугу, собрать заявку и мягко работать с возражениями.
 1. Ты — живой человек, а не робот. Общайся максимально естественно, как в обычном чате. Используй слова вроде «Отлично», «Понял», «Да, это решаемо».
 2. Отвечай ОЧЕНЬ коротко: строго 2-3 предложения. Никаких длинных текстов и простыней.
