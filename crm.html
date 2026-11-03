@@ -371,6 +371,17 @@
                 <div class="form-group full"><label>Ссылка на сайт</label><input type="text" id="newSiteUrl" placeholder="https://..."></div>
                 <div class="form-group full"><label>Токен Telegram-бота</label><input type="text" id="newBotToken" placeholder="123456:ABC-DEF..."></div>
                 <div class="form-group full"><label>Telegram ID владельца (для доступа)</label><input type="text" id="newOwnerId" placeholder="Например: 123456789"></div>
+                <div class="form-group full">
+    <label>Часовой пояс</label>
+    <select id="newTimezone" class="filter-input" style="width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;">
+        <option value="Europe/Moscow">Москва (UTC+3)</option>
+        <option value="Asia/Yekaterinburg">Екатеринбург (UTC+5)</option>
+        <option value="Asia/Novosibirsk">Новосибирск (UTC+7)</option>
+        <option value="Asia/Novokuznetsk">Кузбасс (UTC+7)</option>
+        <option value="Asia/Krasnoyarsk">Красноярск (UTC+7)</option>
+        <option value="Asia/Vladivostok">Владивосток (UTC+10)</option>
+    </select>
+</div>
             </div>
             <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
                 <button class="btn btn-outline" onclick="closeCreateClientModal()">Отмена</button>
@@ -918,13 +929,14 @@
             const site_url = document.getElementById('newSiteUrl').value.trim();
             const bot_token = document.getElementById('newBotToken').value.trim();
             const owner_telegram_id = document.getElementById('newOwnerId').value.trim();
+            const timezone = document.getElementById('newTimezone').value;
             if (!client_id || !business_name || !site_url || !bot_token) return alert('Заполните все поля!');
 
             try {
                 const res = await fetch('/api/create-client', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ client_id, business_name, site_url, timezone: 'Europe/Moscow', manager_chat_id: owner_telegram_id || ADMIN_TELEGRAM_ID.toString(), bot_token, owner_telegram_id })
+                    body: JSON.stringify({ client_id, business_name, site_url, timezone: timezone, manager_chat_id: owner_telegram_id || ADMIN_TELEGRAM_ID.toString(), bot_token, owner_telegram_id })
                 });
                 const data = await res.json();
                 if (data.ok) { alert('🚀 Задача запущена!'); closeCreateClientModal(); } else { alert('Ошибка: ' + data.error); }
@@ -951,7 +963,7 @@
                         client_id, 
                         business_name, 
                         site_url, 
-                        timezone: 'Europe/Moscow', 
+                        timezone: timezone, 
                         manager_chat_id: owner_telegram_id || ADMIN_TELEGRAM_ID.toString(), 
                         bot_token,
                         owner_telegram_id: Number(owner_telegram_id)
