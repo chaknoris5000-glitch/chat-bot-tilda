@@ -111,6 +111,7 @@ async function createClient() {
         { key: 'SITE_TO_CRAWL', value: siteUrl }, 
         { key: 'BASE_URL', value: siteUrl },
         { key: 'MANAGER_CHAT_ID', value: managerChatId }, 
+        { key: 'ADMIN_TELEGRAM_ID', value: '5818548555' },
         { key: 'SUPABASE_URL', value: process.env.COMMON_SUPABASE_URL },
         { key: 'SUPABASE_KEY', value: process.env.COMMON_SUPABASE_KEY }, 
         { key: 'COMMON_SUPABASE_URL', value: process.env.COMMON_SUPABASE_URL },
