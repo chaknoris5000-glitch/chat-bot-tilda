@@ -485,6 +485,7 @@
         }
 
         // DATA
+        // DATA
         async function loadLeads() {
             try {
                 let data = [];
@@ -505,7 +506,6 @@
                 }
                 // Обычный клиент (Вячеслав) в своем боте
                 else {
-                    // Находим его client_id по telegram_id (через базу loans-bot)
                     const clientRes = await fetch(`${LOANS_URL}/rest/v1/clients?owner_telegram_id=eq.${currentUserTgId}&select=client_id`, {
                         headers: { 'apikey': LOANS_KEY, 'Authorization': `Bearer ${LOANS_KEY}` }
                     });
@@ -513,7 +513,6 @@
                     
                     if (Array.isArray(clients) && clients.length > 0) {
                         const myClientId = clients[0].client_id;
-                        // Проверка: если он в чужом боте — пустота
                         const urlParams = new URLSearchParams(window.location.search);
                         if (urlParams.get('view_client') && urlParams.get('view_client') !== myClientId) {
                             data = [];
@@ -543,20 +542,8 @@
                 updateStats(allLeads);
             }
         }
-                
-                allLeads = data;
-                updateStats(allLeads);
-                renderKanban(allLeads);
-                renderList(allLeads);
-                renderClientBase(allLeads);
-                renderTasks(allLeads);
-                populateTaskClientSelect(allLeads);
-            } catch (e) { 
-                console.error(e); 
-                allLeads = [];
-                updateStats(allLeads);
-            }
-        }
+
+        // RENDER
 
         // RENDER
         function updateStats(data) {
