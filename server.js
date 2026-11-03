@@ -1509,13 +1509,16 @@ app.post('/api/connect-result', async (req, res) => {
 app.get('/api/get-leads', async (req, res) => {
   try {
     const { client_id } = req.query;
-    const url = `${COMMON_SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc${client_id ? `&client_id=eq.${client_id}` : ''}`;
+    // Выбираем базу в зависимости от client_id
+    const isTilda = client_id === 'tilda';
+    const baseUrl = isTilda ? SUPABASE_URL : COMMON_SUPABASE_URL;
+    const baseKey = isTilda ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
+
+    let url = `${baseUrl}/rest/v1/leads?select=*&order=id.desc`;
+    if (client_id) url += `&client_id=eq.${client_id}`;
     
     const r = await fetch(url, {
-      headers: {
-        'apikey': COMMON_SUPABASE_KEY,
-        'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`
-      }
+      headers: { 'apikey': baseKey, 'Authorization': `Bearer ${baseKey}` }
     });
     const data = await r.json();
     res.json(data);
