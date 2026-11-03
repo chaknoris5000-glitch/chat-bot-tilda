@@ -93,7 +93,7 @@ async function createClient() {
         business_name: businessName,
         chat_id: parseInt(managerChatId, 10),
         paid_until: new Date(Date.now() + 7 * 86400000).toISOString(),
-        timezone: detectedTimezone,
+        timezone: timezone || detectedTimezone,
         prompt: null,
         owner_telegram_id: (ownerTelegramId && !isNaN(ownerTelegramId) && ownerTelegramId !== 'НЕТ_ТОКЕНА') ? Number(ownerTelegramId) : null
       }, { headers: { 'apikey': commonSupabaseKey, 'Authorization': `Bearer ${commonSupabaseKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' } });
