@@ -1508,8 +1508,13 @@ app.post('/api/connect-result', async (req, res) => {
 });
 app.get('/api/get-leads', async (req, res) => {
   try {
-    const { client_id } = req.query;
-    // Выбираем базу в зависимости от client_id
+    const { client_id, telegram_id } = req.query;
+
+    // Если запрос пришел не от Админа, и он просит базу Тильды — отдаем пустоту
+    if (client_id === 'tilda' && String(telegram_id) !== String(process.env.ADMIN_TELEGRAM_ID)) {
+      return res.json([]);
+    }
+
     const isTilda = client_id === 'tilda';
     const baseUrl = isTilda ? SUPABASE_URL : COMMON_SUPABASE_URL;
     const baseKey = isTilda ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
