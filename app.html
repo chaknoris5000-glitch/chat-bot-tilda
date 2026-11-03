@@ -186,7 +186,7 @@
                 myClient = await resClient.json();
 
                 if (user.id === ADMIN_TELEGRAM_ID) {
-                    const resLeads = await fetch(`/api/get-leads`); // Админ видит всё
+                    const resLeads = await fetch(`/api/get-leads?telegram_id=${user.id}&client_id=tilda`);
                     myLeads = await resLeads.json();
                     setupAdminUI();
                 } else if (myClient) {
