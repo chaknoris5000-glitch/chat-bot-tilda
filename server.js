@@ -1299,6 +1299,7 @@ cron.schedule('*/15 * * * *', async () => {
     if (!Array.isArray(clients)) return;
 
     for (const client of clients) {
+      if (client.client_id !== 'tilda') continue;
       if (!isPaid(client)) continue;
       const tz = client.timezone || 'Europe/Moscow';
       const local = getLocalTime(tz);
