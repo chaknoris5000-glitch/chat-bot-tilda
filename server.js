@@ -418,7 +418,7 @@ async function askAI(message, history, sessionId) {
     timeZone: clientTz, 
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour: '2-digit', minute: '2-digit'
   });
-      const systemPrompt = `СЕГОДНЯШНЯЯ ДАТА И ВРЕМЯ: ${currentDate}.\n\n` + (clientConfig?.prompt || BUSINESS_PROMPT || `
+    const systemPrompt = clientConfig?.prompt || BUSINESS_PROMPT || `СЕГОДНЯШНЯЯ ДАТА И ВРЕМЯ: ${currentDate}.
 Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте и в Telegram. Твоя цель — продать услугу, собрать заявку и мягко работать с возражениями.
 1. Ты — живой человек, а не робот. Общайся максимально естественно, как в обычном чате. Используй слова вроде «Отлично», «Понял», «Да, это решаемо».
 2. Отвечай ОЧЕНЬ коротко: строго 2-3 предложения. Никаких длинных текстов и простыней.
@@ -470,7 +470,7 @@ async function askAI(message, history, sessionId) {
 БАЗА ЗНАНИЙ:
 ${context || 'Информация временно недоступна.'}`;
 
-    const limitPrompt = systemPrompt + "\n\nВАЖНО: Отвечай кратко (1-2 предложения). Твоя главная цель — узнать Имя, Телефон и суть запроса. Когда клиент их назвал — ОБЯЗАТЕЛЬНО добавь в самом конце: [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:суть]. Не пиши, что заявка оформлена, пока не добавишь этот тег.";
+    const limitPrompt = `СЕГОДНЯШНЯЯ ДАТА И ВРЕМЯ: ${currentDate}.\n\n` + systemPrompt + "\n\nВАЖНО: Отвечай кратко (1-2 предложения). Твоя главная цель — узнать Имя, Телефон и суть запроса. Когда клиент их назвал — ОБЯЗАТЕЛЬНО добавь в самом конце: [LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:суть]. Не пиши, что заявка оформлена, пока не добавишь этот тег.";
   const messages = [
     { role: 'system', content: limitPrompt },
     ...(history || []).slice(-10),
