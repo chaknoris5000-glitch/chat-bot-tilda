@@ -175,25 +175,30 @@
             }
         });
 
-        async function init() {
+                async function init() {
             const user = tg.initDataUnsafe?.user;
             if (!user) return;
             document.getElementById('greeting').innerText = `Привет, ${user.first_name}!`;
             
             try {
-                // Теперь Mini App не лезет в базу напрямую, а стучится к серверу
-                const resClient = await fetch(`/api/get-my-client?owner_telegram_id=${user.id}`);
-                myClient = await resClient.json();
-
                 if (user.id === ADMIN_TELEGRAM_ID) {
+                    // Админ видит только свои лиды из Tilda
+                    myClient = { client_id: 'tilda', business_name: 'AI-Администратор', paid_until: '2099-12-31' };
                     const resLeads = await fetch(`/api/get-leads?telegram_id=${user.id}&client_id=tilda`);
                     myLeads = await resLeads.json();
-                    setupAdminUI();
-                } else if (myClient) {
-                    const resLeads = await fetch(`/api/get-leads?client_id=${myClient.client_id}`);
-                    myLeads = await resLeads.json();
                     if (!Array.isArray(myLeads)) myLeads = [];
-                    setupClientUI(myClient);
+                    setupAdminUI();
+                } else {
+                    // Обычный клиент
+                    const resClient = await fetch(`/api/get-my-client?owner_telegram_id=${user.id}`);
+                    myClient = await resClient.json();
+                    
+                    if (myClient) {
+                        const resLeads = await fetch(`/api/get-leads?telegram_id=${user.id}&client_id=${myClient.client_id}`);
+                        myLeads = await resLeads.json();
+                        if (!Array.isArray(myLeads)) myLeads = [];
+                        setupClientUI(myClient);
+                    }
                 }
                 renderPlans();
             } catch (e) { console.error(e); }
