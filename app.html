@@ -140,42 +140,11 @@
     <div id="supportModal" class="modal-overlay"><div class="modal-box"><div class="modal-title">Поддержка</div><p style="font-size: 14px; color: var(--hint); margin-bottom: 16px;">Опишите вашу проблему, и мы свяжемся с вами.</p><div class="form-group"><textarea id="support-text" rows="4" placeholder="Ваше сообщение..."></textarea></div><button class="btn btn-primary" onclick="sendSupport()">Отправить</button><button class="btn btn-outline" onclick="closeModal('supportModal')">Отмена</button></div></div>
 
     <script>
-        const ADMIN_TELEGRAM_ID = 5818548555; 
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+                const ADMIN_TELEGRAM_ID = 5818548555; 
+        const MY_BOT_CLIENT_ID = 'tilda'; // ID этого бота
+        // ... (дальше идет const tg = window.Telegram.WebApp; и остальной код)
 
-        const TARIFFS = {
-            'start': { name: 'Старт', month: 1990, year: 17900, monthIfYear: 1490, limit: 100, features: ['До 100 заявок', 'Работает 24/7', 'Уведомления', 'CRM', 'Обучение', 'Отчеты Excel', 'API'] },
-            'business': { name: 'Бизнес', month: 2490, year: 23900, monthIfYear: 1990, limit: 300, features: ['До 300 заявок', 'Работает 24/7', 'CRM', 'Обучение', 'Отчеты Excel', 'API'] },
-            'unlimited': { name: 'Безлимит', month: 4990, year: 47900, monthIfYear: 3990, limit: 99999, features: ['Безлимит заявок', 'Работает 24/7', 'Приоритетная поддержка', 'CRM', 'Обучение', 'Отчеты Excel', 'API'] },
-            'result': { name: 'За результат', month: 25, year: 0, monthIfYear: 25, limit: 99999, features: ['Оплата за заявки (25 ₽)', 'Работает 24/7', 'Прозрачный отчет', 'CRM', 'Обучение', 'Отчеты Excel', 'API'] }
-        };
-        
-        let myClient = null;
-        let myLeads = []; 
-        let currentPlanKey = null;
-        let filterTime = 'today'; 
-        let filterStatus = 'all';
-
-        function scrollToPage(index) {
-            const container = document.getElementById('swipeContainer');
-            container.scrollTo({ left: index * window.innerWidth, behavior: 'smooth' });
-        }
-
-        document.getElementById('swipeContainer').addEventListener('scroll', () => {
-            const container = document.getElementById('swipeContainer');
-            const scrollLeft = container.scrollLeft;
-            const width = window.innerWidth;
-            if (scrollLeft < width / 2) {
-                document.querySelectorAll('.nav-item')[0].classList.add('active');
-                document.querySelectorAll('.nav-item')[1].classList.remove('active');
-            } else {
-                document.querySelectorAll('.nav-item')[0].classList.remove('active');
-                document.querySelectorAll('.nav-item')[1].classList.add('active');
-            }
-        });
-
-                async function init() {
+        async function init() {
             const user = tg.initDataUnsafe?.user;
             if (!user) return;
             document.getElementById('greeting').innerText = `Привет, ${user.first_name}!`;
@@ -193,6 +162,21 @@
                     const resClient = await fetch(`/api/get-my-client?owner_telegram_id=${user.id}`);
                     myClient = await resClient.json();
                     
+                    // ПРОВЕРКА: Если клиент зашел в ЧУЖОЙ бот — не показываем ничего
+                    if (!myClient || myClient.client_id !== MY_BOT_CLIENT_ID) {
+                        myLeads = [];
+                        // Показываем пустой интерфейс
+                        document.getElementById('acc-plan-name').innerText = 'Гость';
+                        document.getElementById('acc-status').innerText = 'Нет доступа';
+                        document.getElementById('acc-date').innerText = '—';
+                        document.getElementById('acc-total-leads').innerText = '0';
+                        document.getElementById('acc-limit-text').innerText = '0 / 0';
+                        document.getElementById('acc-progress').style.width = '0%';
+                        renderLeads();
+                        renderPlans();
+                        return;
+                    }
+
                     if (myClient) {
                         const resLeads = await fetch(`/api/get-leads?telegram_id=${user.id}&client_id=${myClient.client_id}`);
                         myLeads = await resLeads.json();
@@ -203,7 +187,6 @@
                 renderPlans();
             } catch (e) { console.error(e); }
         }
-
         function setupClientUI(client) {
             const paidUntil = new Date(client.paid_until);
             document.getElementById('acc-plan-name').innerText = client.business_name || 'Бизнес';
