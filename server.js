@@ -413,11 +413,27 @@ async function askAI(message, history, sessionId) {
   const clientConfig = await getClient(CLIENT_ID);
     // Получаем часовой пояс клиента из базы (или берем Москву, если нет)
   const now = new Date();
+    // Получаем часовой пояс клиента из базы (или берем Москву, если нет)
   const clientTz = clientConfig?.timezone || 'Europe/Moscow';
-  const currentDate = now.toLocaleString('ru-RU', { 
-    timeZone: clientTz, 
-    year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour: '2-digit', minute: '2-digit'
-  });
+  
+  // Смещения для часовых поясов
+  const offsets = {
+    'Europe/Moscow': 3,
+    'Asia/Yekaterinburg': 5,
+    'Asia/Novosibirsk': 7,
+    'Asia/Novokuznetsk': 7,
+    'Asia/Krasnoyarsk': 7,
+    'Asia/Vladivostok': 10
+  };
+  const offsetHours = offsets[clientTz] || 3; // По умолчанию Москва
+  
+  // Считаем точное время и минуты
+  const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const localDate = new Date(utcMs + (offsetHours * 3600000));
+  
+  const currentDate = localDate.toLocaleDateString('ru-RU', { 
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' 
+  }) + ', ' + localDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     const systemPrompt = clientConfig?.prompt || BUSINESS_PROMPT || `СЕГОДНЯШНЯЯ ДАТА И ВРЕМЯ: ${currentDate}.
 Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте и в Telegram. Твоя цель — продать услугу, собрать заявку и мягко работать с возражениями.
 1. Ты — живой человек, а не робот. Общайся максимально естественно, как в обычном чате. Используй слова вроде «Отлично», «Понял», «Да, это решаемо».
