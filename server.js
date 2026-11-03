@@ -1274,13 +1274,17 @@ async function sendDailyReportForClient(client) {
     const leads = await fetchLeads(since.toISOString());
     if (leads.length === 0) return;
 
-    const chatId = client.chat_id || MANAGER_CHAT_ID;
-    if (!chatId) return;
+    // ЖЕСТКОЕ ИСПРАВЛЕНИЕ:
+    // Если это бот Тильда, шлем только тебе (MANAGER_CHAT_ID).
+    // Если это бот клиента, шлем владельцу (client.chat_id).
+    const targetChatId = CLIENT_ID === 'tilda' ? MANAGER_CHAT_ID : (client.chat_id || MANAGER_CHAT_ID);
+    
+    if (!targetChatId) return;
 
-    await sendTelegram(chatId, statsBlock(leads, `Итоги за сегодня (${local.dateStr})`));
+    await sendTelegram(targetChatId, statsBlock(leads, `Итоги за сегодня (${local.dateStr})`));
     const buffer = await buildXlsx(leads, 'День');
-    await sendTelegramDoc(chatId, buffer, `leads_day_${local.dateStr}.xlsx`, `📥 Заявки за день (${leads.length} шт.)`);
-    console.log(`✅ Сводка отправлена клиенту ${client.client_id} (${tz})`);
+    await sendTelegramDoc(targetChatId, buffer, `leads_day_${local.dateStr}.xlsx`, `📥 Заявки за день (${leads.length} шт.)`);
+    console.log(`✅ Сводка отправлена (${CLIENT_ID === 'tilda' ? 'Админу' : 'Клиенту'}) (${tz})`);
   } catch (e) {
     console.log('sendDailyReportForClient error:', e.message);
   }
