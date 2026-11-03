@@ -50,7 +50,7 @@ async function createClient() {
     serverCode = serverCode.replace(/const BUSINESS_NAME = .*?;/, `const BUSINESS_NAME = '${businessName}';`);
     serverCode = serverCode.replace(/const SITE_TO_CRAWL = .*?;/, `const SITE_TO_CRAWL = '${siteUrl}';`);
     serverCode = serverCode.replace(/const BASE_URL = .*?;/, `const BASE_URL = '${siteUrl}';`);
-
+    serverCode = serverCode.replace(/const BOT_CLIENT_ID = .*?;/, `const BOT_CLIENT_ID = '${clientId}';`);
     serverCode = serverCode.replace(/if \(lowerMsg\.includes\('тариф'\).*?\}\n/s, '');
     serverCode = serverCode.replace(/if \(lowerMsg\.includes\('пример'\).*?\}\n/s, '');
 
