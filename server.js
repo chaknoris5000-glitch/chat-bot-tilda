@@ -411,7 +411,15 @@ async function askAI(message, history, sessionId) {
   } catch (e) { console.log('Контекст не собран:', e.message); }
   
   const clientConfig = await getClient(CLIENT_ID);
-  const systemPrompt = clientConfig?.prompt || BUSINESS_PROMPT || `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте и в Telegram. Твоя цель — продать услугу, собрать заявку и мягко работать с возражениями.
+    // Получаем часовой пояс клиента из базы (или берем Москву, если нет)
+  const now = new Date();
+  const clientTz = clientConfig?.timezone || 'Europe/Moscow';
+  const currentDate = now.toLocaleString('ru-RU', { 
+    timeZone: clientTz, 
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour: '2-digit', minute: '2-digit'
+  });
+    const systemPrompt = clientConfig?.prompt || BUSINESS_PROMPT || `СЕГОДНЯШНЯЯ ДАТА И ВРЕМЯ: ${currentDate}.
+Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте и в Telegram. Твоя цель — продать услугу, собрать заявку и мягко работать с возражениями.
 1. Ты — живой человек, а не робот. Общайся максимально естественно, как в обычном чате. Используй слова вроде «Отлично», «Понял», «Да, это решаемо».
 2. Отвечай ОЧЕНЬ коротко: строго 2-3 предложения. Никаких длинных текстов и простыней.
 3. НЕ используй списки, тире, нумерацию, звёздочки. Только обычный текст.
