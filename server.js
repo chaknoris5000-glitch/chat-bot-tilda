@@ -300,12 +300,14 @@ const r = await fetch(`${targetUrl}/rest/v1/leads`, {
 // ========== TELEGRAM API ==========
 
 async function sendTelegram(chatId, text, keyboard = null) {
-  const body = { chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: false };
+  const body = { chat_id: chatId, text, disable_web_page_preview: false };
   if (keyboard) body.reply_markup = { inline_keyboard: keyboard };
-  await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+  const r = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
+  const d = await r.json();
+  if (!d.ok) console.log('❌ Telegram sendMessage error:', JSON.stringify(d));
 }
 
 async function sendTelegramDoc(chatId, buffer, filename, caption = '') {
