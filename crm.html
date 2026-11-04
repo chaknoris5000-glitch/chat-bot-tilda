@@ -235,6 +235,15 @@
                     <div class="form-group" style="margin-bottom: 8px;"><label>Ссылка на сайт</label><input type="text" id="bot-site-url" placeholder="https://..."></div>
                     <div class="form-group" style="margin-bottom: 8px;"><label>Токен Telegram-бота</label><input type="text" id="bot-token" placeholder="123456:ABC-DEF..."></div>
                     <div class="form-group" style="margin-bottom: 8px;"><label>Telegram ID владельца (для доступа)</label><input type="text" id="bot-owner-id" placeholder="Например: 123456789"></div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label>Тариф</label>
+                        <select id="bot-tariff" style="width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;">
+                            <option value="start">Старт (1990 ₽, до 100 заявок)</option>
+                            <option value="business" selected>Бизнес (2490 ₽, до 300 заявок)</option>
+                            <option value="unlimited">Безлимит (4990 ₽, без ограничений)</option>
+                            <option value="result">За результат (25 ₽ за заявку)</option>
+                        </select>
+                    </div>
                     <button class="btn btn-primary" style="width: 100%;" onclick="createBotFromCard()">🚀 Создать бота</button>
                 </div>
                 <div id="widget-download-container" style="display: none; margin-top: 10px;">
@@ -407,32 +416,6 @@
                 allLeads = [];
                 updateStats(allLeads);
             }
-        }
-
-        async function init() {
-            const user = tg.initDataUnsafe?.user;
-            if (!user) return;
-            document.getElementById('greeting').innerText = `Привет, ${user.first_name}!`;
-            
-            try {
-                const [resLeads, resClients] = await Promise.all([
-                    fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc&client_id=eq.loans`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }),
-                    fetch(`${SUPABASE_URL}/rest/v1/clients?select=*&client_id=eq.loans`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } })
-                ]);
-
-                const allLeadsData = await resLeads.json();
-                const allClientsData = await resClients.json();
-                myClient = allClientsData.find(c => c.owner_telegram_id === user.id);
-
-                if (user.id === ADMIN_TELEGRAM_ID) {
-                    myLeads = allLeadsData; 
-                    setupAdminUI(allClientsData);
-                } else if (myClient) {
-                    myLeads = allLeadsData.filter(l => l.client_id === myClient.client_id); 
-                    setupClientUI(myClient);
-                }
-                renderPlans();
-            } catch (e) { console.error(e); }
         }
 
         function updateStats(data) {
@@ -639,6 +622,7 @@
                     document.getElementById('bot-site-url').value = '';
                     document.getElementById('bot-token').value = '';
                     document.getElementById('bot-owner-id').value = '';
+                    document.getElementById('bot-tariff').value = 'business';
                 }
             } else {
                 document.getElementById('bot-creation-block').style.display = 'none';
@@ -810,8 +794,12 @@
             const site_url = document.getElementById('bot-site-url').value.trim();
             const bot_token = document.getElementById('bot-token').value.trim();
             const owner_telegram_id = document.getElementById('bot-owner-id').value.trim();
+            const tariff = document.getElementById('bot-tariff').value;
+            const leads_limit = tariff === 'start' ? 100 : (tariff === 'business' ? 300 : 99999);
+
             if (!client_id || !business_name || !site_url || !bot_token) return alert('Заполните все поля для создания бота!');
             const lead = allLeads.find(l => l.id === currentLeadId);
+
             try {
                 const res = await fetch('/api/create-client', {
                     method: 'POST',
@@ -821,8 +809,8 @@
                         timezone: 'Europe/Moscow', 
                         manager_chat_id: owner_telegram_id || ADMIN_TELEGRAM_ID.toString(), 
                         bot_token, owner_telegram_id: Number(owner_telegram_id),
-                        tariff: 'business', 
-                        leads_limit: 300   
+                        tariff: tariff,
+                        leads_limit: leads_limit
                     })
                 });
                 const data = await res.json();
@@ -865,6 +853,7 @@
             const clientId = lead.client_id || 'tilda';
             const serverUrl = `https://chat-bot-${clientId}.onrender.com/message`;
             const botName = `vadim602_bot`;
+
             const widgetCode = `
 <div id="chatBubble" style="position:fixed;bottom:20px;right:20px;width:60px;height:60px;border-radius:50%;background:#2F5B43;color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;z-index:99999;box-shadow:0 4px 20px rgba(47,91,67,0.5);animation:pulse 2s infinite;">💬</div>
 <div id="chatWidget" style="display:none;position:fixed;bottom:20px;right:20px;width:340px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.18);font-family:Arial,sans-serif;z-index:99999;box-sizing:border-box;">
@@ -961,6 +950,7 @@
 })();
 <\/script>
             `.trim();
+
             const blob = new Blob([widgetCode], { type: 'text/html' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
