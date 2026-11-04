@@ -666,7 +666,13 @@ function statsBlock(leads, periodLabel) {
 }
 
 // ========== HEALTH ==========
+app.get('/crm', (req, res) => {
+  res.sendFile(path.join(__dirname, 'crm.html'));
+});
 
+app.get('/app', (req, res) => {
+  res.sendFile(path.join(__dirname, 'app.html'));
+});
 app.get('/health', (req, res) => {
   res.json({ ok: true, time: new Date().toISOString(), uptime: process.uptime(), client_id: CLIENT_ID });
 });
