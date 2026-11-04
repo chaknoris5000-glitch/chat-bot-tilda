@@ -932,7 +932,6 @@
   sendBtn.addEventListener('click', sendMessage);
   input.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 })();
-<\/script>
             `.trim();
             const blob = new Blob([widgetCode], { type: 'text/html' });
             const link = document.createElement('a');
