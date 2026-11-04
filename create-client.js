@@ -137,7 +137,28 @@ async function createClient() {
         console.log(`✅ Вебхук привязан`);
       } catch (e) { console.log(`❌ Ошибка вебхука: ${e.message}`); }
     }
-
+    if (botToken && botToken !== 'НЕТ_ТОКЕНА') {
+      try {
+        const webhookUrl = `https://chat-bot-${clientId}.onrender.com/telegram-webhook`;
+        await axios.get(`https://api.telegram.org/bot${botToken}/setWebhook?url=${webhookUrl}`);
+        console.log(`✅ Вебхук привязан`);
+      } catch (e) { console.log(`❌ Ошибка вебхука: ${e.message}`); }
+    }
+    if (botToken && botToken !== 'НЕТ_ТОКЕНА') {
+      try {
+        const menuButtonUrl = `https://chat-bot-${clientId}.onrender.com/app`;
+        await axios.post(`https://api.telegram.org/bot${botToken}/setChatMenuButton`, {
+          menu_button: {
+            type: 'web_app',
+            text: 'Открыть приложение',
+            web_app: { url: menuButtonUrl }
+          }
+        });
+        console.log(`✅ Mini App привязан к боту`);
+      } catch (e) { 
+        console.log(`❌ Ошибка привязки Mini App: ${e.message}`); 
+      }
+    }
     if (siteUrl) {
       try {
         console.log(`⏳ Запускаю парсинг сайта...`);
