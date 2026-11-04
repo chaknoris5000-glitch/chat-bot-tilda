@@ -7,11 +7,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
-        :root {
-            --bg: #f4f6f8; --sidebar-bg: #ffffff; --primary: #1e3a2f; --primary-light: #2F5B43;
-            --accent: #3b82f6; --text-main: #0f172a; --text-muted: #64748b; --border: #e2e8f0;
-            --card-shadow: 0 1px 3px rgba(0,0,0,0.05); --danger: #ef4444; --success: #10b981;
-        }
+        :root { --bg: #f4f6f8; --sidebar-bg: #ffffff; --primary: #1e3a2f; --primary-light: #2F5B43; --accent: #3b82f6; --text-main: #0f172a; --text-muted: #64748b; --border: #e2e8f0; --card-shadow: 0 1px 3px rgba(0,0,0,0.05); --danger: #ef4444; --success: #10b981; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; background: var(--bg); color: var(--text-main); display: flex; min-height: 100vh; }
         .sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; position: fixed; height: 100%; left: 0; top: 0; z-index: 100; }
@@ -336,6 +332,7 @@
         let currentListStatus = 'all';
         let SUPABASE_URL = TILDA_URL;
         let SUPABASE_KEY = TILDA_KEY;
+
         function onTelegramAuth(user) {
             fetch('/auth/telegram', {
                 method: 'POST',
@@ -345,6 +342,7 @@
                 if (data.ok) window.location.href = `/crm?auth_success=1&telegram_id=${data.telegram_id}`;
             });
         }
+
         async function checkAuth() {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('telegram_id')) {
@@ -384,6 +382,7 @@
             }
         }
         window.onload = checkAuth;
+
         async function loadLeads() {
             try {
                 let data = [];
@@ -409,6 +408,7 @@
                 updateStats(allLeads);
             }
         }
+
         async function init() {
             const user = tg.initDataUnsafe?.user;
             if (!user) return;
@@ -434,12 +434,14 @@
                 renderPlans();
             } catch (e) { console.error(e); }
         }
+
         function updateStats(data) {
             document.getElementById('stat-total').innerText = data.length;
             document.getElementById('stat-progress').innerText = data.filter(l => l.status === 'in_progress').length;
             document.getElementById('stat-closed').innerText = data.filter(l => l.status === 'closed').length;
             document.getElementById('stat-archive').innerText = data.filter(l => l.status === 'archived').length;
         }
+
         function renderKanban(data) {
             const board = document.getElementById('kanban-view');
             board.innerHTML = '';
@@ -477,6 +479,7 @@
                 board.appendChild(colEl);
             });
         }
+
         function renderList(data) {
             const tbody = document.getElementById('leadsBody');
             tbody.innerHTML = '';
@@ -503,6 +506,7 @@
                 tbody.appendChild(tr);
             });
         }
+
         function renderClientBase(data) {
             const tbody = document.getElementById('clientsBaseBody');
             tbody.innerHTML = '';
@@ -536,6 +540,7 @@
                 tbody.appendChild(tr);
             });
         }
+
         function renderTasks(data) {
             const tbody = document.getElementById('tasksBody');
             tbody.innerHTML = '';
@@ -554,6 +559,7 @@
                 tbody.appendChild(tr);
             });
         }
+
         function updateStatusUI(status) {
             const badge = document.getElementById('current-status-badge');
             const buttons = document.getElementById('status-buttons');
@@ -575,6 +581,7 @@
                 buttons.innerHTML = `<button class="btn btn-outline btn-sm" onclick="changeStatusFromCard('new')">Вернуть в новые</button>`;
             }
         }
+
         async function changeStatusFromCard(id, newStatus) {
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
                 method: 'PATCH',
@@ -584,6 +591,7 @@
             closeModal();
             loadLeads();
         }
+
         async function archiveFromKanban(id) {
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
                 method: 'PATCH',
@@ -592,6 +600,7 @@
             });
             loadLeads();
         }
+
         function openClientModal(id) {
             const lead = allLeads.find(l => l.id === id);
             if (!lead) return;
@@ -636,6 +645,7 @@
             }
             document.getElementById('clientModal').style.display = 'flex';
         }
+
         function addPhoneField(value = '') {
             const container = document.getElementById('phones-container');
             const div = document.createElement('div');
@@ -643,6 +653,7 @@
             div.innerHTML = `<input type="text" class="dynamic-phone" value="${value}" placeholder="+7..." style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"><button class="btn btn-danger btn-sm" type="button" onclick="this.parentElement.remove()" style="padding:0 10px;">✕</button>`;
             container.appendChild(div);
         }
+
         function addServiceField(value = '') {
             const container = document.getElementById('services-container');
             const div = document.createElement('div');
@@ -650,7 +661,9 @@
             div.innerHTML = `<input type="text" class="dynamic-service" value="${value}" placeholder="Услуга" style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"><button class="btn btn-danger btn-sm" type="button" onclick="this.parentElement.remove()" style="padding:0 10px;">✕</button>`;
             container.appendChild(div);
         }
+
         function closeModal() { document.getElementById('clientModal').style.display = 'none'; }
+
         async function saveLead() {
             const phones = Array.from(document.querySelectorAll('.dynamic-phone')).map(i => i.value.trim()).filter(v => v);
             const services = Array.from(document.querySelectorAll('.dynamic-service')).map(i => i.value.trim()).filter(v => v);
@@ -669,6 +682,7 @@
             });
             closeModal(); loadLeads();
         }
+
         async function archiveLead() {
             const reason = prompt('Укажите причину переноса в архив:');
             if (reason === null) return; 
@@ -679,6 +693,7 @@
             });
             closeModal(); loadLeads();
         }
+
         async function deleteLead() {
             if (!confirm('Удалить заявку?')) return;
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${currentLeadId}`, {
@@ -687,18 +702,22 @@
             });
             closeModal(); loadLeads();
         }
+
         function copyTemplate() {
             const name = document.getElementById('edit-name').value || 'Клиент';
             navigator.clipboard.writeText(`Здравствуйте, ${name}! Спасибо за обращение. Наш менеджер свяжется с вами в ближайшее время.`);
             alert('Шаблон скопирован!');
         }
+
         function populateTaskClientSelect(data) {
             const select = document.getElementById('task-client-id');
             select.innerHTML = '<option value="">Выберите клиента...</option>';
             data.forEach(l => { select.innerHTML += `<option value="${l.id}">${l.name || 'Без имени'} (${l.phone || '—'})</option>`; });
         }
+
         function openTaskModal() { document.getElementById('taskModal').style.display = 'flex'; }
         function closeTaskModal() { document.getElementById('taskModal').style.display = 'none'; }
+
         async function saveTask() {
             const id = document.getElementById('task-client-id').value;
             const text = document.getElementById('task-text').value;
@@ -711,6 +730,7 @@
             });
             closeTaskModal(); loadLeads(); switchTab('tasks');
         }
+
         function switchTab(tab) {
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.main-content > div:not(.header-actions-mobile)').forEach(el => el.style.display = 'none');
@@ -737,14 +757,17 @@
                 document.getElementById('settings-view').style.display = 'block';
             }
         }
+
         function filterLeadsByStatus(status, btn) {
             currentListStatus = status;
             document.querySelectorAll('.filters-bar .filter-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             applyListFilters();
         }
+
         function applyListFilters() { renderList(allLeads); }
         function applyClientBaseFilters() { renderClientBase(allLeads); }
+
         function exportToExcel() {
             if (allLeads.length === 0) return alert('Нет данных');
             const ws_data = [["ID", "Дата", "Имя", "Телефон", "Услуга", "Сумма", "Оплачено", "Статус"]];
@@ -756,8 +779,10 @@
             XLSX.utils.book_append_sheet(wb, ws, "Заявки");
             XLSX.writeFile(wb, "leads_export.xlsx");
         }
+
         function openCreateModal() { document.getElementById('createModal').style.display = 'flex'; }
         function closeCreateClientModal() { document.getElementById('createModal').style.display = 'none'; }
+
         async function submitNewClient() {
             const client_id = document.getElementById('newClientId').value.trim();
             const business_name = document.getElementById('newBusinessName').value.trim();
@@ -778,6 +803,7 @@
                 if (data.ok) { alert('🚀 Задача запущена!'); closeCreateClientModal(); } else { alert('Ошибка: ' + data.error); }
             } catch (e) { alert('Ошибка сети: ' + e.message); }
         }
+
         async function createBotFromCard() {
             const client_id = document.getElementById('bot-client-id').value.trim();
             const business_name = document.getElementById('bot-business-name').value.trim();
@@ -797,7 +823,6 @@
                         bot_token, owner_telegram_id: Number(owner_telegram_id),
                         tariff: 'business', 
                         leads_limit: 300   
-})
                     })
                 });
                 const data = await res.json();
@@ -816,6 +841,7 @@
                 }
             } catch (e) { alert('Ошибка сети: ' + e.message); }
         }
+
         function toggleTheme() {
             const isDark = document.getElementById('theme-toggle').checked;
             if (isDark) {
@@ -832,6 +858,7 @@
                 document.querySelectorAll('input, select, textarea').forEach(el => { el.style.background = '#ffffff'; el.style.color = '#0f172a'; el.style.borderColor = '#e2e8f0'; });
             }
         }
+
         function downloadWidget() {
             const lead = allLeads.find(l => l.id === currentLeadId);
             if (!lead) return;
@@ -932,6 +959,7 @@
   sendBtn.addEventListener('click', sendMessage);
   input.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 })();
+<\/script>
             `.trim();
             const blob = new Blob([widgetCode], { type: 'text/html' });
             const link = document.createElement('a');
@@ -940,8 +968,7 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-              }
-        init();
+        }
     </script>
 </body>
 </html>
