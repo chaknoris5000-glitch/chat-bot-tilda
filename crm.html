@@ -352,7 +352,7 @@
             });
         }
 
-        async function checkAuth() {
+                async function checkAuth() {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('telegram_id')) {
                 currentUserTgId = Number(urlParams.get('telegram_id'));
