@@ -1438,8 +1438,12 @@ app.all('/auth/telegram', async (req, res) => {
 
 app.post('/api/create-client', async (req, res) => {
   try {
-        const { client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id } = req.body;
+    const { client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id } = req.body;
     
+    // Дефолтные значения тарифа, если их не передали
+    const tariff = req.body.tariff || 'business';
+    const leads_limit = Number(req.body.leads_limit) || 300;
+
     const ghRes = await fetch(`https://api.github.com/repos/chaknoris5000-glitch/chat-bot-tilda/actions/workflows/create-client.yml/dispatches`, {
       method: 'POST',
       headers: {
@@ -1449,7 +1453,17 @@ app.post('/api/create-client', async (req, res) => {
       },
       body: JSON.stringify({
         ref: 'main',
-                inputs: { client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id }
+        inputs: { 
+            client_id, 
+            business_name, 
+            site_url, 
+            timezone, 
+            manager_chat_id, 
+            bot_token, 
+            owner_telegram_id,
+            tariff, 
+            leads_limit
+        }
       })
     });
 
@@ -1461,19 +1475,6 @@ app.post('/api/create-client', async (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     console.error('Ошибка создания клиента:', e.message);
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
-app.post('/api/support', async (req, res) => {
-  try {
-    const { message, user_id, name } = req.body;
-    if (!message) return res.status(400).json({ ok: false });
-
-    if (MANAGER_CHAT_ID) {
-      await sendTelegram(MANAGER_CHAT_ID, `🆘 <b>Обращение в поддержку</b>\n\nОт: ${name} (ID: ${user_id})\n\nСообщение:\n${message}`);
-    }
-    res.json({ ok: true });
-  } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
