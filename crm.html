@@ -769,7 +769,10 @@
                         client_id, business_name, site_url, 
                         timezone: 'Europe/Moscow', 
                         manager_chat_id: owner_telegram_id || ADMIN_TELEGRAM_ID.toString(), 
-                        bot_token, owner_telegram_id: Number(owner_telegram_id)
+                        bot_token, owner_telegram_id: Number(owner_telegram_id),
+                        tariff: 'business', 
+                        leads_limit: 300   
+})
                     })
                 });
                 const data = await res.json();
