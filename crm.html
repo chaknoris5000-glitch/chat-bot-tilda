@@ -1,4 +1,4 @@
-// Если это Админ в своем боте (Тильда) — смотрим <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -14,7 +14,6 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; background: var(--bg); color: var(--text-main); display: flex; min-height: 100vh; }
-
         .sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; position: fixed; height: 100%; left: 0; top: 0; z-index: 100; }
         .logo { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 24px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
         .sidebar-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
@@ -26,7 +25,6 @@
         .menu-item svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-right: 10px; }
         .menu-item-left { display: flex; align-items: center; }
         .badge-count { background: var(--danger); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px; font-weight: bold; }
-
         .main-content { flex: 1; margin-left: 260px; padding: 30px; max-width: 1400px; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
         .header h1 { font-size: 24px; font-weight: 700; }
@@ -37,12 +35,10 @@
         .btn-outline:hover { background: #f8fafc; }
         .btn-sm { padding: 4px 8px; font-size: 11px; }
         .btn-danger { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
-
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
         .stat-card { background: white; padding: 16px; border-radius: 10px; border: 1px solid var(--border); box-shadow: var(--card-shadow); }
         .stat-title { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
         .stat-value { font-size: 26px; font-weight: 800; }
-
         .kanban-board { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 20px; min-height: 60vh; }
         .kanban-col { flex: 1; min-width: 300px; background: #f8fafc; border-radius: 10px; padding: 12px; border: 1px solid var(--border); }
         .col-header { display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; padding: 4px 8px; margin-bottom: 10px; color: #475569; }
@@ -54,23 +50,19 @@
         .k-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
         .k-tag { font-size: 10px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #475569; }
         .k-actions { margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 8px; display: flex; justify-content: flex-end; }
-
         .table-container { background: white; border-radius: 10px; border: 1px solid var(--border); overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th { background: #f8fafc; padding: 12px 16px; font-size: 12px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
         td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
         tr:hover td { background: #f8fafc; cursor: pointer; }
-
         .filters-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
         .filter-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border); background: #fff; color: var(--text-muted); font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
         .filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
         .filter-input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; }
-
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.5); z-index: 1000; align-items: center; justify-content: center; }
         .modal-content { background: white; padding: 24px; border-radius: 12px; width: 95%; max-width: 650px; max-height: 90vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
         .modal-title { font-size: 20px; font-weight: 700; }
-        
         .status-panel { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
         .current-status { font-weight: bold; font-size: 14px; padding: 4px 10px; border-radius: 6px; }
         .status-new { background: #eff6ff; color: #1d4ed8; }
@@ -78,24 +70,20 @@
         .status-closed { background: #f0fdf4; color: #15803d; }
         .status-archived { background: #f1f5f9; color: #475569; }
         .status-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
         .contact-actions { display: flex; gap: 8px; margin-bottom: 20px; }
         .btn-contact { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; font-size: 12px; border-radius: 8px; text-decoration: none; font-weight: 600; border: none; cursor: pointer; }
         .btn-call { background: #eff6ff; color: #1d4ed8; }
         .btn-tg { background: #e0f2fe; color: #0284c7; }
         .btn-email { background: #f3f4f6; color: #374151; }
-        
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
         .form-group.full { grid-column: span 2; }
         .form-group label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
         .form-group input, .form-group select, .form-group textarea { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; font-family: inherit; }
-
         .settings-section { background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
         .settings-section h3 { font-size: 16px; margin-bottom: 15px; color: var(--primary); }
         .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
         .settings-row:last-child { border-bottom: none; padding-bottom: 0; }
-
         @media (max-width: 768px) {
             .mobile-small-btn { font-size: 10px !important; }
             body { flex-direction: column; padding-bottom: 64px; }
@@ -129,7 +117,6 @@
             <script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="vadim602_bot" data-size="large" data-onauth="onTelegramAuth(user)" data-request-access="write"></script>
         </div>
     </div>
-
     <div id="crm-container" style="display: none; width: 100%;">
         <div class="header-actions-mobile">
             <button class="btn btn-primary" id="add-client-btn-mobile" onclick="openCreateModal()">+ Клиент</button>
@@ -149,7 +136,6 @@
             <div class="menu-label">Настройки</div>
             <div class="menu-item" onclick="switchTab('settings')"><div class="menu-item-left"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Настройки</div></div>
         </div>
-
         <div class="main-content">
             <div class="header"><h1 id="page-title">Воронка продаж</h1></div>
             <div class="stats-grid" id="stats-block">
@@ -159,7 +145,6 @@
                 <div class="stat-card" style="background: #f1f5f9; border-color: #e2e8f0;"><div class="stat-title" style="color: #475569;">Архив</div><div class="stat-value" id="stat-archive" style="color: #475569;">0</div></div>
             </div>
             <div id="kanban-view" class="kanban-board"></div>
-
             <div id="list-view" style="display: none;">
                 <div class="filters-bar">
                     <button class="filter-btn active" onclick="filterLeadsByStatus('all', this)">Все</button>
@@ -177,7 +162,6 @@
                     </table>
                 </div>
             </div>
-
             <div id="clients-view" style="display: none;">
                 <div class="filters-bar">
                     <input type="text" class="filter-input" id="client-filter-name" placeholder="Поиск по имени" oninput="applyClientBaseFilters()">
@@ -191,7 +175,6 @@
                     </table>
                 </div>
             </div>
-
             <div id="tasks-view" style="display: none;">
                 <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
                     <button class="btn btn-primary" onclick="openTaskModal()">+ Добавить задачу</button>
@@ -203,7 +186,6 @@
                     </table>
                 </div>
             </div>
-
             <div id="settings-view" style="display: none;">
                 <div class="settings-section">
                     <h3>Профиль владельца</h3>
@@ -234,7 +216,6 @@
             </div>
         </div>
     </div>
-
     <div id="clientModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -287,7 +268,6 @@
             </div>
         </div>
     </div>
-
     <div id="createModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -300,6 +280,15 @@
                 <div class="form-group full"><label>Ссылка на сайт</label><input type="text" id="newSiteUrl" placeholder="https://..."></div>
                 <div class="form-group full"><label>Токен Telegram-бота</label><input type="text" id="newBotToken" placeholder="123456:ABC-DEF..."></div>
                 <div class="form-group full"><label>Telegram ID владельца (для доступа)</label><input type="text" id="newOwnerId" placeholder="Например: 123456789"></div>
+                <div class="form-group full">
+                    <label>Тариф</label>
+                    <select id="newTariff" class="filter-input" style="width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;">
+                        <option value="start">Старт (1990 ₽, до 100 заявок)</option>
+                        <option value="business" selected>Бизнес (2490 ₽, до 300 заявок)</option>
+                        <option value="unlimited">Безлимит (4990 ₽, без ограничений)</option>
+                        <option value="result">За результат (25 ₽ за заявку)</option>
+                    </select>
+                </div>
                 <div class="form-group full">
                     <label>Часовой пояс</label>
                     <select id="newTimezone" class="filter-input" style="width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;">
@@ -318,7 +307,6 @@
             </div>
         </div>
     </div>
-
     <div id="taskModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -336,21 +324,18 @@
             </div>
         </div>
     </div>
-
     <script>
         const TILDA_URL = 'https://ozutjnwextahorvzdbpl.supabase.co';
         const TILDA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96dXRqbndleHRhaG9ydnpkYnBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MTQ3MzUsImV4cCI6MjEwNzE5MDczNX0.8L3adhQ9gUR5iSly1afSQN6HeEhkj9QQ4NtUyZUQx28';
         const LOANS_URL = 'https://ggmshdfplrqsybnchvha.supabase.co';
         const LOANS_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnbXNoZGZwbHJxc3libmNodmhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3MDA4MTUsImV4cCI6MjEwNzI3NjgxNX0.BXfy8ECjzp1g0-uuM_CeXOOB46fWm9KD7VERSX8tYJs';
         const ADMIN_TELEGRAM_ID = 5818548555; 
-        
         let allLeads = [];
         let currentLeadId = null;
         let currentUserTgId = null;
         let currentListStatus = 'all';
         let SUPABASE_URL = TILDA_URL;
         let SUPABASE_KEY = TILDA_KEY;
-
         function onTelegramAuth(user) {
             fetch('/auth/telegram', {
                 method: 'POST',
@@ -360,10 +345,8 @@
                 if (data.ok) window.location.href = `/crm?auth_success=1&telegram_id=${data.telegram_id}`;
             });
         }
-
         async function checkAuth() {
             const urlParams = new URLSearchParams(window.location.search);
-            
             if (urlParams.get('telegram_id')) {
                 currentUserTgId = Number(urlParams.get('telegram_id'));
             } else {
@@ -373,15 +356,12 @@
                     }
                 } catch (e) {}
             }
-            
             if (currentUserTgId) {
                 document.getElementById('auth-container').style.display = 'none';
                 document.getElementById('crm-container').style.display = 'flex';
-                
                 if (urlParams.get('view_client')) {
                     window.currentClientId = urlParams.get('view_client');
                 }
-
                 const isAdmin = currentUserTgId === ADMIN_TELEGRAM_ID;
                 if (isAdmin && (!window.currentClientId || window.currentClientId === 'tilda')) {
                     SUPABASE_URL = TILDA_URL;
@@ -390,7 +370,6 @@
                     SUPABASE_URL = LOANS_URL;
                     SUPABASE_KEY = LOANS_KEY;
                 }
-                                // Если это обычный клиент, и он зашел в бота Тильды — не даем ему смотреть
                 if (!isAdmin && window.currentClientId === 'tilda') {
                     document.getElementById('auth-container').style.display = 'none';
                     document.getElementById('crm-container').style.display = 'flex';
@@ -405,26 +384,18 @@
             }
         }
         window.onload = checkAuth;
-
         async function loadLeads() {
             try {
                 let data = [];
                 let url = `/api/get-leads?telegram_id=${currentUserTgId}`;
-                
-                // Если мы знаем, в каком боте находимся (Админ смотрит чужой бот)
                 if (window.currentClientId) {
                     url += `&client_id=${window.currentClientId}`;
-                } 
-                // Если это Админ в своем боте (без view_client)
-                else if (currentUserTgId === ADMIN_TELEGRAM_ID) {
+                } else if (currentUserTgId === ADMIN_TELEGRAM_ID) {
                     url += `&client_id=tilda`;
                 }
-
                 const res = await fetch(url);
                 data = await res.json();
-                
                 if (!Array.isArray(data)) data = [];
-                
                 allLeads = data;
                 updateStats(allLeads);
                 renderKanban(allLeads);
@@ -438,14 +409,12 @@
                 updateStats(allLeads);
             }
         }
-
         function updateStats(data) {
             document.getElementById('stat-total').innerText = data.length;
             document.getElementById('stat-progress').innerText = data.filter(l => l.status === 'in_progress').length;
             document.getElementById('stat-closed').innerText = data.filter(l => l.status === 'closed').length;
             document.getElementById('stat-archive').innerText = data.filter(l => l.status === 'archived').length;
         }
-
         function renderKanban(data) {
             const board = document.getElementById('kanban-view');
             board.innerHTML = '';
@@ -454,20 +423,16 @@
                 { id: 'in_progress', title: 'В работе' }, 
                 { id: 'closed', title: 'Выполнено' }
             ];
-
             columns.forEach(col => {
                 const colLeads = data.filter(l => l.status === col.id);
                 const totalSum = colLeads.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-                
                 const colEl = document.createElement('div');
                 colEl.className = 'kanban-col';
                 colEl.innerHTML = `<div class="col-header"><span>${col.title} (${colLeads.length})</span><span style="color:var(--success);">${totalSum > 0 ? totalSum.toLocaleString() + ' ₽' : ''}</span></div>`;
-
                 colLeads.forEach(lead => {
                     const card = document.createElement('div');
                     card.className = 'kanban-card';
                     card.onclick = () => openClientModal(lead.id);
-                    
                     let actionBtn = '';
                     if (col.id === 'new') {
                         actionBtn = `<button class="btn btn-outline btn-sm" onclick="event.stopPropagation(); changeStatusFromCard(${lead.id}, 'in_progress')">→ В работу</button>`;
@@ -476,7 +441,6 @@
                     } else if (col.id === 'closed') {
                         actionBtn = `<div style="display:flex; gap:5px;"><button class="btn btn-outline btn-sm" onclick="event.stopPropagation(); changeStatusFromCard(${lead.id}, 'in_progress')">← В работу</button><button class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="event.stopPropagation(); archiveFromKanban(${lead.id})">📦 В архив</button></div>`;
                     }
-
                     card.innerHTML = `
                         <div class="k-title"><span>${lead.name || 'Без имени'}</span><span class="k-amount">${lead.amount ? lead.amount + ' ₽' : ''}</span></div>
                         <div class="k-phone">${lead.phone || (lead.phones && lead.phones[0]) || '—'}</div>
@@ -488,21 +452,17 @@
                 board.appendChild(colEl);
             });
         }
-
         function renderList(data) {
             const tbody = document.getElementById('leadsBody');
             tbody.innerHTML = '';
-            
             const dateVal = document.getElementById('list-filter-date').value;
             const searchVal = document.getElementById('list-filter-search').value.toLowerCase();
-            
             let filtered = data.filter(l => {
                 if (currentListStatus !== 'all' && l.status !== currentListStatus) return false;
                 if (dateVal && !l.created_at.startsWith(dateVal)) return false;
                 if (searchVal && !(l.name||'').toLowerCase().includes(searchVal) && !(l.phone||'').includes(searchVal)) return false;
                 return true;
             });
-
             filtered.forEach(lead => {
                 const tr = document.createElement('tr');
                 tr.onclick = () => openClientModal(lead.id);
@@ -518,7 +478,6 @@
                 tbody.appendChild(tr);
             });
         }
-
         function renderClientBase(data) {
             const tbody = document.getElementById('clientsBaseBody');
             tbody.innerHTML = '';
@@ -529,19 +488,16 @@
                 if (lead.service && !uniqueClients[phone].allServices.includes(lead.service)) uniqueClients[phone].allServices.push(lead.service);
                 if (lead.created_at > uniqueClients[phone].lastDate) uniqueClients[phone].lastDate = lead.created_at;
             });
-
             const clientsArray = Object.values(uniqueClients);
             const nameVal = document.getElementById('client-filter-name').value.toLowerCase();
             const phoneVal = document.getElementById('client-filter-phone').value;
             const dateVal = document.getElementById('client-filter-date').value;
-
             const filtered = clientsArray.filter(c => {
                 if (nameVal && !(c.name||'').toLowerCase().includes(nameVal)) return false;
                 if (phoneVal && !(c.phone||'').includes(phoneVal)) return false;
                 if (dateVal && !c.lastDate.startsWith(dateVal)) return false;
                 return true;
             });
-
             filtered.forEach(client => {
                 const tr = document.createElement('tr');
                 tr.onclick = () => openClientModal(client.id);
@@ -555,14 +511,12 @@
                 tbody.appendChild(tr);
             });
         }
-
         function renderTasks(data) {
             const tbody = document.getElementById('tasksBody');
             tbody.innerHTML = '';
             const tasks = data.filter(l => l.next_contact_date);
             document.getElementById('task-count').innerText = tasks.length;
             if(tasks.length > 0) document.getElementById('task-count').style.display = 'inline-block';
-
             tasks.forEach(lead => {
                 const date = new Date(lead.next_contact_date).toLocaleString('ru-RU');
                 const tr = document.createElement('tr');
@@ -575,12 +529,10 @@
                 tbody.appendChild(tr);
             });
         }
-
         function updateStatusUI(status) {
             const badge = document.getElementById('current-status-badge');
             const buttons = document.getElementById('status-buttons');
             buttons.innerHTML = '';
-
             if (status === 'new') {
                 badge.className = 'current-status status-new';
                 badge.innerText = 'Статус: Новая';
@@ -598,7 +550,6 @@
                 buttons.innerHTML = `<button class="btn btn-outline btn-sm" onclick="changeStatusFromCard('new')">Вернуть в новые</button>`;
             }
         }
-
         async function changeStatusFromCard(id, newStatus) {
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
                 method: 'PATCH',
@@ -608,7 +559,6 @@
             closeModal();
             loadLeads();
         }
-
         async function archiveFromKanban(id) {
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
                 method: 'PATCH',
@@ -617,7 +567,6 @@
             });
             loadLeads();
         }
-
         function openClientModal(id) {
             const lead = allLeads.find(l => l.id === id);
             if (!lead) return;
@@ -627,21 +576,16 @@
             document.getElementById('edit-amount').value = lead.amount || '';
             document.getElementById('edit-paid').value = lead.is_paid ? 'true' : 'false';
             document.getElementById('edit-notes').value = lead.notes || lead.problem || '';
-
             document.getElementById('phones-container').innerHTML = '';
             document.getElementById('services-container').innerHTML = '';
-
             const phones = lead.phones && lead.phones.length > 0 ? lead.phones : (lead.phone ? [lead.phone] : ['']);
             phones.forEach(p => addPhoneField(p));
             const services = lead.services && lead.services.length > 0 ? lead.services : (lead.service ? [lead.service] : ['']);
             services.forEach(s => addServiceField(s));
-
             updateStatusUI(lead.status);
-
             const cleanPhone = (lead.phone || '').replace(/\D/g, '');
             document.getElementById('btn-call').href = `tel:${lead.phone || ''}`;
             document.getElementById('btn-tg').href = cleanPhone.length > 5 ? `https://t.me/+${cleanPhone}` : '#';
-
             if (lead.email) {
                 document.getElementById('btn-email').href = `mailto:${lead.email}`;
                 document.getElementById('btn-email').style.opacity = '1';
@@ -649,7 +593,6 @@
                 document.getElementById('btn-email').removeAttribute('href');
                 document.getElementById('btn-email').style.opacity = '0.5';
             }
-
             if (currentUserTgId === ADMIN_TELEGRAM_ID) {
                 if (lead.client_id && lead.client_id !== 'tilda') {
                     document.getElementById('create-bot-fields').style.display = 'none';
@@ -668,7 +611,6 @@
             }
             document.getElementById('clientModal').style.display = 'flex';
         }
-
         function addPhoneField(value = '') {
             const container = document.getElementById('phones-container');
             const div = document.createElement('div');
@@ -676,7 +618,6 @@
             div.innerHTML = `<input type="text" class="dynamic-phone" value="${value}" placeholder="+7..." style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"><button class="btn btn-danger btn-sm" type="button" onclick="this.parentElement.remove()" style="padding:0 10px;">✕</button>`;
             container.appendChild(div);
         }
-
         function addServiceField(value = '') {
             const container = document.getElementById('services-container');
             const div = document.createElement('div');
@@ -684,9 +625,7 @@
             div.innerHTML = `<input type="text" class="dynamic-service" value="${value}" placeholder="Услуга" style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"><button class="btn btn-danger btn-sm" type="button" onclick="this.parentElement.remove()" style="padding:0 10px;">✕</button>`;
             container.appendChild(div);
         }
-
         function closeModal() { document.getElementById('clientModal').style.display = 'none'; }
-
         async function saveLead() {
             const phones = Array.from(document.querySelectorAll('.dynamic-phone')).map(i => i.value.trim()).filter(v => v);
             const services = Array.from(document.querySelectorAll('.dynamic-service')).map(i => i.value.trim()).filter(v => v);
@@ -705,7 +644,6 @@
             });
             closeModal(); loadLeads();
         }
-
         async function archiveLead() {
             const reason = prompt('Укажите причину переноса в архив:');
             if (reason === null) return; 
@@ -716,7 +654,6 @@
             });
             closeModal(); loadLeads();
         }
-
         async function deleteLead() {
             if (!confirm('Удалить заявку?')) return;
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${currentLeadId}`, {
@@ -725,28 +662,23 @@
             });
             closeModal(); loadLeads();
         }
-
         function copyTemplate() {
             const name = document.getElementById('edit-name').value || 'Клиент';
             navigator.clipboard.writeText(`Здравствуйте, ${name}! Спасибо за обращение. Наш менеджер свяжется с вами в ближайшее время.`);
             alert('Шаблон скопирован!');
         }
-
         function populateTaskClientSelect(data) {
             const select = document.getElementById('task-client-id');
             select.innerHTML = '<option value="">Выберите клиента...</option>';
             data.forEach(l => { select.innerHTML += `<option value="${l.id}">${l.name || 'Без имени'} (${l.phone || '—'})</option>`; });
         }
-
         function openTaskModal() { document.getElementById('taskModal').style.display = 'flex'; }
         function closeTaskModal() { document.getElementById('taskModal').style.display = 'none'; }
-
         async function saveTask() {
             const id = document.getElementById('task-client-id').value;
             const text = document.getElementById('task-text').value;
             const date = document.getElementById('task-date').value;
             if (!id || !text || !date) return alert('Заполните все поля');
-
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
                 method: 'PATCH',
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
@@ -754,7 +686,6 @@
             });
             closeTaskModal(); loadLeads(); switchTab('tasks');
         }
-
         function switchTab(tab) {
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.main-content > div:not(.header-actions-mobile)').forEach(el => el.style.display = 'none');
@@ -781,17 +712,14 @@
                 document.getElementById('settings-view').style.display = 'block';
             }
         }
-
         function filterLeadsByStatus(status, btn) {
             currentListStatus = status;
             document.querySelectorAll('.filters-bar .filter-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             applyListFilters();
         }
-
         function applyListFilters() { renderList(allLeads); }
         function applyClientBaseFilters() { renderClientBase(allLeads); }
-
         function exportToExcel() {
             if (allLeads.length === 0) return alert('Нет данных');
             const ws_data = [["ID", "Дата", "Имя", "Телефон", "Услуга", "Сумма", "Оплачено", "Статус"]];
@@ -803,40 +731,36 @@
             XLSX.utils.book_append_sheet(wb, ws, "Заявки");
             XLSX.writeFile(wb, "leads_export.xlsx");
         }
-
         function openCreateModal() { document.getElementById('createModal').style.display = 'flex'; }
         function closeCreateClientModal() { document.getElementById('createModal').style.display = 'none'; }
-
         async function submitNewClient() {
             const client_id = document.getElementById('newClientId').value.trim();
             const business_name = document.getElementById('newBusinessName').value.trim();
             const site_url = document.getElementById('newSiteUrl').value.trim();
             const bot_token = document.getElementById('newBotToken').value.trim();
             const owner_telegram_id = document.getElementById('newOwnerId').value.trim();
+            const tariff = document.getElementById('newTariff').value;
+            const leads_limit = tariff === 'start' ? 100 : (tariff === 'business' ? 300 : 99999);
             const timezone = document.getElementById('newTimezone').value;
             if (!client_id || !business_name || !site_url || !bot_token) return alert('Заполните все поля!');
-
             try {
                 const res = await fetch('/api/create-client', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ client_id, business_name, site_url, timezone: timezone, manager_chat_id: owner_telegram_id || ADMIN_TELEGRAM_ID.toString(), bot_token, owner_telegram_id })
+                    body: JSON.stringify({ client_id, business_name, site_url, timezone: timezone, manager_chat_id: owner_telegram_id || ADMIN_TELEGRAM_ID.toString(), bot_token, owner_telegram_id, tariff: tariff, leads_limit: leads_limit })
                 });
                 const data = await res.json();
                 if (data.ok) { alert('🚀 Задача запущена!'); closeCreateClientModal(); } else { alert('Ошибка: ' + data.error); }
             } catch (e) { alert('Ошибка сети: ' + e.message); }
         }
-
         async function createBotFromCard() {
             const client_id = document.getElementById('bot-client-id').value.trim();
             const business_name = document.getElementById('bot-business-name').value.trim();
             const site_url = document.getElementById('bot-site-url').value.trim();
             const bot_token = document.getElementById('bot-token').value.trim();
             const owner_telegram_id = document.getElementById('bot-owner-id').value.trim();
-            
             if (!client_id || !business_name || !site_url || !bot_token) return alert('Заполните все поля для создания бота!');
             const lead = allLeads.find(l => l.id === currentLeadId);
-
             try {
                 const res = await fetch('/api/create-client', {
                     method: 'POST',
@@ -849,7 +773,6 @@
                     })
                 });
                 const data = await res.json();
-                
                 if (data.ok) {
                     alert('🚀 Бот создается! Через минуту появится кнопка скачивания.');
                     await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${currentLeadId}`, {
@@ -865,7 +788,6 @@
                 }
             } catch (e) { alert('Ошибка сети: ' + e.message); }
         }
-
         function toggleTheme() {
             const isDark = document.getElementById('theme-toggle').checked;
             if (isDark) {
@@ -882,14 +804,12 @@
                 document.querySelectorAll('input, select, textarea').forEach(el => { el.style.background = '#ffffff'; el.style.color = '#0f172a'; el.style.borderColor = '#e2e8f0'; });
             }
         }
-
         function downloadWidget() {
             const lead = allLeads.find(l => l.id === currentLeadId);
             if (!lead) return;
             const clientId = lead.client_id || 'tilda';
             const serverUrl = `https://chat-bot-${clientId}.onrender.com/message`;
             const botName = `vadim602_bot`;
-
             const widgetCode = `
 <div id="chatBubble" style="position:fixed;bottom:20px;right:20px;width:60px;height:60px;border-radius:50%;background:#2F5B43;color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;z-index:99999;box-shadow:0 4px 20px rgba(47,91,67,0.5);animation:pulse 2s infinite;">💬</div>
 <div id="chatWidget" style="display:none;position:fixed;bottom:20px;right:20px;width:340px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.18);font-family:Arial,sans-serif;z-index:99999;box-sizing:border-box;">
@@ -986,7 +906,6 @@
 })();
 <\/script>
             `.trim();
-
             const blob = new Blob([widgetCode], { type: 'text/html' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
