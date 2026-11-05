@@ -43,21 +43,20 @@ async function createClient() {
     const generatedPrompt = await generatePrompt(businessName, siteUrl);
     serverCode = serverCode.replace(/const BUSINESS_PROMPT = .*?;/s, `const BUSINESS_PROMPT = ${JSON.stringify(generatedPrompt)};`);
     
-    const packageJson = Buffer.from(pRes.data.content, 'base64').toString('utf8');
-    const crmHtml = Buffer.from(cRes.data.content, 'base64').toString('utf8');
-    let appHtml = Buffer.from(aRes.data.content, 'base64').toString('utf8');
-    appHtml = appHtml.replace(/const BOT_CLIENT_ID = .*?;/, `const BOT_CLIENT_ID = '${clientId}';`);
-    crmHtml = crmHtml.replace(/const BOT_CLIENT_ID = .*?;/, `const BOT_CLIENT_ID = '${clientId}';`);
-    serverCode = serverCode.replace(/const CLIENT_ID = .*?;/, `const CLIENT_ID = '${clientId}';`);
-    serverCode = serverCode.replace(/const BUSINESS_NAME = .*?;/, `const BUSINESS_NAME = '${businessName}';`);
-    serverCode = serverCode.replace(/const SITE_TO_CRAWL = .*?;/, `const SITE_TO_CRAWL = '${siteUrl}';`);
-    serverCode = serverCode.replace(/const BASE_URL = .*?;/, `const BASE_URL = '${siteUrl}';`);
-    serverCode = serverCode.replace(/const BOT_CLIENT_ID = .*?;/, `const BOT_CLIENT_ID = '${clientId}';`);
-    serverCode = serverCode.replace(/if \(lowerMsg\.includes\('тариф'\).*?\}\n/s, '');
-    serverCode = serverCode.replace(/if \(lowerMsg\.includes\('пример'\).*?\}\n/s, '');
-    serverCode = serverCode.split("'tilda'").join(`'${clientId}'`);
-    const ghRes = await axios.post(`https://api.github.com/user/repos`, { name: `chat-bot-${clientId}`, private: false }, { headers: ghHeaders });
-    const githubRepoUrl = ghRes.data.html_url;
+ const packageJson = Buffer.from(pRes.data.content, 'base64').toString('utf8');
+const crmHtml = Buffer.from(cRes.data.content, 'base64').toString('utf8');
+let appHtml = Buffer.from(aRes.data.content, 'base64').toString('utf8');
+appHtml = appHtml.replace(/const BOT_CLIENT_ID = .*?;/, `const BOT_CLIENT_ID = '${clientId}';`);
+crmHtml = crmHtml.replace(/const BOT_CLIENT_ID = .*?;/, `const BOT_CLIENT_ID = '${clientId}';`);
+serverCode = serverCode.replace(/const CLIENT_ID = .*?;/, `const CLIENT_ID = '${clientId}';`);
+serverCode = serverCode.replace(/const BUSINESS_NAME = .*?;/, `const BUSINESS_NAME = '${businessName}';`);
+serverCode = serverCode.replace(/const SITE_TO_CRAWL = .*?;/, `const SITE_TO_CRAWL = '${siteUrl}';`);
+serverCode = serverCode.replace(/const BASE_URL = .*?;/, `const BASE_URL = '${siteUrl}';`);
+serverCode = serverCode.replace(/const BOT_CLIENT_ID = .*?;/, `const BOT_CLIENT_ID = '${clientId}';`);
+serverCode = serverCode.replace(/if \(lowerMsg\.includes\('тариф'\).*?\}\n/s, '');
+serverCode = serverCode.replace(/if \(lowerMsg\.includes\('пример'\).*?\}\n/s, '');
+const ghRes = await axios.post(`https://api.github.com/user/repos`, { name: `chat-bot-${clientId}`, private: false }, { headers: ghHeaders });
+const githubRepoUrl = ghRes.data.html_url;
 
     const uploadFile = async (path, content, message) => {
       await axios.put(`https://api.github.com/repos/${GITHUB_OWNER}/chat-bot-${clientId}/contents/${path}`, { message: message, content: Buffer.from(content).toString('base64') }, { headers: ghHeaders });
