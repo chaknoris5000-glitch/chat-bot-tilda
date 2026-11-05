@@ -673,18 +673,40 @@ app.get('/crm', (req, res) => {
 app.get('/app', (req, res) => {
   res.sendFile(path.join(__dirname, 'app.html'));
 });
-app.get('/health', (req, res) => {
-  res.json({ ok: true, time: new Date().toISOString(), uptime: process.uptime(), client_id: CLIENT_ID });
+
+app.get('/api/get-leads', async (req, res) => {
+  try {
+    const { client_id } = req.query;
+    const isTilda = client_id === 'tilda';
+    const baseUrl = isTilda ? SUPABASE_URL : COMMON_SUPABASE_URL;
+    const baseKey = isTilda ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
+
+    let url = `${baseUrl}/rest/v1/leads?select=*&order=id.desc`;
+    if (client_id) url += `&client_id=eq.${client_id}`;
+    
+    const r = await fetch(url, {
+      headers: { 'apikey': baseKey, 'Authorization': `Bearer ${baseKey}` }
+    });
+    const data = await r.json();
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-app.get('/', (req, res) => {
-  res.json({ ok: true, service: 'AI-Администратор Tilda', client_id: CLIENT_ID, time: new Date().toISOString() });
+app.get('/api/get-my-client', async (req, res) => {
+  try {
+    const { owner_telegram_id } = req.query;
+    const url = `${COMMON_SUPABASE_URL}/rest/v1/clients?select=*&owner_telegram_id=eq.${owner_telegram_id}&client_id=eq.${CLIENT_ID}&limit=1`;
+    const r = await fetch(url, {
+      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
+    });
+    const data = await r.json();
+    res.json(Array.isArray(data) && data.length > 0 ? data[0] : null);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
-
-// ========== ВЕБХУКИ ==========
-
-app.post('/yookassa-webhook', async (req, res) => {
-  res.sendStatus(200);
 
   try {
     const event = req.body;
