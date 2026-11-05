@@ -44,7 +44,7 @@ async function createClient() {
     serverCode = serverCode.replace(/const BUSINESS_PROMPT = .*?;/s, `const BUSINESS_PROMPT = ${JSON.stringify(generatedPrompt)};`);
     
  const packageJson = Buffer.from(pRes.data.content, 'base64').toString('utf8');
-const crmHtml = Buffer.from(cRes.data.content, 'base64').toString('utf8');
+let crmHtml = Buffer.from(cRes.data.content, 'base64').toString('utf8');
 let appHtml = Buffer.from(aRes.data.content, 'base64').toString('utf8');
 appHtml = appHtml.replace(/const BOT_CLIENT_ID = .*?;/, `const BOT_CLIENT_ID = '${clientId}';`);
 crmHtml = crmHtml.replace(/const BOT_CLIENT_ID = .*?;/, `const BOT_CLIENT_ID = '${clientId}';`);
