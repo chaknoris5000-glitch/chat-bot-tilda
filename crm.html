@@ -7,9 +7,14 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
-        :root { --bg: #f4f6f8; --sidebar-bg: #ffffff; --primary: #1e3a2f; --primary-light: #2F5B43; --accent: #3b82f6; --text-main: #0f172a; --text-muted: #64748b; --border: #e2e8f0; --card-shadow: 0 1px 3px rgba(0,0,0,0.05); --danger: #ef4444; --success: #10b981; }
+        :root {
+            --bg: #f4f6f8; --sidebar-bg: #ffffff; --primary: #1e3a2f; --primary-light: #2F5B43;
+            --accent: #3b82f6; --text-main: #0f172a; --text-muted: #64748b; --border: #e2e8f0;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.05); --danger: #ef4444; --success: #10b981;
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; background: var(--bg); color: var(--text-main); display: flex; min-height: 100vh; }
+
         .sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; position: fixed; height: 100%; left: 0; top: 0; z-index: 100; }
         .logo { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 24px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
         .sidebar-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
@@ -21,6 +26,7 @@
         .menu-item svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-right: 10px; }
         .menu-item-left { display: flex; align-items: center; }
         .badge-count { background: var(--danger); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px; font-weight: bold; }
+
         .main-content { flex: 1; margin-left: 260px; padding: 30px; max-width: 1400px; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
         .header h1 { font-size: 24px; font-weight: 700; }
@@ -31,10 +37,12 @@
         .btn-outline:hover { background: #f8fafc; }
         .btn-sm { padding: 4px 8px; font-size: 11px; }
         .btn-danger { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
         .stat-card { background: white; padding: 16px; border-radius: 10px; border: 1px solid var(--border); box-shadow: var(--card-shadow); }
         .stat-title { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
         .stat-value { font-size: 26px; font-weight: 800; }
+
         .kanban-board { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 20px; min-height: 60vh; }
         .kanban-col { flex: 1; min-width: 300px; background: #f8fafc; border-radius: 10px; padding: 12px; border: 1px solid var(--border); }
         .col-header { display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; padding: 4px 8px; margin-bottom: 10px; color: #475569; }
@@ -46,19 +54,23 @@
         .k-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
         .k-tag { font-size: 10px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #475569; }
         .k-actions { margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 8px; display: flex; justify-content: flex-end; }
+
         .table-container { background: white; border-radius: 10px; border: 1px solid var(--border); overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th { background: #f8fafc; padding: 12px 16px; font-size: 12px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
         td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
         tr:hover td { background: #f8fafc; cursor: pointer; }
+
         .filters-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
         .filter-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border); background: #fff; color: var(--text-muted); font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
         .filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
         .filter-input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; }
+
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.5); z-index: 1000; align-items: center; justify-content: center; }
         .modal-content { background: white; padding: 24px; border-radius: 12px; width: 95%; max-width: 650px; max-height: 90vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
         .modal-title { font-size: 20px; font-weight: 700; }
+        
         .status-panel { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
         .current-status { font-weight: bold; font-size: 14px; padding: 4px 10px; border-radius: 6px; }
         .status-new { background: #eff6ff; color: #1d4ed8; }
@@ -66,20 +78,24 @@
         .status-closed { background: #f0fdf4; color: #15803d; }
         .status-archived { background: #f1f5f9; color: #475569; }
         .status-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
         .contact-actions { display: flex; gap: 8px; margin-bottom: 20px; }
         .btn-contact { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; font-size: 12px; border-radius: 8px; text-decoration: none; font-weight: 600; border: none; cursor: pointer; }
         .btn-call { background: #eff6ff; color: #1d4ed8; }
         .btn-tg { background: #e0f2fe; color: #0284c7; }
         .btn-email { background: #f3f4f6; color: #374151; }
+        
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
         .form-group.full { grid-column: span 2; }
         .form-group label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
         .form-group input, .form-group select, .form-group textarea { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; font-family: inherit; }
+
         .settings-section { background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
         .settings-section h3 { font-size: 16px; margin-bottom: 15px; color: var(--primary); }
         .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
         .settings-row:last-child { border-bottom: none; padding-bottom: 0; }
+
         @media (max-width: 768px) {
             .mobile-small-btn { font-size: 10px !important; }
             body { flex-direction: column; padding-bottom: 64px; }
@@ -113,6 +129,7 @@
             <script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="vadim602_bot" data-size="large" data-onauth="onTelegramAuth(user)" data-request-access="write"></script>
         </div>
     </div>
+
     <div id="crm-container" style="display: none; width: 100%;">
         <div class="header-actions-mobile">
             <button class="btn btn-primary" id="add-client-btn-mobile" onclick="openCreateModal()">+ Клиент</button>
@@ -132,6 +149,7 @@
             <div class="menu-label">Настройки</div>
             <div class="menu-item" onclick="switchTab('settings')"><div class="menu-item-left"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Настройки</div></div>
         </div>
+
         <div class="main-content">
             <div class="header"><h1 id="page-title">Воронка продаж</h1></div>
             <div class="stats-grid" id="stats-block">
@@ -141,6 +159,7 @@
                 <div class="stat-card" style="background: #f1f5f9; border-color: #e2e8f0;"><div class="stat-title" style="color: #475569;">Архив</div><div class="stat-value" id="stat-archive" style="color: #475569;">0</div></div>
             </div>
             <div id="kanban-view" class="kanban-board"></div>
+
             <div id="list-view" style="display: none;">
                 <div class="filters-bar">
                     <button class="filter-btn active" onclick="filterLeadsByStatus('all', this)">Все</button>
@@ -158,6 +177,7 @@
                     </table>
                 </div>
             </div>
+
             <div id="clients-view" style="display: none;">
                 <div class="filters-bar">
                     <input type="text" class="filter-input" id="client-filter-name" placeholder="Поиск по имени" oninput="applyClientBaseFilters()">
@@ -171,6 +191,7 @@
                     </table>
                 </div>
             </div>
+
             <div id="tasks-view" style="display: none;">
                 <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
                     <button class="btn btn-primary" onclick="openTaskModal()">+ Добавить задачу</button>
@@ -182,6 +203,7 @@
                     </table>
                 </div>
             </div>
+
             <div id="settings-view" style="display: none;">
                 <div class="settings-section">
                     <h3>Профиль владельца</h3>
@@ -212,6 +234,7 @@
             </div>
         </div>
     </div>
+
     <div id="clientModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -237,7 +260,7 @@
                     <div class="form-group" style="margin-bottom: 8px;"><label>Telegram ID владельца (для доступа)</label><input type="text" id="bot-owner-id" placeholder="Например: 123456789"></div>
                     <div class="form-group" style="margin-bottom: 8px;">
                         <label>Тариф</label>
-                        <select id="bot-tariff" style="width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;">
+                        <select id="bot-tariff" class="filter-input" style="width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;">
                             <option value="start">Старт (1990 ₽, до 100 заявок)</option>
                             <option value="business" selected>Бизнес (2490 ₽, до 300 заявок)</option>
                             <option value="unlimited">Безлимит (4990 ₽, без ограничений)</option>
@@ -273,6 +296,7 @@
             </div>
         </div>
     </div>
+
     <div id="createModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -312,6 +336,7 @@
             </div>
         </div>
     </div>
+
     <div id="taskModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -329,12 +354,14 @@
             </div>
         </div>
     </div>
+
     <script>
         const TILDA_URL = 'https://ozutjnwextahorvzdbpl.supabase.co';
         const TILDA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96dXRqbndleHRhaG9ydnpkYnBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MTQ3MzUsImV4cCI6MjEwNzE5MDczNX0.8L3adhQ9gUR5iSly1afSQN6HeEhkj9QQ4NtUyZUQx28';
         const LOANS_URL = 'https://ggmshdfplrqsybnchvha.supabase.co';
         const LOANS_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnbXNoZGZwbHJxc3libmNodmhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3MDA4MTUsImV4cCI6MjEwNzI3NjgxNX0.BXfy8ECjzp1g0-uuM_CeXOOB46fWm9KD7VERSX8tYJs';
         const ADMIN_TELEGRAM_ID = 5818548555; 
+        
         let allLeads = [];
         let currentLeadId = null;
         let currentUserTgId = null;
@@ -354,6 +381,7 @@
 
         async function checkAuth() {
             const urlParams = new URLSearchParams(window.location.search);
+            
             if (urlParams.get('telegram_id')) {
                 currentUserTgId = Number(urlParams.get('telegram_id'));
             } else {
@@ -363,12 +391,15 @@
                     }
                 } catch (e) {}
             }
+            
             if (currentUserTgId) {
                 document.getElementById('auth-container').style.display = 'none';
                 document.getElementById('crm-container').style.display = 'flex';
+                
                 if (urlParams.get('view_client')) {
                     window.currentClientId = urlParams.get('view_client');
                 }
+
                 const isAdmin = currentUserTgId === ADMIN_TELEGRAM_ID;
                 if (isAdmin && (!window.currentClientId || window.currentClientId === 'tilda')) {
                     SUPABASE_URL = TILDA_URL;
@@ -377,6 +408,7 @@
                     SUPABASE_URL = LOANS_URL;
                     SUPABASE_KEY = LOANS_KEY;
                 }
+                
                 if (!isAdmin && window.currentClientId === 'tilda') {
                     document.getElementById('auth-container').style.display = 'none';
                     document.getElementById('crm-container').style.display = 'flex';
@@ -396,14 +428,19 @@
             try {
                 let data = [];
                 let url = `/api/get-leads?telegram_id=${currentUserTgId}`;
+                
                 if (window.currentClientId) {
                     url += `&client_id=${window.currentClientId}`;
-                } else if (currentUserTgId === ADMIN_TELEGRAM_ID) {
+                } 
+                else if (currentUserTgId === ADMIN_TELEGRAM_ID) {
                     url += `&client_id=tilda`;
                 }
+
                 const res = await fetch(url);
                 data = await res.json();
+                
                 if (!Array.isArray(data)) data = [];
+                
                 allLeads = data;
                 updateStats(allLeads);
                 renderKanban(allLeads);
@@ -433,16 +470,20 @@
                 { id: 'in_progress', title: 'В работе' }, 
                 { id: 'closed', title: 'Выполнено' }
             ];
+
             columns.forEach(col => {
                 const colLeads = data.filter(l => l.status === col.id);
                 const totalSum = colLeads.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+                
                 const colEl = document.createElement('div');
                 colEl.className = 'kanban-col';
                 colEl.innerHTML = `<div class="col-header"><span>${col.title} (${colLeads.length})</span><span style="color:var(--success);">${totalSum > 0 ? totalSum.toLocaleString() + ' ₽' : ''}</span></div>`;
+
                 colLeads.forEach(lead => {
                     const card = document.createElement('div');
                     card.className = 'kanban-card';
                     card.onclick = () => openClientModal(lead.id);
+                    
                     let actionBtn = '';
                     if (col.id === 'new') {
                         actionBtn = `<button class="btn btn-outline btn-sm" onclick="event.stopPropagation(); changeStatusFromCard(${lead.id}, 'in_progress')">→ В работу</button>`;
@@ -451,6 +492,7 @@
                     } else if (col.id === 'closed') {
                         actionBtn = `<div style="display:flex; gap:5px;"><button class="btn btn-outline btn-sm" onclick="event.stopPropagation(); changeStatusFromCard(${lead.id}, 'in_progress')">← В работу</button><button class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="event.stopPropagation(); archiveFromKanban(${lead.id})">📦 В архив</button></div>`;
                     }
+
                     card.innerHTML = `
                         <div class="k-title"><span>${lead.name || 'Без имени'}</span><span class="k-amount">${lead.amount ? lead.amount + ' ₽' : ''}</span></div>
                         <div class="k-phone">${lead.phone || (lead.phones && lead.phones[0]) || '—'}</div>
@@ -466,14 +508,17 @@
         function renderList(data) {
             const tbody = document.getElementById('leadsBody');
             tbody.innerHTML = '';
+            
             const dateVal = document.getElementById('list-filter-date').value;
             const searchVal = document.getElementById('list-filter-search').value.toLowerCase();
+            
             let filtered = data.filter(l => {
                 if (currentListStatus !== 'all' && l.status !== currentListStatus) return false;
                 if (dateVal && !l.created_at.startsWith(dateVal)) return false;
                 if (searchVal && !(l.name||'').toLowerCase().includes(searchVal) && !(l.phone||'').includes(searchVal)) return false;
                 return true;
             });
+
             filtered.forEach(lead => {
                 const tr = document.createElement('tr');
                 tr.onclick = () => openClientModal(lead.id);
@@ -500,16 +545,19 @@
                 if (lead.service && !uniqueClients[phone].allServices.includes(lead.service)) uniqueClients[phone].allServices.push(lead.service);
                 if (lead.created_at > uniqueClients[phone].lastDate) uniqueClients[phone].lastDate = lead.created_at;
             });
+
             const clientsArray = Object.values(uniqueClients);
             const nameVal = document.getElementById('client-filter-name').value.toLowerCase();
             const phoneVal = document.getElementById('client-filter-phone').value;
             const dateVal = document.getElementById('client-filter-date').value;
+
             const filtered = clientsArray.filter(c => {
                 if (nameVal && !(c.name||'').toLowerCase().includes(nameVal)) return false;
                 if (phoneVal && !(c.phone||'').includes(phoneVal)) return false;
                 if (dateVal && !c.lastDate.startsWith(dateVal)) return false;
                 return true;
             });
+
             filtered.forEach(client => {
                 const tr = document.createElement('tr');
                 tr.onclick = () => openClientModal(client.id);
@@ -530,6 +578,7 @@
             const tasks = data.filter(l => l.next_contact_date);
             document.getElementById('task-count').innerText = tasks.length;
             if(tasks.length > 0) document.getElementById('task-count').style.display = 'inline-block';
+
             tasks.forEach(lead => {
                 const date = new Date(lead.next_contact_date).toLocaleString('ru-RU');
                 const tr = document.createElement('tr');
@@ -547,6 +596,7 @@
             const badge = document.getElementById('current-status-badge');
             const buttons = document.getElementById('status-buttons');
             buttons.innerHTML = '';
+
             if (status === 'new') {
                 badge.className = 'current-status status-new';
                 badge.innerText = 'Статус: Новая';
@@ -593,16 +643,21 @@
             document.getElementById('edit-amount').value = lead.amount || '';
             document.getElementById('edit-paid').value = lead.is_paid ? 'true' : 'false';
             document.getElementById('edit-notes').value = lead.notes || lead.problem || '';
+
             document.getElementById('phones-container').innerHTML = '';
             document.getElementById('services-container').innerHTML = '';
+
             const phones = lead.phones && lead.phones.length > 0 ? lead.phones : (lead.phone ? [lead.phone] : ['']);
             phones.forEach(p => addPhoneField(p));
             const services = lead.services && lead.services.length > 0 ? lead.services : (lead.service ? [lead.service] : ['']);
             services.forEach(s => addServiceField(s));
+
             updateStatusUI(lead.status);
+
             const cleanPhone = (lead.phone || '').replace(/\D/g, '');
             document.getElementById('btn-call').href = `tel:${lead.phone || ''}`;
             document.getElementById('btn-tg').href = cleanPhone.length > 5 ? `https://t.me/+${cleanPhone}` : '#';
+
             if (lead.email) {
                 document.getElementById('btn-email').href = `mailto:${lead.email}`;
                 document.getElementById('btn-email').style.opacity = '1';
@@ -610,6 +665,7 @@
                 document.getElementById('btn-email').removeAttribute('href');
                 document.getElementById('btn-email').style.opacity = '0.5';
             }
+
             if (currentUserTgId === ADMIN_TELEGRAM_ID) {
                 if (lead.client_id && lead.client_id !== 'tilda') {
                     document.getElementById('create-bot-fields').style.display = 'none';
@@ -707,6 +763,7 @@
             const text = document.getElementById('task-text').value;
             const date = document.getElementById('task-date').value;
             if (!id || !text || !date) return alert('Заполните все поля');
+
             await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
                 method: 'PATCH',
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
@@ -776,7 +833,9 @@
             const tariff = document.getElementById('newTariff').value;
             const leads_limit = tariff === 'start' ? 100 : (tariff === 'business' ? 300 : 99999);
             const timezone = document.getElementById('newTimezone').value;
+            
             if (!client_id || !business_name || !site_url || !bot_token) return alert('Заполните все поля!');
+
             try {
                 const res = await fetch('/api/create-client', {
                     method: 'POST',
@@ -796,7 +855,7 @@
             const owner_telegram_id = document.getElementById('bot-owner-id').value.trim();
             const tariff = document.getElementById('bot-tariff').value;
             const leads_limit = tariff === 'start' ? 100 : (tariff === 'business' ? 300 : 99999);
-
+            
             if (!client_id || !business_name || !site_url || !bot_token) return alert('Заполните все поля для создания бота!');
             const lead = allLeads.find(l => l.id === currentLeadId);
 
@@ -808,12 +867,14 @@
                         client_id, business_name, site_url, 
                         timezone: 'Europe/Moscow', 
                         manager_chat_id: owner_telegram_id || ADMIN_TELEGRAM_ID.toString(), 
-                        bot_token, owner_telegram_id: Number(owner_telegram_id),
-                        tariff: tariff,
-                        leads_limit: leads_limit
+                        bot_token, 
+                        owner_telegram_id, 
+                        tariff: tariff, 
+                        leads_limit: leads_limit 
                     })
                 });
                 const data = await res.json();
+                
                 if (data.ok) {
                     alert('🚀 Бот создается! Через минуту появится кнопка скачивания.');
                     await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${currentLeadId}`, {
