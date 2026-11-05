@@ -694,19 +694,8 @@ app.get('/api/get-leads', async (req, res) => {
   }
 });
 
-app.get('/api/get-my-client', async (req, res) => {
-  try {
-    const { owner_telegram_id } = req.query;
-    const url = `${COMMON_SUPABASE_URL}/rest/v1/clients?select=*&owner_telegram_id=eq.${owner_telegram_id}&client_id=eq.${CLIENT_ID}&limit=1`;
-    const r = await fetch(url, {
-      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
-    });
-    const data = await r.json();
-    res.json(Array.isArray(data) && data.length > 0 ? data[0] : null);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
+app.post('/yookassa-webhook', async (req, res) => {
+  res.sendStatus(200);
 
   try {
     const event = req.body;
