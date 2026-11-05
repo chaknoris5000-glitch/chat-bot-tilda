@@ -1521,9 +1521,9 @@ app.post('/api/create-client', async (req, res) => {
             timezone, 
             manager_chat_id, 
             bot_token, 
-            owner_telegram_id,
-            tariff, 
-            leads_limit
+            owner_telegram_id: String(owner_telegram_id || ''),
+            tariff,
+            leads_limit: String(leads_limit || '300')
         }
       })
     });
