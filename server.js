@@ -666,7 +666,13 @@ function statsBlock(leads, periodLabel) {
 }
 
 // ========== HEALTH ==========
+app.get('/crm', (req, res) => {
+  res.sendFile(path.join(__dirname, 'crm.html'));
+});
 
+app.get('/app', (req, res) => {
+  res.sendFile(path.join(__dirname, 'app.html'));
+});
 app.get('/health', (req, res) => {
   res.json({ ok: true, time: new Date().toISOString(), uptime: process.uptime(), client_id: CLIENT_ID });
 });
@@ -1365,17 +1371,25 @@ cron.schedule('0 7 1 * *', async () => {
   } catch (e) { console.log('cron month error:', e.message); }
 });
 
-// ========== НАПОМИНАНИЯ ОБ ОПЛАТЕ ==========
+// ========== БИЛЛИНГ И НАПОМИНАНИЯ ==========
 cron.schedule('0 10 * * *', async () => { 
   try {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Получаем всех клиентов
     const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/clients?select=*`, {
       headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
     });
     const clients = await r.json();
     if (!Array.isArray(clients)) return;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Получаем юзернейм бота для ссылок на оплату
+    let botUsername = '';
+    try {
+      const botInfo = await (await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getMe`)).json();
+      botUsername = botInfo.result.username;
+    } catch(e) {}
 
     for (const client of clients) {
       if (!client.paid_until) continue;
@@ -1385,156 +1399,93 @@ cron.schedule('0 10 * * *', async () => {
 
       const diffTime = paidDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays === 1) {
-        const chatId = client.chat_id || MANAGER_CHAT_ID;
-        if (chatId) {
+      const chatId = client.chat_id || MANAGER_CHAT_ID;
+      
+      // 1. ФИКСИРОВАННЫЕ ТАРИФЫ (предупреждение и приостановка)
+      if (client.tariff !== 'result') {
+        if (diffDays === 1 && chatId) {
+          const keyboard = botUsername ? [[{ text: '💳 Продлить подписку', url: `https://t.me/${botUsername}?start=pay_${client.tariff}_month` }]] : null;
           await sendTelegram(chatId, 
             `⚠️ <b>Напоминание об оплате</b>\n\n` +
-            `У клиента «${client.business_name || client.client_id}» завтра заканчивается подписка.\n` +
-            `Не забудьте продлить оплату, чтобы бот не перестал работать!`
+            `Завтра заканчивается подписка на тариф «${client.business_name || client.client_id}».\n` +
+            `Чтобы бот не перестал работать, продлите оплату.`, 
+            keyboard
+          );
+        }
+        if (diffDays === 0 && chatId) {
+          const keyboard = botUsername ? [[{ text: '💳 Продлить подписку', url: `https://t.me/${botUsername}?start=pay_${client.tariff}_month` }]] : null;
+          await sendTelegram(chatId, 
+            `⛔️ <b>Тариф приостановлен</b>\n\n` +
+            `Оплата за тариф «${client.business_name || client.client_id}» не поступила.\n` +
+            `Бот временно не отвечает клиентам. Продлите подписку, чтобы возобновить работу.`, 
+            keyboard
           );
         }
       }
+
+      // 2. ТАРИФ "ЗА РЕЗУЛЬТАТ" (для Админа за 1 день до конца месяца)
+      if (client.tariff === 'result') {
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        
+        // Если сегодня предпоследний день месяца
+        if (today.getDate() === lastDay.getDate() - 1) {
+          const prevMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          const prevMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          const monthLabel = prevMonthStart.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+
+          const leadsUrl = `${COMMON_SUPABASE_URL}/rest/v1/leads?client_id=eq.${client.client_id}&created_at=gte.${prevMonthStart.toISOString()}&created_at=lte.${prevMonthEnd.toISOString()}`;
+          const leadsRes = await fetch(leadsUrl, { headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` } });
+          const leads = await leadsRes.json();
+          const count = Array.isArray(leads) ? leads.length : 0;
+          
+          if (count > 0 && client.chat_id) {
+            const sum = count * PRICE_PER_LEAD;
+            const adminText = `📊 <b>Предварительный счет за ${monthLabel}</b>\n\nКлиент: ${client.business_name || client.client_id}\nЗаявок: <b>${count}</b>\nК оплате: <b>${sum} ₽</b>\n\n<i>Проверьте базу. Завтра клиенту уйдет официальный счет.</i>`;
+            await sendTelegram(MANAGER_CHAT_ID, adminText);
+          }
+        }
+      }
     }
-  } catch (e) {
-    console.log('Ошибка при проверке напоминаний:', e.message);
-  }
-});
-app.get('/crm', (req, res) => {
-  res.sendFile(path.join(__dirname, 'crm.html'));
+  } catch (e) { console.log('Ошибка при проверке напоминаний:', e.message); }
 });
 
-app.get('/app', (req, res) => {
-  res.sendFile(path.join(__dirname, 'app.html'));
-});
-app.all('/auth/telegram', async (req, res) => {
+// ========== ОТПРАВКА СЧЕТА ЗА РЕЗУЛЬТАТ (1-е число) ==========
+cron.schedule('0 10 1 * *', async () => {
   try {
-    const params = req.method === 'GET' ? req.query : req.body;
-    const { hash, ...data } = params;
-    
-    if (!hash) throw new Error('Нет параметра hash');
+    const now = new Date();
+    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    const monthLabel = prevMonthStart.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
 
-    const dataCheckString = Object.keys(data)
-      .sort()
-      .map(key => `${key}=${data[key]}`)
-      .join('\n');
-
-    const crypto = require('crypto');
-    const secretKey = crypto.createHash('sha256').update(TELEGRAM_TOKEN).digest();
-    const calculatedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
-
-    if (calculatedHash !== hash) {
-      throw new Error('Неверная подпись');
-    }
-
-    res.json({ ok: true, telegram_id: data.id, first_name: data.first_name });
-    
-  } catch (e) {
-    console.error('Ошибка авторизации Telegram:', e.message);
-    res.status(401).json({ ok: false, error: 'Неверная подпись' });
-  }
-});
-
-app.post('/api/create-client', async (req, res) => {
-  try {
-        const { client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id } = req.body;
-    
-    const ghRes = await fetch(`https://api.github.com/repos/chaknoris5000-glitch/chat-bot-tilda/actions/workflows/create-client.yml/dispatches`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `token ${process.env.MY_GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        ref: 'main',
-                inputs: { client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id }
-      })
-    });
-
-    if (!ghRes.ok) {
-      const errText = await ghRes.text();
-      throw new Error(`GitHub API: ${errText}`);
-    }
-
-    res.json({ ok: true });
-  } catch (e) {
-    console.error('Ошибка создания клиента:', e.message);
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
-app.post('/api/support', async (req, res) => {
-  try {
-    const { message, user_id, name } = req.body;
-    if (!message) return res.status(400).json({ ok: false });
-
-    if (MANAGER_CHAT_ID) {
-      await sendTelegram(MANAGER_CHAT_ID, `🆘 <b>Обращение в поддержку</b>\n\nОт: ${name} (ID: ${user_id})\n\nСообщение:\n${message}`);
-    }
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
-
-app.post('/api/create-payment', async (req, res) => {
-  try {
-    const { chat_id, tariff, period } = req.body;
-    const payUrl = await createYookassaPayment(chat_id, tariff, period);
-    if (payUrl) {
-      res.json({ ok: true, url: payUrl });
-    } else {
-      res.status(500).json({ ok: false, error: 'Ошибка ЮKassa' });
-    }
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
-
-app.post('/api/connect-result', async (req, res) => {
-  try {
-    const { chat_id, name, manager_id } = req.body;
-    if (manager_id) {
-      await sendTelegram(manager_id, `🔥 <b>Новое подключение!</b>\n\nКлиент: ${name} (ID: ${chat_id})\nТариф: За результат (25 ₽/заявка)\n\n<i>Оплата будет формироваться по факту заявок.</i>`);
-    }
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
-app.get('/api/get-leads', async (req, res) => {
-  try {
-    const { client_id } = req.query;
-    // Выбираем базу в зависимости от client_id
-    const isTilda = client_id === 'tilda';
-    const baseUrl = isTilda ? SUPABASE_URL : COMMON_SUPABASE_URL;
-    const baseKey = isTilda ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
-
-    let url = `${baseUrl}/rest/v1/leads?select=*&order=id.desc`;
-    if (client_id) url += `&client_id=eq.${client_id}`;
-    
-    const r = await fetch(url, {
-      headers: { 'apikey': baseKey, 'Authorization': `Bearer ${baseKey}` }
-    });
-    const data = await r.json();
-    res.json(data);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-app.get('/api/get-my-client', async (req, res) => {
-  try {
-    const { owner_telegram_id } = req.query;
-    const url = `${COMMON_SUPABASE_URL}/rest/v1/clients?select=*&owner_telegram_id=eq.${owner_telegram_id}&client_id=eq.${CLIENT_ID}&limit=1`;
-    const r = await fetch(url, {
+    const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/clients?select=*`, {
       headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
     });
-    const data = await r.json();
-    res.json(Array.isArray(data) && data.length > 0 ? data[0] : null);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+    const clients = await r.json();
+    if (!Array.isArray(clients)) return;
+
+    let botUsername = '';
+    try {
+      const botInfo = await (await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getMe`)).json();
+      botUsername = botInfo.result.username;
+    } catch(e) {}
+
+    for (const client of clients) {
+      if (client.tariff !== 'result') continue;
+      if (!client.chat_id) continue;
+
+      const leadsUrl = `${COMMON_SUPABASE_URL}/rest/v1/leads?client_id=eq.${client.client_id}&created_at=gte.${prevMonthStart.toISOString()}&created_at=lte.${prevMonthEnd.toISOString()}`;
+      const leadsRes = await fetch(leadsUrl, { headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` } });
+      const leads = await leadsRes.json();
+      const count = Array.isArray(leads) ? leads.length : 0;
+
+      if (count > 0) {
+        const sum = count * PRICE_PER_LEAD;
+        const clientText = `📊 <b>Ваш счет за ${monthLabel}</b>\n\nЗаявок: <b>${count}</b>\nСумма к оплате: <b>${sum} ₽</b>.\n\nОплатить можно по ссылке ниже.`;
+        const keyboard = botUsername ? [[{ text: '💳 Оплатить', url: `https://t.me/${botUsername}?start=pay_result_month` }]] : null;
+        await sendTelegram(client.chat_id, clientText, keyboard);
+      }
+    }
+  } catch (e) { console.log('Ошибка при отправке счета за результат:', e.message); }
 });
 
 app.listen(PORT, () => {
