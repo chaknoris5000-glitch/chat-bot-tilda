@@ -12,8 +12,7 @@ const timezone = process.argv[5] || 'Europe/Moscow';
 const managerChatId = process.argv[6];
 const botToken = (process.argv[7] || '').trim().replace(/['"]/g, '');
 const ownerTelegramId = process.argv[8];
-const tariff = process.argv[9] || 'business';
-const leadsLimit = Number(process.argv[10]) || 300;
+
 async function generatePrompt(businessName, siteUrl) {
   try {
     const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
@@ -97,8 +96,6 @@ appHtml = appHtml.replace(/const BOT_CLIENT_ID = .*?;/, `const BOT_CLIENT_ID = '
         paid_until: new Date(Date.now() + 7 * 86400000).toISOString(),
         timezone: timezone || detectedTimezone,
         prompt: null,
-        tariff: tariff,           
-        leads_limit: leadsLimit, 
         owner_telegram_id: (ownerTelegramId && !isNaN(ownerTelegramId) && ownerTelegramId !== 'НЕТ_ТОКЕНА') ? Number(ownerTelegramId) : null
       }, { headers: { 'apikey': commonSupabaseKey, 'Authorization': `Bearer ${commonSupabaseKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' } });
       console.log(`✅ Клиент добавлен в базу`);
