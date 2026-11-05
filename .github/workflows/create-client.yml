@@ -23,6 +23,16 @@ on:
       owner_telegram_id:
         description: 'Telegram ID владельца'
         required: false
+      tariff:
+        description: 'Тариф клиента'
+        required: false
+        default: 'business'
+        type: string
+      leads_limit:
+        description: 'Лимит заявок'
+        required: false
+        default: '300'
+        type: string
 jobs:
   create:
     runs-on: ubuntu-latest
@@ -49,4 +59,4 @@ jobs:
           YOOKASSA_SHOP_ID: ${{ secrets.YOOKASSA_SHOP_ID }}
           YOOKASSA_SECRET_KEY: ${{ secrets.YOOKASSA_SECRET_KEY }}
         run: |
-          node create-client.js "${{ github.event.inputs.client_id }}" "${{ github.event.inputs.business_name }}" "${{ github.event.inputs.site_url }}" "${{ github.event.inputs.timezone }}" "${{ github.event.inputs.manager_chat_id }}" "${{ github.event.inputs.bot_token }}" "${{ github.event.inputs.owner_telegram_id }}"
+          node create-client.js "${{ github.event.inputs.client_id }}" "${{ github.event.inputs.business_name }}" "${{ github.event.inputs.site_url }}" "${{ github.event.inputs.timezone }}" "${{ github.event.inputs.manager_chat_id }}" "${{ github.event.inputs.bot_token }}" "${{ github.event.inputs.owner_telegram_id }}" "${{ github.event.inputs.tariff }}" "${{ github.event.inputs.leads_limit }}"
