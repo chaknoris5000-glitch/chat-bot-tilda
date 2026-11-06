@@ -280,12 +280,19 @@ async function updateSession(sessionId, patch) {
 
 async function saveLead(sessionId, name, phone, problem, source = 'site') {
   try {
-    const targetUrl = CLIENT_ID === 'tilda' ? SUPABASE_URL : COMMON_SUPABASE_URL;
-const targetKey = CLIENT_ID === 'tilda' ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
-const r = await fetch(`${targetUrl}/rest/v1/leads`, {
+    // Жесткая привязка: если это Тильда - всегда шлем в Тильду.
+    // Если это копия - всегда шлем в Общую базу.
+    const isTildaBot = CLIENT_ID === 'tilda';
+    const targetUrl = isTildaBot ? SUPABASE_URL : COMMON_SUPABASE_URL;
+    const targetKey = isTildaBot ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
+    
+    // Защита от перекрестных заявок: используем тот ID, который прописан в константе.
+    const finalClientId = CLIENT_ID;
+
+    const r = await fetch(`${targetUrl}/rest/v1/leads`, {
       method: 'POST',
-              headers: { 'apikey': targetKey, 'Authorization': `Bearer ${targetKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-      body: JSON.stringify({ session_id: sessionId, client_id: CLIENT_ID, name: name || null, phone: phone || null, problem: problem || null, source, status: 'new' })
+      headers: { 'apikey': targetKey, 'Authorization': `Bearer ${targetKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify({ session_id: sessionId, client_id: finalClientId, name: name || null, phone: phone || null, problem: problem || null, source, status: 'new' })
     });
     const inserted = await r.json();
     const leadId = Array.isArray(inserted) && inserted[0] ? inserted[0].id : 0;
