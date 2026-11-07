@@ -1558,6 +1558,10 @@ app.post('/api/create-client', async (req, res) => {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
 app.listen(PORT, () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
 });
