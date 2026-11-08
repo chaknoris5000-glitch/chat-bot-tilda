@@ -1,25 +1,31 @@
 name: Weekly Supabase Backup
 on:
   schedule:
-    - cron: '0 3 * * 0'  # Каждое воскресенье в 03:00 UTC
-  workflow_dispatch:      # Чтобы можно было запустить вручную
+    - cron: '0 3 * * 0' # Каждое воскресенье в 03:00 UTC
+  workflow_dispatch:     # Для ручного запуска
 
 permissions:
-  contents: write         # Чтобы сохранить файл в репозиторий
+  contents: write
 
 jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-      - name: Dump database
+      
+      - name: Скачать бэкап базы
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          supabase db dump --db-url "${{ secrets.SUPABASE_DB_URL }}" -f backup_$(date +%Y%m%d).sql
-      - name: Commit backup
+          # Устанавливаем клиент PostgreSQL
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          
+          # Делаем дамп базы. Используем переменную окружения, чтобы избежать проблем с символами.
+          pg_dump "$SUPABASE_DB_URL" > backup_$(date +%Y%m%d).sql
+          
+      - name: Сохранить файл в репозиторий
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Weekly Supabase backup"
+          commit_message: "Автоматический бэкап базы"
           file_pattern: "backup_*.sql"
