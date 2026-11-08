@@ -1,0 +1,25 @@
+name: Weekly Supabase Backup
+on:
+  schedule:
+    - cron: '0 3 * * 0'  # Каждое воскресенье в 03:00 UTC
+  workflow_dispatch:      # Чтобы можно было запустить вручную
+
+permissions:
+  contents: write         # Чтобы сохранить файл в репозиторий
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Dump database
+        run: |
+          supabase db dump --db-url "${{ secrets.SUPABASE_DB_URL }}" -f backup_$(date +%Y%m%d).sql
+      - name: Commit backup
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Weekly Supabase backup"
+          file_pattern: "backup_*.sql"
