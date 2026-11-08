@@ -408,6 +408,28 @@ async function notifyManager(lead, leadId) {
 // ========== ИИ ==========
 
 async function askAI(message, history, sessionId) {
+    // --- ПРОВЕРКА ЛИМИТА ЗАЯВОК ---
+  try {
+    const client = await getClient(CLIENT_ID);
+    if (client && client.leads_limit) {
+      // Считаем заявки за текущий месяц
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const countUrl = `${COMMON_SUPABASE_URL}/rest/v1/leads?client_id=eq.${CLIENT_ID}&created_at=gte.${monthStart}&select=id`;
+      const countRes = await fetch(countUrl, {
+        headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
+      });
+      const currentLeads = await countRes.json();
+      
+      if (Array.isArray(currentLeads) && currentLeads.length >= client.leads_limit) {
+        console.log(`⛔️ Лимит исчерпан для ${CLIENT_ID}. Заявок: ${currentLeads.length} из ${client.leads_limit}`);
+        return 'Лимит заявок на этот месяц исчерпан. Пожалуйста, свяжитесь с менеджером для продления тарифа.';
+      }
+    }
+  } catch (e) {
+    console.log('Ошибка проверки лимита:', e.message);
+  }
+  // -------------------------------
   let context = '';
   try {
         const emb = await getEmbedding(message);
