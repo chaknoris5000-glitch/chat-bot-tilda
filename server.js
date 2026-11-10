@@ -1281,7 +1281,7 @@ app.post('/telegram-webhook', async (req, res) => {
 
 app.get('/crawl', async (req, res) => {
   try {
-    const scrape = await fetch('https://api.firecrawl.dev/v1/scrape', {
+    const scrape = await fetch('https://api.firecrawl.dev/v2/scrape', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${FIRECRAWL_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
