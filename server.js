@@ -61,7 +61,7 @@ const TARIFFS = {
 
 const processedUpdates = new Set();
 const newClientStates = {}; // Память для пошагового создания
-const BUSINESS_PROMPT = process.env.BUSINESS_PROMPT || `Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам... (остальной дефолтный текст)`;
+const BUSINESS_PROMPT = process.env.BUSINESS_PROMPT || 'Ты — AI-Администратор компании «' + BUSINESS_NAME + '». Опытный, живой менеджер по продажам: общаешься с клиентами на сайте и в Telegram, коротко и по делу.';
 
 // ========== КЛИЕНТЫ И ОПЛАТА ==========
 
@@ -233,11 +233,15 @@ async function searchDocuments(queryEmbedding, limit = 8) {
 }
 
 async function saveDocument(content, embedding, url) {
-  await fetch(`${COMMON_SUPABASE_URL}/rest/v1/documents`, {
+  const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/documents`, {
     method: 'POST',
     headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
     body: JSON.stringify({ content, embedding, url, client_id: CLIENT_ID })
   });
+  if (!r.ok) {
+    const errText = await r.text().catch(() => '');
+    throw new Error(`saveDocument ${r.status}: ${errText.slice(0, 300)}`);
+  }
 }
 
 async function getOrCreateSession(sessionId) {
@@ -463,7 +467,10 @@ async function askAI(message, history, sessionId) {
   const currentDate = localDate.toLocaleDateString('ru-RU', { 
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' 
   }) + ', ' + localDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-    const systemPrompt = clientConfig?.prompt || BUSINESS_PROMPT || `СЕГОДНЯШНЯЯ ДАТА И ВРЕМЯ: ${currentDate}.
+    // Идентичность клиента + правила + БАЗА ЗНАНИЙ. Контекст подставляется ВСЕГДА,
+    // даже если промпт задан в БД, иначе бот отвечает без базы знаний и выдумывает факты.
+    const identityPrompt = (clientConfig?.prompt || BUSINESS_PROMPT || '').trim();
+    const systemPrompt = `${identityPrompt ? identityPrompt + '\n\n' : ''}СЕГОДНЯШНЯЯ ДАТА И ВРЕМЯ: ${currentDate}.
 Ты — AI-Администратор компании «${BUSINESS_NAME}». Ты опытный, живой менеджер по продажам, который общается с клиентами на сайте и в Telegram. Твоя цель — продать услугу, собрать заявку и мягко работать с возражениями.
 1. Ты — живой человек, а не робот. Общайся максимально естественно, как в обычном чате. Используй слова вроде «Отлично», «Понял», «Да, это решаемо».
 2. Отвечай ОЧЕНЬ коротко: строго 2-3 предложения. Никаких длинных текстов и простыней.
@@ -506,8 +513,9 @@ async function askAI(message, history, sessionId) {
 6. Призыв к действию: не проси контакты сразу. Сначала ответь на вопрос и помоги. Предложи оставить имя и телефон только тогда, когда клиент готов к следующему шагу (сам спросил «как записаться», «хочу подключить», уточняет детали или сомневается).
 
 СБОР ЗАЯВКИ:
-Когда клиент назвал имя + телефон — добавь в САМОМ КОНЦЕ ответа:
-[LEAD_SAVE][NAME:имя][PHONE:телефон][PROBLEM:краткая суть]
+Когда клиент назвал имя + телефон — добавь в САМОМ КОНЦЕ ответа строку ровно такого вида, подставив РЕАЛЬНЫЕ данные клиента:
+[LEAD_SAVE][NAME:Иван][PHONE:+79001234567][PROBLEM:краткая суть]
+Никогда не выводи вместо значений слова «имя», «телефон», «суть» или угловые скобки.
 
 КОНТЕКСТ ДИАЛОГА:
 Если ты видишь, что диалог начался на сайте (в истории есть предыдущие сообщения), не начинай разговор с нуля. Продолжай его по смыслу. Например: "Возвращаясь к вашему вопросу про тарифы..." или "Как я понял, вас интересует...".
@@ -1303,6 +1311,12 @@ app.get('/crawl', async (req, res) => {
 
     const chunks = [];
     for (let i = 0; i < text.length; i += 1000) chunks.push(text.slice(i, i + 1000));
+
+    // Чистим старую базу знаний клиента, чтобы повторный парсинг не плодил дубли
+    await fetch(`${COMMON_SUPABASE_URL}/rest/v1/documents?client_id=eq.${CLIENT_ID}`, {
+      method: 'DELETE',
+      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
+    });
 
     let saved = 0;
     for (const chunk of chunks) {
