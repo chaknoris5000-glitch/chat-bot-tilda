@@ -246,7 +246,7 @@ async function saveDocument(content, embedding, url) {
 
 async function getOrCreateSession(sessionId) {
   try {
-    const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sessionId}&select=*`, {
+    const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sessionId}&client_id=eq.${CLIENT_ID}&select=*`, {
       headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
     });
     const rows = await r.json();
@@ -274,7 +274,7 @@ async function getSessionByTelegram(chatId) {
 
 async function updateSession(sessionId, patch) {
   try {
-    await fetch(`${COMMON_SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sessionId}`, {
+    await fetch(`${COMMON_SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sessionId}&client_id=eq.${CLIENT_ID}`, {
       method: 'PATCH',
       headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ ...patch, updated_at: new Date().toISOString() })
@@ -795,7 +795,10 @@ app.post('/message', async (req, res) => {
       return res.json({ reply: 'Сервис временно приостановлен. Свяжитесь с менеджером.', session_id: session_id || 'default' });
     }
 
-    const sid = session_id || 'default';
+    // Пространство имён на клиента: два разных бота с одинаковым session_id
+    // больше не попадут в одну и ту же историю диалога.
+    const rawSid = String(session_id || 'default');
+    const sid = rawSid.startsWith(CLIENT_ID + '_') ? rawSid : `${CLIENT_ID}_${rawSid}`;
     const session = await getOrCreateSession(sid);
     const history = session.history || [];
     const reply = await askAI(message, history, sid);
