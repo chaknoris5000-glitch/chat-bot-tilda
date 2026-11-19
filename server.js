@@ -574,6 +574,8 @@ async function askAI(message, history, sessionId) {
 
   const lowerMsg = message.toLowerCase();
   
+  // Сайтовые ответы (тарифы, демо, оферта) — только для бота-витрины.
+  if (CLIENT_ID === 'tilda') {
     if (lowerMsg.includes('тариф') || lowerMsg.includes('цен') || lowerMsg.includes('стоимост') || lowerMsg.includes('подробн')) {
     reply = `Есть 4 тарифа:
     
@@ -633,6 +635,7 @@ async function askAI(message, history, sessionId) {
   if (lowerMsg.includes('отзыв')) {
     if (!reply.includes('[SCROLL:')) reply += ' [SCROLL:reviews]';
     if (!reply.includes(BASE_URL)) reply += `\n\nОтзывы клиентов: ${BASE_URL}/?go=reviews`;
+  }
   }
 
   const leadData = extractLeadData(reply); 
