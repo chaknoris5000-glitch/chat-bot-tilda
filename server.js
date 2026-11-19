@@ -568,7 +568,7 @@ async function askAI(message, history, sessionId) {
   const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${OPENROUTER_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: AI_MODEL_CHAT, messages, temperature: CLIENT_ID === 'tilda' ? 0.6 : 0, max_tokens: 150 })
+    body: JSON.stringify({ model: AI_MODEL_CHAT, messages, temperature: CLIENT_ID === 'tilda' ? 0.6 : 0.2, max_tokens: 150 })
   });
   const data = await r.json();
   if (!r.ok) throw new Error('OpenRouter error');
@@ -592,7 +592,7 @@ async function askAI(message, history, sessionId) {
         let grounded = '';
         if (wantsPhone) {
           const m = (context || '').match(/\+?7[\d\s\-()]{9,}/);
-          if (m) grounded = 'Наш телефон: ' + m[0].trim();
+          if (m) grounded = 'Наш телефон: ' + m[0].trim().replace(/[^\d+]+$/, '');
         }
         if (!grounded) {
           const m = (context || '').match(/[^\n]{0,40}(?:улица|ул\.|проспект|трц)[^\n]{0,60}/i);
