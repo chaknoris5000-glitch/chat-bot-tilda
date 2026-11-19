@@ -367,7 +367,33 @@
         let currentUserTgId = null;
         let currentListStatus = 'all';
         let SUPABASE_URL = TILDA_URL;
-        let SUPABASE_KEY = TILDA_KEY;
+                let SUPABASE_KEY = TILDA_KEY;
+
+        // Запись заявок идёт через сервер: anon-ключ больше не имеет доступа к базе.
+        function leadsDb() {
+            const cid = window.currentClientId || (currentUserTgId === ADMIN_TELEGRAM_ID ? 'tilda' : null);
+            return cid === 'tilda' ? 'tilda' : 'loans';
+        }
+        async function saveLeadPatch(id, patch) {
+            try {
+                const res = await fetch('/api/lead-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: Number(id), db: leadsDb(), patch })
+                });
+                if (!res.ok) console.warn('lead-update:', await res.text());
+            } catch (e) { console.warn('lead-update error', e); }
+        }
+        async function deleteLeadById(id) {
+            try {
+                const res = await fetch('/api/lead-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: Number(id), db: leadsDb(), action: 'delete' })
+                });
+                if (!res.ok) console.warn('lead-delete:', await res.text());
+            } catch (e) { console.warn('lead-delete error', e); }
+        }
 
         function onTelegramAuth(user) {
             fetch('/auth/telegram', {
@@ -616,21 +642,13 @@
         }
 
         async function changeStatusFromCard(id, newStatus) {
-            await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
-                method: 'PATCH',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus })
-            });
+            await saveLeadPatch(id, { status: newStatus });
             closeModal();
             loadLeads();
         }
 
         async function archiveFromKanban(id) {
-            await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
-                method: 'PATCH',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'archived' })
-            });
+            await saveLeadPatch(id, { status: 'archived' });
             loadLeads();
         }
 
@@ -715,31 +733,20 @@
                 is_paid: document.getElementById('edit-paid').value === 'true',
                 notes: document.getElementById('edit-notes').value.trim()
             };
-            await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${currentLeadId}`, {
-                method: 'PATCH',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(updates)
-            });
+            await saveLeadPatch(currentLeadId, updates);
             closeModal(); loadLeads();
         }
 
         async function archiveLead() {
             const reason = prompt('Укажите причину переноса в архив:');
             if (reason === null) return; 
-            await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${currentLeadId}`, {
-                method: 'PATCH',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'archived', archive_reason: reason || 'Без причины' })
-            });
+            await saveLeadPatch(currentLeadId, { status: 'archived', archive_reason: reason || 'Без причины' });
             closeModal(); loadLeads();
         }
 
         async function deleteLead() {
             if (!confirm('Удалить заявку?')) return;
-            await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${currentLeadId}`, {
-                method: 'DELETE',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-            });
+            await deleteLeadById(currentLeadId);
             closeModal(); loadLeads();
         }
 
@@ -764,11 +771,7 @@
             const date = document.getElementById('task-date').value;
             if (!id || !text || !date) return alert('Заполните все поля');
 
-            await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
-                method: 'PATCH',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ next_contact_date: date, notes: text })
-            });
+            await saveLeadPatch(id, { next_contact_date: date, notes: text });
             closeTaskModal(); loadLeads(); switchTab('tasks');
         }
 
@@ -877,11 +880,7 @@
                 
                 if (data.ok) {
                     alert('🚀 Бот создается! Через минуту появится кнопка скачивания.');
-                    await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${currentLeadId}`, {
-                        method: 'PATCH',
-                        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ client_id: client_id })
-                    });
+                    await saveLeadPatch(currentLeadId, { client_id: client_id });
                     document.getElementById('create-bot-fields').style.display = 'none';
                     document.getElementById('widget-download-container').style.display = 'block';
                     if (lead) lead.client_id = client_id;
