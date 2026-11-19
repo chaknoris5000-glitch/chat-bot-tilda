@@ -574,6 +574,24 @@ async function askAI(message, history, sessionId) {
   if (!r.ok) throw new Error('OpenRouter error');
   let reply = data.choices?.[0]?.message?.content || 'Нет ответа';
 
+  // Защита от выдуманных фактов: если в ответе про адрес/телефон есть цифры или слова,
+  // которых нет в базе знаний — значит модель сочинила. Отвечаем безопасно.
+  if (CLIENT_ID !== 'tilda') {
+    const asksContact = /адрес|где\s|где вы|где находит|добрат|телефон|позвон|контакт/i.test(message || '');
+    if (asksContact) {
+      const ctx = (context || '').toLowerCase();
+      const ctxDigits = (ctx.match(/\d+/g) || []).join(' ');
+      const replyDigits = (reply.match(/\d{3,}/g) || []);
+      const badDigits = replyDigits.filter(d => !ctxDigits.includes(d));
+      const streetWords = ['проспект', 'улица', 'ул.', 'переулок', 'бульвар', 'трц', 'этаж', 'д.'];
+      const badStreet = streetWords.some(w => reply.toLowerCase().includes(w) && !ctx.includes(w));
+      if (badDigits.length > 0 || badStreet) {
+        console.log('⚠️ выдуманные контакты, ответ заменён:', reply.slice(0, 80));
+        reply = 'Уточню точный адрес и телефон у администратора. Оставьте, пожалуйста, имя и номер — мы свяжемся и всё расскажем.';
+      }
+    }
+  }
+
   const lowerMsg = message.toLowerCase();
   
   // Сайтовые ответы (тарифы, демо, оферта) — только для бота-витрины.
