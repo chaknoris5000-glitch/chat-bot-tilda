@@ -587,7 +587,18 @@ async function askAI(message, history, sessionId) {
       const badStreet = streetWords.some(w => reply.toLowerCase().includes(w) && !ctx.includes(w));
       if (badDigits.length > 0 || badStreet) {
         console.log('⚠️ выдуманные контакты, ответ заменён:', reply.slice(0, 80));
-        reply = 'Уточню точный адрес и телефон у администратора. Оставьте, пожалуйста, имя и номер — мы свяжемся и всё расскажем.';
+        // Отвечаем фактом из базы знаний, а не отказом
+        const wantsPhone = /телефон|позвон|номер/i.test(message || '');
+        let grounded = '';
+        if (wantsPhone) {
+          const m = (context || '').match(/\+?7[\d\s\-()]{9,}/);
+          if (m) grounded = 'Наш телефон: ' + m[0].trim();
+        }
+        if (!grounded) {
+          const m = (context || '').match(/[^\n]{0,40}(?:улица|ул\.|проспект|трц)[^\n]{0,60}/i);
+          if (m) grounded = 'Наш адрес: ' + m[0].trim().replace(/^[^\wА-Яа-я+]+/, '');
+        }
+        reply = grounded || 'Уточню точный адрес и телефон у администратора. Оставьте, пожалуйста, имя и номер — мы свяжемся и всё расскажем.';
       }
     }
   }
