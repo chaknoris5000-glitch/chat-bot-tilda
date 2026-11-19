@@ -539,7 +539,7 @@ async function askAI(message, history, sessionId) {
 2. Отвечай коротко: 1-2 предложения.
 3. Помни историю диалога, не задавай вопросы, на которые уже ответили.
 4. Не используй списки, тире, звёздочки и markdown.
-5. Опирайся ТОЛЬКО на блок «БАЗА ЗНАНИЙ» ниже. Не выдумывай адреса, телефоны, цены, услуги и график работы.
+5. Опирайся ТОЛЬКО на блок «БАЗА ЗНАНИЙ» ниже. Категорически запрещено придумывать адреса, телефоны, цены, услуги и график: если факта нет в базе — прямо скажи, что уточнишь.
 6. Если нужной информации нет в базе знаний — честно скажи, что уточнишь у администратора, и предложи оставить имя и телефон.
 7. Имя и телефон проси только тогда, когда клиент сам проявил интерес (спросил цену, «хочу», «запишите»).
 
@@ -566,7 +566,7 @@ async function askAI(message, history, sessionId) {
   const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${OPENROUTER_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: AI_MODEL_CHAT, messages, temperature: 0.6, max_tokens: 150 })
+    body: JSON.stringify({ model: AI_MODEL_CHAT, messages, temperature: CLIENT_ID === 'tilda' ? 0.6 : 0.25, max_tokens: 150 })
   });
   const data = await r.json();
   if (!r.ok) throw new Error('OpenRouter error');
@@ -1321,25 +1321,45 @@ app.post('/telegram-webhook', async (req, res) => {
 
 app.get('/crawl', async (req, res) => {
   try {
-    const scrape = await fetch('https://api.firecrawl.dev/v2/scrape', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${FIRECRAWL_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        url: SITE_TO_CRAWL, 
-        formats: ['markdown'],
-        onlyMainContent: false
-      })
-    });
-    
-    const scrapeData = await scrape.json();
-    
-    if (!scrape.ok) {
-        console.log('Firecrawl error:', scrapeData);
-        return res.status(500).json({ error: 'Firecrawl error', details: scrapeData });
+    // Собираем несколько страниц сайта (главная + внутренние ссылки), а не только одну
+    let pages = [];
+    try {
+      const mapRes = await fetch('https://api.firecrawl.dev/v2/map', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${FIRECRAWL_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: SITE_TO_CRAWL, limit: 20 })
+      });
+      const mapData = await mapRes.json();
+      const links = (mapData.links || [])
+        .map(l => (typeof l === 'string' ? l : l.url))
+        .filter(u => typeof u === 'string' && u.startsWith('http'));
+      pages = [...new Set(links)].slice(0, 12);
+    } catch (e) { console.log('map error:', e.message); }
+    if (pages.length === 0) pages = [SITE_TO_CRAWL];
+
+    let text = '';
+    let okPages = 0;
+    for (const pageUrl of pages) {
+      try {
+        const scrape = await fetch('https://api.firecrawl.dev/v2/scrape', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${FIRECRAWL_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: pageUrl, formats: ['markdown'], onlyMainContent: false })
+        });
+        const d = await scrape.json();
+        if (!scrape.ok) { console.log('Firecrawl error', pageUrl, JSON.stringify(d).slice(0, 200)); continue; }
+        const md = d.data?.markdown || '';
+        if (md && md.length > 100) {
+          text += `\n\n# Страница: ${pageUrl}\n\n${md}`;
+          okPages++;
+        }
+      } catch (e) { console.log('scrape error', pageUrl, e.message); }
     }
-    
-    const text = scrapeData.data?.markdown || '';
-    if (!text) return res.status(500).json({ error: 'Empty text from Firecrawl' });
+
+    console.log(`crawl: страниц ${pages.length}, собрано ${okPages}, символов ${text.length}`);
+    if (!text || text.length < 300) {
+      return res.status(500).json({ error: 'Empty text from Firecrawl', pages: pages.length });
+    }
 
     const chunks = [];
     for (let i = 0; i < text.length; i += 1000) chunks.push(text.slice(i, i + 1000));
