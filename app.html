@@ -223,9 +223,9 @@
             document.getElementById('acc-status').innerText = (paidUntil > new Date()) ? 'Активен' : 'Истек';
             document.getElementById('acc-total-leads').innerText = myLeads.length;
             
-            const currentTariff = TARIFFS['business']; 
-            document.getElementById('acc-limit-text').innerText = `${myLeads.length} / ${currentTariff.limit}`;
-            document.getElementById('acc-progress').style.width = Math.min((myLeads.length/currentTariff.limit)*100, 100) + '%';
+            const limit = Number(client.leads_limit) || 300;
+            document.getElementById('acc-limit-text').innerText = `${myLeads.length} / ${limit}`;
+            document.getElementById('acc-progress').style.width = Math.min((myLeads.length/limit)*100, 100) + '%';
 
             updateFilterCounts();
             renderLeads();
