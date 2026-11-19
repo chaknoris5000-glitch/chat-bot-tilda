@@ -1597,6 +1597,42 @@ app.post('/api/create-client', async (req, res) => {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
+
+// ========== CRM: правка заявок через сервер (без anon-доступа к базе) ==========
+app.post('/api/lead-update', async (req, res) => {
+  try {
+    const { id, db, patch, action } = req.body || {};
+    if (!id) return res.status(400).json({ error: 'no id' });
+    const useTilda = db === 'tilda';
+    const baseUrl = useTilda ? SUPABASE_URL : COMMON_SUPABASE_URL;
+    const baseKey = useTilda ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
+    const headers = { apikey: baseKey, Authorization: 'Bearer ' + baseKey };
+
+    if (action === 'delete') {
+      const d = await fetch(baseUrl + '/rest/v1/leads?id=eq.' + id, { method: 'DELETE', headers });
+      if (!d.ok) throw new Error((await d.text()).slice(0, 200));
+      return res.json({ ok: true });
+    }
+
+    const allowed = ['status', 'archive_reason', 'name', 'phone', 'phones', 'services', 'service', 'amount', 'is_paid', 'notes', 'next_contact_date', 'client_id', 'problem', 'source'];
+    const body = {};
+    for (const k of allowed) if (patch && Object.prototype.hasOwnProperty.call(patch, k)) body[k] = patch[k];
+    if (!Object.keys(body).length) return res.status(400).json({ error: 'empty patch' });
+    body.updated_at = new Date().toISOString();
+
+    const r = await fetch(baseUrl + '/rest/v1/leads?id=eq.' + id, {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error((await r.text()).slice(0, 200));
+    res.json({ ok: true });
+  } catch (e) {
+    console.log('lead-update error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
