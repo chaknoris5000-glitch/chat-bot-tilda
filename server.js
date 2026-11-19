@@ -427,6 +427,18 @@ async function askAI(message, history, sessionId) {
       
       if (Array.isArray(currentLeads) && currentLeads.length >= client.leads_limit) {
         console.log(`⛔️ Лимит исчерпан для ${CLIENT_ID}. Заявок: ${currentLeads.length} из ${client.leads_limit}`);
+        try {
+          const chatId = client.chat_id || MANAGER_CHAT_ID;
+          const dayKey = new Date().toISOString().slice(0, 10) + '_' + CLIENT_ID;
+          global.__limitNotified = global.__limitNotified || {};
+          if (chatId && global.__limitNotified[dayKey] !== currentLeads.length) {
+            global.__limitNotified[dayKey] = currentLeads.length;
+            await sendTelegram(chatId,
+              `⚠️ <b>Лимит заявок исчерпан</b>\n\n` +
+              `Тариф «${client.tariff || 'business'}»: ${currentLeads.length} из ${client.leads_limit} заявок за месяц.\n` +
+              `Новые заявки не собираются. Продлите тариф или увеличьте лимит.`);
+          }
+        } catch (e) { console.log('limit notify error:', e.message); }
         return 'Лимит заявок на этот месяц исчерпан. Пожалуйста, свяжитесь с менеджером для продления тарифа.';
       }
     }
@@ -1388,20 +1400,13 @@ async function sendDailyReportForClient(client) {
 
 cron.schedule('*/15 * * * *', async () => {
   try {
-    const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/clients?select=*`, {
-      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
-    });
-    const clients = await r.json();
-    if (!Array.isArray(clients)) return;
-
-    for (const client of clients) {
-      if (client.client_id !== 'tilda') continue;
-      if (!isPaid(client)) continue;
-      const tz = client.timezone || 'Europe/Moscow';
-      const local = getLocalTime(tz);
-      if (local.hour === REPORT_HOUR && local.minute >= 0 && local.minute < 15) {
-        await sendDailyReportForClient(client);
-      }
+    // Каждый бот отчитывается только по своему клиенту (в своей базе).
+    const client = await getClient(CLIENT_ID);
+    if (!client || !isPaid(client)) return;
+    const tz = client.timezone || 'Europe/Moscow';
+    const local = getLocalTime(tz);
+    if (local.hour === REPORT_HOUR && local.minute >= 0 && local.minute < 15) {
+      await sendDailyReportForClient(client);
     }
   } catch (e) { console.log('cron 15min error:', e.message); }
 });
