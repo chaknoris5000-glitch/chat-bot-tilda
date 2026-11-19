@@ -1561,6 +1561,109 @@ cron.schedule('0 10 1 * *', async () => {
     }
   } catch (e) { console.log('Ошибка при отправке счета за результат:', e.message); }
 });
+
+// Прямое создание клиента (резервный путь, если GitHub Actions недоступен):
+// новый Render-сервис из этого же репозитория + запись в базе. Отдельный репозиторий не нужен.
+async function createClientDirect(p) {
+  const renderKey = process.env.RENDER_API_KEY;
+  if (!renderKey) throw new Error('RENDER_API_KEY не задан');
+  if (!/^[a-z0-9][a-z0-9-]{2,24}$/.test(String(p.client_id || ''))) {
+    throw new Error('client_id: только латиница, цифры и дефис, 3-25 символов');
+  }
+
+  const check = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/clients?client_id=eq.${encodeURIComponent(p.client_id)}&select=client_id`, {
+    headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
+  });
+  const existing = await check.json();
+  if (Array.isArray(existing) && existing.length > 0) throw new Error('Клиент с таким client_id уже существует');
+
+  const ownersRes = await fetch('https://api.render.com/v1/owners', { headers: { Authorization: `Bearer ${renderKey}` } });
+  const owners = await ownersRes.json();
+  const ownerId = owners[0]?.owner?.id || owners[0]?.id;
+  if (!ownerId) throw new Error('Не удалось получить ownerId Render');
+
+  const prompt = `Ты — AI-администратор компании «${p.business_name}» (сайт ${p.site_url}).` +
+    ' Общайся как живой администратор: приветливо, коротко, по делу.' +
+    ' Отвечай ТОЛЬКО по информации из базы знаний ниже.' +
+    ' Если нужных данных там нет — скажи, что уточнишь у администратора, и предложи оставить имя и телефон.';
+
+  const envMap = {
+    CLIENT_ID: p.client_id,
+    BOT_CLIENT_ID: p.client_id,
+    BUSINESS_NAME: p.business_name,
+    SITE_TO_CRAWL: p.site_url,
+    BASE_URL: p.site_url,
+    MANAGER_CHAT_ID: String(p.manager_chat_id),
+    TELEGRAM_TOKEN: p.bot_token,
+    COMMON_SUPABASE_URL: process.env.COMMON_SUPABASE_URL,
+    COMMON_SUPABASE_KEY: process.env.COMMON_SUPABASE_KEY,
+    SUPABASE_URL: process.env.COMMON_SUPABASE_URL,
+    SUPABASE_KEY: process.env.COMMON_SUPABASE_KEY,
+    OPENROUTER_KEY: process.env.OPENROUTER_KEY,
+    FIRECRAWL_KEY: process.env.FIRECRAWL_KEY,
+    YOOKASSA_SHOP_ID: process.env.YOOKASSA_SHOP_ID || '',
+    YOOKASSA_SECRET_KEY: process.env.YOOKASSA_SECRET_KEY || '',
+    BUSINESS_PROMPT: prompt
+  };
+  const envVars = Object.entries(envMap)
+    .filter(([, v]) => v !== undefined && v !== null && v !== '')
+    .map(([key, value]) => ({ key, value: String(value) }));
+
+  const createRes = await fetch('https://api.render.com/v1/services', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${renderKey}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({
+      type: 'web_service',
+      name: `chat-bot-${p.client_id}`,
+      ownerId,
+      repo: 'https://github.com/chaknoris5000-glitch/chat-bot-tilda',
+      branch: 'main',
+      autoDeploy: 'yes',
+      envVars,
+      serviceDetails: {
+        env: 'node',
+        plan: 'free',
+        region: 'frankfurt',
+        envSpecificDetails: { buildCommand: 'npm install', startCommand: 'node server.js' }
+      }
+    })
+  });
+  const createdText = await createRes.text();
+  if (!createRes.ok) throw new Error('Render: ' + createdText.slice(0, 300));
+
+  let svc = {};
+  try { svc = JSON.parse(createdText); } catch (e) {}
+  const url = svc.service?.serviceDetails?.url || svc.serviceDetails?.url || `https://chat-bot-${String(p.client_id).toLowerCase()}.onrender.com`;
+
+  const chatId = Number(p.manager_chat_id);
+  await fetch(`${COMMON_SUPABASE_URL}/rest/v1/clients`, {
+    method: 'POST',
+    headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({
+      client_id: p.client_id,
+      business_name: p.business_name,
+      chat_id: Number.isFinite(chatId) ? chatId : null,
+      paid_until: new Date(Date.now() + 7 * 86400000).toISOString(),
+      timezone: p.timezone || 'Europe/Moscow',
+      prompt: null,
+      tariff: p.tariff || 'business',
+      leads_limit: Number(p.leads_limit) || 300,
+      owner_telegram_id: p.owner_telegram_id ? Number(p.owner_telegram_id) : null
+    })
+  });
+
+  // вебхук и парсинг — после старта сервиса
+  setTimeout(async () => {
+    try {
+      await fetch(`https://api.telegram.org/bot${p.bot_token}/setWebhook?url=${encodeURIComponent(url + '/telegram-webhook')}`);
+      await fetch(url + '/crawl').catch(() => {});
+      console.log('✅ fallback: вебхук и парсинг запущены для', p.client_id);
+    } catch (e) { console.log('fallback post-create error:', e.message); }
+  }, 90000);
+
+  return { url, mode: 'direct' };
+}
+
 app.post('/api/create-client', async (req, res) => {
   try {
     const { client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id } = req.body;
@@ -1593,10 +1696,12 @@ app.post('/api/create-client', async (req, res) => {
 
     if (!ghRes.ok) {
       const errText = await ghRes.text();
-      throw new Error(`GitHub API: ${errText}`);
+      console.log('GitHub dispatch недоступен, создаю напрямую:', errText.slice(0, 160));
+      const direct = await createClientDirect({ client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id, tariff, leads_limit });
+      return res.json({ ok: true, ...direct });
     }
 
-    res.json({ ok: true });
+    res.json({ ok: true, mode: 'actions' });
   } catch (e) {
     console.error('Ошибка создания клиента:', e.message);
     res.status(500).json({ ok: false, error: e.message });
