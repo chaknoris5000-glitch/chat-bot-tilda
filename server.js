@@ -1126,6 +1126,35 @@ app.post('/telegram-webhook', async (req, res) => {
         return;
       }
 
+      if (data === 'route') {
+        const s = await getSessionByTelegram(chatId);
+        if (!s || !s.lat || !s.branch) {
+          await answerCallback(cb.id, 'Нужна геолокация');
+          await sendTelegram(chatId, 'Отправьте геолокацию — построю маршрут до выбранного филиала.');
+          await sendLocationKeyboard(chatId);
+          return;
+        }
+        await answerCallback(cb.id, 'Строю маршрут');
+        await sendRouteTo(chatId, s.lat, s.lon, s.branch);
+        return;
+      }
+
+      if (data === 'book') {
+        await answerCallback(cb.id, 'Ок');
+        await showServices(chatId);
+        return;
+      }
+
+      if (data === 'other') {
+        await answerCallback(cb.id, 'Выберите филиал');
+        const kb = [];
+        for (let i = 0; i < BRANCHES.length; i += 2) {
+          kb.push(BRANCHES.slice(i, i + 2).map((a, j) => ({ text: a.length > 34 ? a.slice(0, 32) + '…' : a, callback_data: 'bf_' + (i + j) })));
+        }
+        await sendTelegram(chatId, 'Выберите филиал:', kb);
+        return;
+      }
+
       if (data === 'agn') {
         await answerCallback(cb.id, 'Повторяем');
         await repeatLastBooking(chatId);
@@ -1242,19 +1271,37 @@ app.post('/telegram-webhook', async (req, res) => {
     let text = '';
 
     if (msg.location && BRANCHES_GEO.length) {
-      const near = nearestBranch(msg.location.latitude, msg.location.longitude);
+      const lat = msg.location.latitude;
+      const lon = msg.location.longitude;
+      const near = nearestBranch(lat, lon);
+
+      let sess = await getSessionByTelegram(chatId);
+      if (!sess) {
+        const sid = 'tg_' + chatId + '_' + CLIENT_ID;
+        await getOrCreateSession(sid);
+        await updateSession(sid, { telegram_chat_id: chatId });
+        sess = await getSessionByTelegram(chatId);
+      }
+
+      if (sess) await updateSession(sess.session_id, { lat: lat, lon: lon });
+
+      if (near && near.dist > 150) {
+        await sendTelegram(chatId, 'Вы находитесь далеко от наших филиалов (' + fmtKm(near.dist) + '). ' +
+          'Если планируете визит в Кемерово — выберите филиал, и я подскажу адрес и время работы.');
+        return;
+      }
+
       if (near) {
-        await sendTelegram(chatId, 'Ближе всего к вам: <b>' + near.addr + '</b> — примерно ' + near.dist.toFixed(1) + ' км. Записать вас туда?');
-        try {
-          let sess = await getSessionByTelegram(chatId);
-          if (!sess) {
-            const sid = 'tg_' + chatId + '_' + CLIENT_ID;
-            await getOrCreateSession(sid);
-            await updateSession(sid, { telegram_chat_id: chatId });
-            sess = await getSessionByTelegram(chatId);
-          }
-          if (sess) await updateSession(sess.session_id, { branch: near.addr });
-        } catch (e) {}
+        if (sess) await updateSession(sess.session_id, { branch: near.addr });
+        const rt = await osrmRoute(lat, lon, (BRANCHES_GEO.find(b => b.addr === near.addr) || {}).lat, (BRANCHES_GEO.find(b => b.addr === near.addr) || {}).lon);
+        await sendVenueCard(chatId, (BRANCHES_GEO.find(b => b.addr === near.addr) || {}).lat, (BRANCHES_GEO.find(b => b.addr === near.addr) || {}).lon, near.addr, 'Филиал');
+        await sendTelegram(chatId, 'Ближе всего к вам: <b>' + near.addr + '</b> — ' + fmtKm(near.dist) +
+          (rt ? ', ~' + rt.min + ' мин на машине' : '') +
+          '. Работаем ' + WORK_START + ':00–' + WORK_END + ':00.');
+        await sendTelegram(chatId, 'Записать вас сюда или отправлю маршрут?', [
+          [{ text: '🗺 Маршрут', callback_data: 'route' }, { text: '📅 Записаться', callback_data: 'book' }],
+          [{ text: '📍 Другой филиал', callback_data: 'other' }]
+        ]);
       }
       return;
     }
@@ -1270,6 +1317,20 @@ app.post('/telegram-webhook', async (req, res) => {
     } else return;
 
     const isManager = String(chatId) === String(MANAGER_CHAT_ID);
+
+    // Маршрут по запросу
+    if (!isManager && /маршрут|как добрат|как доехать|как найти/i.test(text || '') && BRANCHES.length) {
+      const s = await getSessionByTelegram(chatId);
+      if (s && s.lat && s.branch) {
+        await sendRouteTo(chatId, s.lat, s.lon, s.branch);
+      } else if (s && s.lat) {
+        await sendTelegram(chatId, 'Сначала выберите филиал — потом построю маршрут.', [[{ text: 'Выбрать филиал', callback_data: 'other' }]]);
+      } else {
+        await sendTelegram(chatId, 'Отправьте геолокацию — построю маршрут до ближайшего филиала.');
+        await sendLocationKeyboard(chatId);
+      }
+      return;
+    }
 
     // Быстрый вход в запись
     if (!isManager && BRANCHES.length && /запис|свободн|хочу прийти|забронир|есть окн/i.test(text || '')) {
@@ -2672,6 +2733,48 @@ app.post('/api/send-report-email', async (req, res) => {
     res.json({ ok: true, to: to });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+async function sendVenueCard(chatId, lat, lon, title, address) {
+  await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendVenue`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, latitude: lat, longitude: lon, title: title, address: address })
+  });
+}
+
+function yandexRouteUrl(fromLat, fromLon, toLat, toLon) {
+  return 'https://yandex.ru/maps/?rtext=' + fromLat + ',' + fromLon + '~' + toLat + ',' + toLon + '&rtt=auto';
+}
+
+async function osrmRoute(fromLat, fromLon, toLat, toLon) {
+  try {
+    const r = await fetch('https://router.project-osrm.org/route/v1/driving/' + fromLon + ',' + fromLat + ';' + toLon + ',' + toLat + '?overview=false');
+    const j = await r.json();
+    const rt = j.routes && j.routes[0];
+    if (!rt) return null;
+    return { km: rt.distance / 1000, min: Math.round(rt.duration / 60) };
+  } catch (e) { return null; }
+}
+
+function fmtKm(km) {
+  return km >= 10 ? Math.round(km) + ' км' : km.toFixed(1) + ' км';
+}
+
+async function sendRouteTo(chatId, fromLat, fromLon, branch) {
+  const geo = BRANCHES_GEO.find(b => b.addr === branch);
+  if (!geo) {
+    await sendTelegram(chatId, 'Не знаю координат этого филиала — уточните у администратора.');
+    return false;
+  }
+  const rt = await osrmRoute(fromLat, fromLon, geo.lat, geo.lon);
+  await sendVenueCard(chatId, geo.lat, geo.lon, branch, 'Филиал');
+  const line1 = '🗺 Маршрут до <b>' + branch + '</b>';
+  const line2 = rt ? '📏 ' + fmtKm(rt.km) + ' · ~' + rt.min + ' мин на машине' : '';
+  const line3 = '🕐 Работаем ' + WORK_START + ':00–' + WORK_END + ':00';
+  const line4 = '<a href="' + yandexRouteUrl(fromLat, fromLon, geo.lat, geo.lon) + '">Открыть маршрут в Яндекс.Картах</a>';
+  await sendTelegram(chatId, [line1, line2, line3, line4].filter(Boolean).join('\n'));
+  return true;
+}
 
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
