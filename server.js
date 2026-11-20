@@ -34,17 +34,28 @@ function verifyTelegramInitData(initData) {
   } catch (e) { return null; }
 }
 
-function signAuth(telegramId) {
-  const sig = crypto.createHmac('sha256', TELEGRAM_TOKEN).update(String(telegramId)).digest('hex').slice(0, 32);
-  return `${telegramId}.${sig}`;
+function signAuth(telegramId, days) {
+  const ttl = days || 365;
+  const exp = Math.floor(Date.now() / 1000) + ttl * 86400;
+  const sig = crypto.createHmac('sha256', TELEGRAM_TOKEN).update(`${telegramId}.${exp}`).digest('hex').slice(0, 32);
+  return `${telegramId}.${exp}.${sig}`;
 }
 
 function verifyAuthToken(token) {
   try {
-    const [id, sig] = String(token || '').split('.');
-    if (!id || !sig) return null;
-    const expect = crypto.createHmac('sha256', TELEGRAM_TOKEN).update(id).digest('hex').slice(0, 32);
-    return sig === expect ? String(id) : null;
+    const parts = String(token || '').split('.');
+    if (parts.length === 2) {
+      const [id, sig] = parts;
+      const expect = crypto.createHmac('sha256', TELEGRAM_TOKEN).update(id).digest('hex').slice(0, 32);
+      return sig === expect ? String(id) : null;
+    }
+    if (parts.length === 3) {
+      const [id, exp, sig] = parts;
+      if (Number(exp) * 1000 < Date.now()) return null;
+      const expect = crypto.createHmac('sha256', TELEGRAM_TOKEN).update(`${id}.${exp}`).digest('hex').slice(0, 32);
+      return sig === expect ? String(id) : null;
+    }
+    return null;
   } catch (e) { return null; }
 }
 
