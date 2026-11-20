@@ -2126,9 +2126,19 @@ async function checkBots(alert = true) {
     const url = `https://chat-bot-${String(c.client_id).toLowerCase()}.onrender.com/health`;
     let ok = false;
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+      const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
       ok = res.ok;
     } catch (e) { ok = false; }
+
+    // Free-план Render «просыпается» до минуты — перепроверяем, прежде чем паниковать
+    if (!ok) {
+      await new Promise(r => setTimeout(r, 15000));
+      try {
+        const res2 = await fetch(url, { signal: AbortSignal.timeout(60000) });
+        ok = res2.ok;
+      } catch (e) { ok = false; }
+    }
+
     results.push({ client_id: c.client_id, ok });
     if (!ok && alert) {
       const last = __alerted.get(c.client_id) || 0;
