@@ -693,10 +693,17 @@ async function askAI(message, history, sessionId) {
           if (m) grounded = 'Наш телефон: ' + m[0].trim().replace(/[^\d+]+$/, '');
         }
         if (!grounded) {
-          // Берём целый фрагмент из базы знаний, а не обрезанный кусок посреди слова
-          const segs = (context || '').split(/[\n;]+/).map(s => s.trim()).filter(Boolean);
-          const seg = segs.find(s => /(?:улица|ул\.|проспект|трц|филиал)/i.test(s) && s.length > 8);
-          if (seg) grounded = /^адрес/i.test(seg) ? seg.slice(0, 250) : 'Наш адрес: ' + seg.slice(0, 200);
+          // Вырезаем окно с адресами из базы знаний целиком, а не одну строку
+          const src = (context || '');
+          let ci = src.search(/филиал/i);
+          if (ci < 0) ci = src.search(/адрес/i);
+          if (ci >= 0) {
+            let slice = src.slice(ci, ci + 400).replace(/\s+/g, ' ').trim();
+            slice = slice.replace(/^#+\s*/, '');
+            const cut = slice.lastIndexOf(' ');
+            if (slice.length >= 390 && cut > 200) slice = slice.slice(0, cut);
+            grounded = slice;
+          }
         }
         reply = grounded || 'Уточню точный адрес и телефон у администратора. Оставьте, пожалуйста, имя и номер — мы свяжемся и всё расскажем.';
       }
