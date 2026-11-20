@@ -106,11 +106,11 @@ const COMMON_SUPABASE_KEY = process.env.COMMON_SUPABASE_KEY || process.env.SUPAB
 
 const OPENROUTER_KEY = process.env.OPENROUTER_KEY || '';
 const FIRECRAWL_KEY = process.env.FIRECRAWL_KEY || '';
-const SITE_TO_CRAWL = process.env.SITE_TO_CRAWL || 'https://send-empty-creedite.tilda.ws';
+const SITE_TO_CRAWL = process.env.SITE_TO_CRAWL || 'https://ai-admin-bot.ru/';
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'AI-Администратор';
 const CLIENT_ID = process.env.CLIENT_ID || 'tilda';
 const PRICE_PER_LEAD = Number(process.env.PRICE_PER_LEAD) || 25;
-const BASE_URL = process.env.BASE_URL || 'https://send-empty-creedite.tilda.ws';
+const BASE_URL = process.env.BASE_URL || 'https://ai-admin-bot.ru/';
 const REPORT_HOUR = Number(process.env.REPORT_HOUR) || 20;
 const AI_MODEL_CHAT = process.env.AI_MODEL_CHAT || 'deepseek/deepseek-chat';
 const AI_MODEL_EMBED = process.env.AI_MODEL_EMBED || 'openai/text-embedding-3-small';
