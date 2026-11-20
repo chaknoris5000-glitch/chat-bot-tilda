@@ -2115,6 +2115,7 @@ cron.schedule('0 3 * * *', async () => {
 });
 
 const __alerted = new Map();
+const __failCount = new Map();
 async function checkBots(alert = true) {
   const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/clients?select=client_id,business_name`, {
     headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
@@ -2139,8 +2140,11 @@ async function checkBots(alert = true) {
       } catch (e) { ok = false; }
     }
 
-    results.push({ client_id: c.client_id, ok });
-    if (!ok && alert) {
+    const fails = (__failCount.get(c.client_id) || 0) + (ok ? 0 : 1);
+    __failCount.set(c.client_id, ok ? 0 : fails);
+    results.push({ client_id: c.client_id, ok, fails: __failCount.get(c.client_id) });
+    // Алерт только после двух провалов подряд (20 минут), чтобы не ловить холодный старт
+    if (!ok && alert && __failCount.get(c.client_id) >= 2) {
       const last = __alerted.get(c.client_id) || 0;
       if (Date.now() - last > 3600000) {
         __alerted.set(c.client_id, Date.now());
