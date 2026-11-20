@@ -704,6 +704,7 @@ async function askAI(message, history, sessionId) {
               .replace(/https?:\/\/\S+/g, '')
               .replace(/[×←→©]/g, '')
               .replace(/\s{2,}/g, ' ')
+              .split('---')[0]
               .trim();
             const cut = slice.lastIndexOf(';');
             if (slice.length >= 880 && cut > 200) slice = slice.slice(0, cut + 1);
