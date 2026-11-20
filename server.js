@@ -1072,7 +1072,7 @@ app.post('/telegram-webhook', async (req, res) => {
           if (sess) {
             const h = sess.history || [];
             h.push({ role: 'user', content: 'Выбрал филиал: ' + addr });
-            await updateSession(sess.session_id, { history: h.slice(-20) });
+            await updateSession(sess.session_id, { history: h.slice(-20), branch: addr });
           }
         } catch (e) {}
         return;
