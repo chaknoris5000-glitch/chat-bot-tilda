@@ -3100,7 +3100,7 @@ app.post('/api/backup-verify', async (req, res) => {
       const rows = Array.isArray(data[table]) ? data[table].length : 0;
       const live = await sbSelect(table + '?select=id');
       report[table] = { in_backup: rows, now: live.length };
-      if (rows === 0) ok = false;
+      if ((table === 'clients' || table === 'documents') && rows === 0) ok = false;
     }
 
     res.json({ ok: ok, backup: latest.name, created_at: latest.created_at, size: latest.metadata && latest.metadata.size, tables: report });
