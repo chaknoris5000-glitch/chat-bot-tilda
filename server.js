@@ -1126,6 +1126,18 @@ app.post('/telegram-webhook', async (req, res) => {
         return;
       }
 
+      if (data === 'agn') {
+        await answerCallback(cb.id, 'Повторяем');
+        await repeatLastBooking(chatId);
+        return;
+      }
+
+      if (data === 'new') {
+        await answerCallback(cb.id, 'Ок');
+        await showServices(chatId);
+        return;
+      }
+
       if (data === 'mgr') {
         await answerCallback(cb.id, 'Передал администратору');
         await sendTelegram(chatId, 'Передал администратору — он ответит в ближайшее время.');
@@ -2372,6 +2384,11 @@ const SERVICES = (() => {
     return Array.isArray(a) ? a : [];
   } catch (e) { return []; }
 })();
+const PROMOS = (() => {
+  try { const o = JSON.parse(process.env.PROMOS || '{}'); return o && typeof o === 'object' ? o : {}; }
+  catch (e) { return {}; }
+})();
+
 const WORK_START = Number(process.env.WORK_START || 10);
 const WORK_END = Number(process.env.WORK_END || 20);
 const TZ_OFFSET = Number(process.env.TZ_OFFSET || 7);
@@ -2462,7 +2479,25 @@ async function startBooking(chatId) {
     await sendTelegram(chatId, 'Выберите филиал:', kb);
     return;
   }
+  const prev = await getBookings(chatId);
+  if (prev.length && sess && sess.branch) {
+    await sendTelegram(chatId, 'Вы уже были у нас: ' + prev[0].branch + (prev[0].service ? ', ' + prev[0].service : '') + '.', [
+      [{ text: '🔁 Повторить прошлую запись', callback_data: 'agn' }],
+      [{ text: '🆕 Записаться по-новому', callback_data: 'new' }]
+    ]);
+    return;
+  }
   await showServices(chatId);
+}
+
+async function repeatLastBooking(chatId) {
+  const prev = await getBookings(chatId);
+  if (!prev.length) { await showServices(chatId); return; }
+  const last = prev[0];
+  const sess = await getSessionByTelegram(chatId);
+  if (sess) await updateSession(sess.session_id, { branch: last.branch || sess.branch, service: last.service || null });
+  await sendTelegram(chatId, 'Повторяем: ' + (last.branch || '') + (last.service ? ', ' + last.service : '') + '.');
+  await showSlots(chatId);
 }
 
 async function confirmBooking(chatId, ts) {
@@ -2486,6 +2521,9 @@ async function confirmBooking(chatId, ts) {
     (service ? ', ' + service : '') +
     (branch ? '\nФилиал: ' + branch : '') +
     '\n\nЖдём! Если планы изменятся — напишите.');
+
+  const promo = branch && PROMOS[branch];
+  if (promo) await sendTelegram(chatId, '🎁 ' + promo);
 
   if (MANAGER_CHAT_ID) {
     await sendTelegram(MANAGER_CHAT_ID, '📅 <b>Новая запись</b>\n\n' +
