@@ -1985,6 +1985,92 @@ app.post('/api/lead-update', async (req, res) => {
   }
 });
 
+
+// ========== БЭКАПЫ И МОНИТОРИНГ (только на центральном боте) ==========
+const BACKUP_BUCKET = 'backups';
+
+async function makeBackup() {
+  const tables = ['clients', 'documents', 'leads', 'chat_sessions'];
+  const dump = {};
+  for (const t of tables) {
+    const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/${t}?select=*`, {
+      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
+    });
+    dump[t] = await r.json();
+  }
+  const payload = JSON.stringify({ created_at: new Date().toISOString(), data: dump });
+  const name = `dump-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+
+  const up = await fetch(`${COMMON_SUPABASE_URL}/storage/v1/object/${BACKUP_BUCKET}/${name}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`,
+      'apikey': COMMON_SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'x-upsert': 'true'
+    },
+    body: payload
+  });
+  const text = await up.text();
+  console.log('backup:', name, up.status, payload.length, 'bytes', up.ok ? '' : text.slice(0, 150));
+  return { ok: up.ok, name, bytes: payload.length, status: up.status };
+}
+
+cron.schedule('0 3 * * *', async () => {
+  if (CLIENT_ID !== 'tilda') return;
+  try { await makeBackup(); } catch (e) { console.log('backup error:', e.message); }
+});
+
+const __alerted = new Map();
+async function checkBots(alert = true) {
+  const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/clients?select=client_id,business_name`, {
+    headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
+  });
+  const clients = await r.json();
+  const results = [];
+  for (const c of Array.isArray(clients) ? clients : []) {
+    if (!c.client_id || c.client_id === 'demo-client') continue;
+    const url = `https://chat-bot-${String(c.client_id).toLowerCase()}.onrender.com/health`;
+    let ok = false;
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+      ok = res.ok;
+    } catch (e) { ok = false; }
+    results.push({ client_id: c.client_id, ok });
+    if (!ok && alert) {
+      const last = __alerted.get(c.client_id) || 0;
+      if (Date.now() - last > 3600000) {
+        __alerted.set(c.client_id, Date.now());
+        try {
+          await sendTelegram(MANAGER_CHAT_ID, `⚠️ <b>Бот не отвечает</b>\n\nКлиент: ${c.business_name || c.client_id}\nСервис: ${url}`);
+        } catch (e) {}
+      }
+    }
+  }
+  return results;
+}
+
+cron.schedule('*/10 * * * *', async () => {
+  if (CLIENT_ID !== 'tilda') return;
+  try {
+    const res = await checkBots(true);
+    const bad = res.filter(x => !x.ok);
+    if (bad.length) console.log('watchdog: недоступны', bad.map(x => x.client_id).join(', '));
+  } catch (e) { console.log('watchdog error:', e.message); }
+});
+
+app.post('/api/backup-now', async (req, res) => {
+  const uid = getRequesterId(req);
+  if (String(uid) !== ADMIN_TG_ID) return res.status(403).json({ error: 'forbidden' });
+  try { res.json(await makeBackup()); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/watchdog-now', async (req, res) => {
+  const uid = getRequesterId(req);
+  if (String(uid) !== ADMIN_TG_ID) return res.status(403).json({ error: 'forbidden' });
+  try { res.json({ results: await checkBots(false) }); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
