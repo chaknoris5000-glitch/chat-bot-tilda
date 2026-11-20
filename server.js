@@ -1809,7 +1809,25 @@ app.get('/crawl', async (req, res) => {
       } catch (e) { console.log('Ошибка сохранения чанка:', e.message); }
     }
     
-    res.json({ ok: true, saved, total: chunks.length });
+    // Структурированный каталог: товары и цены (наш LLM, без доп. кредитов Firecrawl)
+    let productsCount = 0;
+    try {
+      if (text.length > 1500) {
+        const products = await extractProducts(text);
+        productsCount = await saveProducts(products, SITE_TO_CRAWL);
+        if (productsCount > 0) {
+          const summary = 'Каталог товаров и услуг с ценами:\n' + products.map(function (p) {
+            return '- ' + (p.name || '') + (p.price ? ' — ' + p.price : '') + (p.description ? ': ' + p.description : '');
+          }).join('\n');
+          try {
+            const emb2 = await getEmbedding(summary);
+            await saveDocument(summary, emb2, SITE_TO_CRAWL);
+          } catch (e) { console.log('catalog doc error:', e.message); }
+        }
+      }
+    } catch (e) { console.log('catalog error:', e.message); }
+
+    res.json({ ok: true, saved, total: chunks.length, products: productsCount });
   } catch (error) {
     console.log('Crawl error:', error.message);
     res.status(500).json({ error: 'Ошибка Firecrawl' });
@@ -2809,6 +2827,58 @@ async function sendRouteTo(chatId, fromLat, fromLon, branch) {
   const line4 = '<a href="' + yandexRouteUrl(fromLat, fromLon, geo.lat, geo.lon) + '">Открыть маршрут в Яндекс.Картах</a>';
   await sendTelegram(chatId, [line1, line2, line3, line4].filter(Boolean).join('\n'));
   return true;
+}
+
+async function extractProducts(text) {
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + OPENROUTER_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: AI_MODEL_CHAT,
+        temperature: 0.1,
+        max_tokens: 2000,
+        messages: [{
+          role: 'user',
+          content: 'Выдели из текста сайта товары и услуги с ценами. Верни строгий JSON-массив объектов {"name","price","description"} без пояснений и без markdown. Если товаров и цен нет — верни [].\n\nТЕКСТ:\n' + String(text).slice(0, 12000)
+        }]
+      })
+    });
+    const data = await res.json();
+    let raw = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+    raw = raw.trim().replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.slice(0, 80) : [];
+  } catch (e) {
+    console.log('extractProducts error:', e.message);
+    return [];
+  }
+}
+
+async function saveProducts(list, sourceUrl) {
+  try {
+    const headers = { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': 'Bearer ' + COMMON_SUPABASE_KEY };
+    if (!list.length) return 0;
+    await fetch(COMMON_SUPABASE_URL + '/rest/v1/products?client_id=eq.' + CLIENT_ID, { method: 'DELETE', headers: headers });
+    const rows = list.map(function (p) {
+      return {
+        client_id: CLIENT_ID,
+        name: String(p.name || '').slice(0, 200),
+        price: p.price ? String(p.price).slice(0, 50) : null,
+        description: p.description ? String(p.description).slice(0, 600) : null,
+        url: sourceUrl
+      };
+    });
+    const r = await fetch(COMMON_SUPABASE_URL + '/rest/v1/products', {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify(rows)
+    });
+    return r.ok ? rows.length : 0;
+  } catch (e) {
+    console.log('saveProducts error:', e.message);
+    return 0;
+  }
 }
 
 app.get('/health', (req, res) => {
