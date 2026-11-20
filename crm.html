@@ -356,6 +356,21 @@
     </div>
 
     <script>
+        // Авторизация: initData из Telegram WebApp или подписанный токен в ?auth=
+        const TG_INIT_DATA = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+        const AUTH_TOKEN = new URLSearchParams(location.search).get('auth') || '';
+        (function () {
+          const origFetch = window.fetch.bind(window);
+          window.fetch = function (url, opts) {
+            opts = opts || {};
+            const headers = Object.assign({}, opts.headers || {});
+            if (TG_INIT_DATA) headers['X-Telegram-Init-Data'] = TG_INIT_DATA;
+            if (AUTH_TOKEN) headers['X-Auth-Token'] = AUTH_TOKEN;
+            opts.headers = headers;
+            return origFetch(url, opts);
+          };
+        })();
+
         const TILDA_URL = 'https://ozutjnwextahorvzdbpl.supabase.co';
         const TILDA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96dXRqbndleHRhaG9ydnpkYnBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MTQ3MzUsImV4cCI6MjEwNzE5MDczNX0.8L3adhQ9gUR5iSly1afSQN6HeEhkj9QQ4NtUyZUQx28';
         const LOANS_URL = 'https://ggmshdfplrqsybnchvha.supabase.co';
