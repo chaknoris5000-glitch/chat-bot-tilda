@@ -140,6 +140,7 @@
             <div class="sidebar-actions">
                 <button class="btn btn-primary" id="add-client-btn" onclick="openCreateModal()">+ Добавить клиента</button>
                 <button class="btn btn-outline" onclick="exportToExcel()">Скачать Excel</button>
+                <button class="btn btn-outline" onclick="sendByEmail()">Отправить на почту</button>
             </div>
             <div class="menu-label">Рабочее пространство</div>
             <div class="menu-item active" onclick="switchTab('kanban')"><div class="menu-item-left"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Воронка</div></div>
@@ -867,6 +868,21 @@
                 });
                 await loadBookings('all');
             } catch (e) { console.error(e); }
+        }
+
+
+        async function sendByEmail() {
+            const email = prompt('На какой email отправить отчёт?');
+            if (!email) return;
+            try {
+                const r = await fetch('/api/send-report-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+                const d = await r.json();
+                alert(d.ok ? 'Отправлено на ' + d.to : ('Ошибка: ' + (d.error || 'неизвестно')));
+            } catch (e) { alert('Ошибка сети: ' + e.message); }
         }
 
         function switchTab(tab) {
