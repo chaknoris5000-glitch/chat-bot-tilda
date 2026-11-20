@@ -1136,6 +1136,7 @@ app.post('/telegram-webhook', async (req, res) => {
         }
         await answerCallback(cb.id, 'Строю маршрут');
         await sendRouteTo(chatId, s.lat, s.lon, s.branch);
+        await sendTelegram(chatId, 'Записать вас в этот филиал?', [[{ text: '📅 Записаться', callback_data: 'book' }]]);
         return;
       }
 
@@ -2189,6 +2190,19 @@ async function createClientDirect(p) {
   setTimeout(async () => {
     try {
       await fetch(`https://api.telegram.org/bot${p.bot_token}/setWebhook?url=${encodeURIComponent(url + '/telegram-webhook')}`);
+      try {
+        const menu = { type: 'web_app', text: 'Аккаунт', web_app: { url: url + '/app' } };
+        if (p.owner_telegram_id) {
+          await fetch('https://api.telegram.org/bot' + p.bot_token + '/setChatMenuButton', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: Number(p.owner_telegram_id), menu_button: menu })
+          });
+        }
+        await fetch('https://api.telegram.org/bot' + p.bot_token + '/setChatMenuButton', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: 5818548555, menu_button: menu })
+        });
+      } catch (e) { console.log('menu button error:', e.message); }
       await fetch(url + '/crawl').catch(() => {});
       console.log('✅ fallback: вебхук и парсинг запущены для', p.client_id);
     } catch (e) { console.log('fallback post-create error:', e.message); }
@@ -2566,7 +2580,7 @@ async function repeatLastBooking(chatId) {
   const last = prev[0];
   const sess = await getSessionByTelegram(chatId);
   if (sess) await updateSession(sess.session_id, { branch: last.branch || sess.branch, service: last.service || null });
-  await sendTelegram(chatId, 'Повторяем: ' + (last.branch || '') + (last.service ? ', ' + last.service : '') + '.');
+  await sendTelegram(chatId, 'Повторяем: ' + (last.branch || '') + (last.service ? ', ' + last.service : '') + '.', [[{ text: '🗺 Маршрут', callback_data: 'route' }]]);
   await showSlots(chatId);
 }
 
@@ -2613,6 +2627,10 @@ async function confirmBooking(chatId, ts) {
       (service ? '\nУслуга: ' + service : '') +
       (branch ? '\nФилиал: ' + branch : '') +
       '\nКлиент: ' + chatId);
+  }
+
+  if (branch && sess && sess.lat && sess.lon) {
+    try { await sendRouteTo(chatId, sess.lat, sess.lon, branch); } catch (e) {}
   }
 }
 
