@@ -2553,30 +2553,28 @@ async function checkBots(alert = true) {
     if (!c.client_id || c.client_id === 'demo-client') continue;
     const url = `https://chat-bot-${String(c.client_id).toLowerCase()}.onrender.com/health`;
     let ok = false;
-    try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
-      ok = res.ok;
-    } catch (e) { ok = false; }
-
-    // Free-план Render «просыпается» до минуты — перепроверяем, прежде чем паниковать
-    if (!ok) {
-      await new Promise(r => setTimeout(r, 15000));
+    let lastErr = '';
+    for (let attempt = 0; attempt < 3 && !ok; attempt++) {
       try {
-        const res2 = await fetch(url, { signal: AbortSignal.timeout(60000) });
-        ok = res2.ok;
-      } catch (e) { ok = false; }
+        const res = await fetch(url, { signal: AbortSignal.timeout(45000) });
+        ok = res.ok;
+        if (!ok) lastErr = 'HTTP ' + res.status;
+      } catch (e) {
+        lastErr = e.message;
+      }
+      if (!ok && attempt < 2) await new Promise(r => setTimeout(r, 12000));
     }
 
     const fails = (__failCount.get(c.client_id) || 0) + (ok ? 0 : 1);
     __failCount.set(c.client_id, ok ? 0 : fails);
     results.push({ client_id: c.client_id, ok, fails: __failCount.get(c.client_id) });
     // Алерт только после двух провалов подряд (20 минут), чтобы не ловить холодный старт
-    if (!ok && alert && __failCount.get(c.client_id) >= 2) {
+    if (!ok && alert && __failCount.get(c.client_id) >= 3) {
       const last = __alerted.get(c.client_id) || 0;
       if (Date.now() - last > 3600000) {
         __alerted.set(c.client_id, Date.now());
         try {
-          await sendTelegram(MANAGER_CHAT_ID, `⚠️ <b>Бот не отвечает</b>\n\nКлиент: ${c.business_name || c.client_id}\nСервис: ${url}`);
+          await sendTelegram(MANAGER_CHAT_ID, `⚠️ <b>Бот не отвечает</b>\n\nКлиент: ${c.business_name || c.client_id}\nСервис: ${url}\nОшибка: ${lastErr}`);
         } catch (e) {}
       }
     }
