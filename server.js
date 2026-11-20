@@ -1678,6 +1678,52 @@ async function createClientDirect(p) {
       ' Если нужных данных там нет — скажи, что уточнишь у администратора, и предложи оставить имя и телефон.';
   }
 
+  // Отдельный репозиторий под клиента: шаблон копируется из chat-bot-tilda
+  let repoUrl = 'https://github.com/chaknoris5000-glitch/chat-bot-tilda';
+  try {
+    const ghToken = process.env.MY_GITHUB_TOKEN || '';
+    const ghHeaders = { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json', 'User-Agent': 'dsh-agent' };
+
+    const repoRes = await fetch('https://api.github.com/user/repos', {
+      method: 'POST',
+      headers: { ...ghHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: `chat-bot-${p.client_id}`, private: false })
+    });
+
+    if (repoRes.ok) {
+      const repo = await repoRes.json();
+      repoUrl = repo.html_url;
+      const safeName = String(p.business_name).replace(/'/g, "\\'");
+
+      for (const f of ['server.js', 'package.json', 'crm.html', 'app.html']) {
+        const srcRes = await fetch(`https://api.github.com/repos/chaknoris5000-glitch/chat-bot-tilda/contents/${f}?ref=main`, { headers: ghHeaders });
+        if (!srcRes.ok) { console.log('copy skip', f, srcRes.status); continue; }
+        const srcMeta = await srcRes.json();
+        let content = Buffer.from(srcMeta.content, 'base64').toString('utf8');
+
+        if (f === 'server.js') {
+          content = content
+            .replace(/const CLIENT_ID = .*?;/, `const CLIENT_ID = '${p.client_id}';`)
+            .replace(/const BUSINESS_NAME = .*?;/, `const BUSINESS_NAME = '${safeName}';`)
+            .replace(/const SITE_TO_CRAWL = .*?;/, `const SITE_TO_CRAWL = '${p.site_url}';`)
+            .replace(/const BASE_URL = .*?;/, `const BASE_URL = '${p.site_url}';`);
+        } else {
+          content = content.replace(/const BOT_CLIENT_ID = .*?;/, `const BOT_CLIENT_ID = '${p.client_id}';`);
+        }
+
+        const putRes = await fetch(`https://api.github.com/repos/${repo.full_name}/contents/${f}`, {
+          method: 'PUT',
+          headers: { ...ghHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: `Add ${f}`, content: Buffer.from(content).toString('base64') })
+        });
+        if (!putRes.ok) console.log('copy fail', f, putRes.status, (await putRes.text()).slice(0, 120));
+      }
+      console.log('✅ репозиторий клиента создан:', repoUrl);
+    } else {
+      console.log('repo create failed:', repoRes.status, (await repoRes.text()).slice(0, 160));
+    }
+  } catch (e) { console.log('repo create error, используем общий репозиторий:', e.message); }
+
   const envMap = {
     CLIENT_ID: p.client_id,
     BOT_CLIENT_ID: p.client_id,
@@ -1707,7 +1753,7 @@ async function createClientDirect(p) {
       type: 'web_service',
       name: `chat-bot-${p.client_id}`,
       ownerId,
-      repo: 'https://github.com/chaknoris5000-glitch/chat-bot-tilda',
+      repo: repoUrl,
       branch: 'main',
       autoDeploy: 'yes',
       envVars,
