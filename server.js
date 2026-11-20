@@ -1771,6 +1771,19 @@ async function createClientDirect(p) {
   const ownerId = owners[0]?.owner?.id || owners[0]?.id;
   if (!ownerId) throw new Error('Не удалось получить ownerId Render');
 
+  // Сначала читаем сайт клиента, чтобы промпт был по реальным фактам, а не по названию домена
+  let siteText = '';
+  try {
+    const sr = await fetch('https://api.firecrawl.dev/v2/scrape', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.FIRECRAWL_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: p.site_url, formats: ['markdown'], onlyMainContent: false })
+    });
+    const sd = await sr.json();
+    siteText = (sd.data?.markdown || '').slice(0, 6000);
+    console.log('prompt: прочитано сайта', siteText.length, 'символов');
+  } catch (e) { console.log('scrape for prompt error:', e.message); }
+
   let prompt = '';
   try {
     const aiRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -1778,13 +1791,15 @@ async function createClientDirect(p) {
       headers: { Authorization: `Bearer ${process.env.OPENROUTER_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'deepseek/deepseek-chat',
-        temperature: 0.4,
-        max_tokens: 400,
+        temperature: 0.3,
+        max_tokens: 700,
         messages: [{
           role: 'user',
-          content: `Напиши системный промпт (до 900 символов) для ИИ-администратора компании «${p.business_name}», сайт ${p.site_url}. ` +
-            'Опиши роль, тон общения, что делать с вопросами по ценам/адресу/записи. ' +
-            'Обязательно: не выдумывать факты, опираться только на базу знаний, собирать имя и телефон. Без markdown, без списков.'
+          content: `Ниже текст сайта компании. Составь системный промпт (до 900 символов) для ИИ-администратора компании «${p.business_name}». ` +
+            'Включи: кто вы, чем занимаетесь, тон общения, ключевые услуги. ' +
+            'Обязательно: все факты (цены, адрес, телефон) брать только из текста сайта, ничего не выдумывать, ' +
+            'собирать имя и телефон для заявки. Без markdown и списков.\n\nТЕКСТ САЙТА:\n' +
+            (siteText || '(текст недоступен, используй только базу знаний)')
         }]
       })
     });
