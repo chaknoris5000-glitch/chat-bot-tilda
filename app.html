@@ -141,6 +141,20 @@
 
     <script>
         const ADMIN_TELEGRAM_ID = 5818548555;
+        // Авторизация: initData из Telegram WebApp или подписанный токен в ?auth=
+        const TG_INIT_DATA = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+        const AUTH_TOKEN = new URLSearchParams(location.search).get('auth') || '';
+        (function () {
+          const origFetch = window.fetch.bind(window);
+          window.fetch = function (url, opts) {
+            opts = opts || {};
+            const headers = Object.assign({}, opts.headers || {});
+            if (TG_INIT_DATA) headers['X-Telegram-Init-Data'] = TG_INIT_DATA;
+            if (AUTH_TOKEN) headers['X-Auth-Token'] = AUTH_TOKEN;
+            opts.headers = headers;
+            return origFetch(url, opts);
+          };
+        })();
         const BOT_CLIENT_ID = 'tilda'; // Для бота Тильды
         const tg = window.Telegram.WebApp;
         tg.expand();
