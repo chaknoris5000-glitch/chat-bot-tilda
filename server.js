@@ -120,6 +120,16 @@ const YOOKASSA_SHOP_ID = process.env.YOOKASSA_SHOP_ID || '';
 const YOOKASSA_SECRET_KEY = process.env.YOOKASSA_SECRET_KEY || '';
 const YOOKASSA_RETURN_URL = process.env.YOOKASSA_RETURN_URL || 'https://t.me/vadim602_bot';
 
+
+// Филиалы клиента (JSON-массив в env BRANCHES), используются для кнопок выбора
+const BRANCHES = (() => {
+  try {
+    const raw = process.env.BRANCHES || '';
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter(x => typeof x === 'string' && x.trim()) : [];
+  } catch (e) { return []; }
+})();
+
 const TARIFFS = {
   'start': { 
     name: 'Старт', 
@@ -466,7 +476,9 @@ function cleanReply(text) {
     .replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/__(.*?)__/g, '$1').replace(/_(.*?)_/g, '$1')
     .replace(/^#{1,6}\s+/gm, '').replace(/`/g, '')
     .replace(/^\s*[-•]\s+/gm, '')
-    .replace(/\n{3,}/g, '\n\n').trim();
+    .replace(/\n{3,}/g, '\n\n')
+    .split('\n').map(l => l.trim()).filter(l => l.length).join('\n')
+    .trim();
 }
 
 async function notifyManager(lead, leadId) {
@@ -990,6 +1002,24 @@ app.post('/telegram-webhook', async (req, res) => {
       const messageId = cb.message.message_id;
       const data = cb.data;
 
+      // Выбор филиала клиентом (кнопки в его чате)
+      if (String(data).startsWith('br_')) {
+        const idx = Number(String(data).slice(3));
+        const addr = BRANCHES[idx];
+        if (!addr) { await answerCallback(cb.id, 'Не найдено'); return; }
+        await answerCallback(cb.id, addr);
+        await sendTelegram(chatId, 'Вы выбрали филиал: <b>' + addr + '</b>\n\nОн находится по этому адресу. Хотите записаться?');
+        try {
+          const sess = await getSessionByTelegram(chatId);
+          if (sess) {
+            const h = sess.history || [];
+            h.push({ role: 'user', content: 'Выбрал филиал: ' + addr });
+            await updateSession(sess.session_id, { history: h.slice(-20) });
+          }
+        } catch (e) {}
+        return;
+      }
+
       if (String(chatId) !== String(MANAGER_CHAT_ID)) { await answerCallback(cb.id, 'Нет доступа'); return; }
 
       if (data === 'menu_bill') {
@@ -1440,6 +1470,18 @@ app.post('/telegram-webhook', async (req, res) => {
     const newHistory = [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }];
     await updateSession(chatSession.session_id, { history: newHistory.slice(-20) });
     await sendTelegram(chatId, reply);
+
+    // Кнопки выбора филиала (если у клиента задан список адресов)
+    if (BRANCHES.length && /адрес|филиал|где вы|где наход|как добрат|какой филиал/i.test(text || '')) {
+      const kb = [];
+      for (let i = 0; i < BRANCHES.length; i += 3) {
+        kb.push(BRANCHES.slice(i, i + 3).map((addr, j) => ({
+          text: addr.length > 38 ? addr.slice(0, 36) + '…' : addr,
+          callback_data: 'br_' + (i + j)
+        })));
+      }
+      await sendTelegram(chatId, 'Выберите филиал — подскажу, как добраться и когда работаем:', kb);
+    }
   } catch (error) {
     console.log('Telegram error:', error);
   }
