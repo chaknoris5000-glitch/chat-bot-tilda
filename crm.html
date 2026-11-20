@@ -425,6 +425,9 @@
             
             if (urlParams.get('telegram_id')) {
                 currentUserTgId = Number(urlParams.get('telegram_id'));
+            } else if (urlParams.get('tg')) {
+                // ссылка с подписью: идентификатор только для интерфейса, доступ проверяет сервер
+                currentUserTgId = Number(urlParams.get('tg'));
             } else {
                 try {
                     if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user) {
