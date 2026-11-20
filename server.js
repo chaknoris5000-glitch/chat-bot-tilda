@@ -2013,7 +2013,59 @@ async function makeBackup() {
   });
   const text = await up.text();
   console.log('backup:', name, up.status, payload.length, 'bytes', up.ok ? '' : text.slice(0, 150));
-  return { ok: up.ok, name, bytes: payload.length, status: up.status };
+
+  // Бэкап второй базы (Tilda_bot) — там данные основного бота
+  let tildaOk = false;
+  try {
+    const tDump = {};
+    for (const t of tables) {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/${t}?select=*`, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      });
+      tDump[t] = await r.json();
+    }
+    const tPayload = JSON.stringify({ created_at: new Date().toISOString(), data: tDump });
+    const tName = `tilda-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+    const tUp = await fetch(`${COMMON_SUPABASE_URL}/storage/v1/object/${BACKUP_BUCKET}/${tName}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`,
+        'apikey': COMMON_SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'x-upsert': 'true'
+      },
+      body: tPayload
+    });
+    tildaOk = tUp.ok;
+  } catch (e) { console.log('tilda backup error:', e.message); }
+
+  // Чистим бэкапы старше 14 дней
+  try {
+    const listRes = await fetch(`${COMMON_SUPABASE_URL}/storage/v1/object/list/${BACKUP_BUCKET}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`,
+        'apikey': COMMON_SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ prefix: '', limit: 200, sortBy: { column: 'created_at', order: 'desc' } })
+    });
+    const items = await listRes.json();
+    const cutoff = Date.now() - 14 * 86400000;
+    let removed = 0;
+    for (const it of Array.isArray(items) ? items : []) {
+      if (new Date(it.created_at).getTime() < cutoff) {
+        await fetch(`${COMMON_SUPABASE_URL}/storage/v1/object/${BACKUP_BUCKET}/${it.name}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}`, 'apikey': COMMON_SUPABASE_KEY }
+        });
+        removed++;
+      }
+    }
+    if (removed) console.log('backup: удалено старых', removed);
+  } catch (e) { console.log('backup cleanup error:', e.message); }
+
+  return { ok: up.ok, name, bytes: payload.length, status: up.status, tildaOk };
 }
 
 cron.schedule('0 3 * * *', async () => {
