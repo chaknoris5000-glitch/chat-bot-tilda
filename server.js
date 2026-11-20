@@ -1319,6 +1319,23 @@ app.post('/telegram-webhook', async (req, res) => {
 
     const isManager = String(chatId) === String(MANAGER_CHAT_ID);
 
+    // Кнопка «Аккаунт» — только владельцу бота и админу платформы
+    try {
+      const isOwnerChat = isManager || String(chatId) === '5818548555';
+      const selfUrl = process.env.RENDER_EXTERNAL_URL;
+      if (isOwnerChat && selfUrl) {
+        global.__menuSet = global.__menuSet || new Set();
+        if (!global.__menuSet.has(String(chatId))) {
+          global.__menuSet.add(String(chatId));
+          await fetch('https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/setChatMenuButton', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, menu_button: { type: 'web_app', text: 'Аккаунт', web_app: { url: selfUrl + '/app' } } })
+          });
+        }
+      }
+    } catch (e) {}
+
     // Маршрут по запросу
     if (!isManager && /маршрут|как добрат|как доехать|как найти/i.test(text || '') && BRANCHES.length) {
       const s = await getSessionByTelegram(chatId);
