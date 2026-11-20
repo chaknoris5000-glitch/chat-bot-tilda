@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI CRM — платформа</title>
+<style>
+  :root { --bg:#f6f7f5; --card:#ffffff; --text:#1f2a24; --muted:#6b7a72; --green:#1f3d2f; --line:#e6ebe7; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); }
+  header { background:var(--green); color:#fff; padding:18px 24px; display:flex; justify-content:space-between; align-items:center; }
+  header h1 { margin:0; font-size:18px; font-weight:600; }
+  .wrap { max-width:1200px; margin:0 auto; padding:24px; }
+  .kpi { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .kpi .value { font-size:26px; font-weight:700; }
+  .kpi .label { color:var(--muted); font-size:13px; margin-bottom:6px; }
+  table { width:100%; border-collapse:collapse; background:var(--card); border-radius:12px; overflow:hidden; }
+  th, td { padding:10px 12px; text-align:left; font-size:14px; border-bottom:1px solid var(--line); }
+  th { background:#eef2ef; font-weight:600; color:#33453b; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; }
+  .ok { background:#e3f3e8; color:#1d6b3a; }
+  .warn { background:#fff4d6; color:#8a6100; }
+  .bad { background:#fde2e1; color:#a12b25; }
+  button { background:var(--green); color:#fff; border:0; border-radius:8px; padding:10px 14px; cursor:pointer; font-size:14px; }
+  button:hover { opacity:.9; }
+  pre { background:#0f1a14; color:#d7e7dd; padding:14px; border-radius:10px; overflow:auto; font-size:13px; }
+  .muted { color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>AI CRM — платформа</h1>
+  <div><button onclick="load()">Обновить</button></div>
+</header>
+
+<div class="wrap">
+  <div class="kpi">
+    <div class="card"><div class="label">Клиентов всего</div><div class="value" id="k-total">—</div></div>
+    <div class="card"><div class="label">Активных (оплачено)</div><div class="value" id="k-active">—</div></div>
+    <div class="card"><div class="label">Истекают ≤ 7 дней</div><div class="value" id="k-expiring">—</div></div>
+    <div class="card"><div class="label">MRR, ₽</div><div class="value" id="k-mrr">—</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:24px;">
+    <table>
+      <thead>
+        <tr>
+          <th>Клиент</th><th>Тариф</th><th>₽/мес</th><th>Оплачено до</th>
+          <th>Заявки</th><th>Записи</th><th>Документы</th><th>Товары</th><th>Сервис</th>
+        </tr>
+      </thead>
+      <tbody id="rows"><tr><td colspan="9" class="muted">Загрузка…</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <b>Проверка бэкапа</b>
+      <button onclick="verifyBackup()">Проверить последний</button>
+    </div>
+    <pre id="backup">—</pre>
+  </div>
+</div>
+
+<script>
+  const TG_INIT = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+  const AUTH = new URLSearchParams(location.search).get('auth') || '';
+
+  function headers() {
+    const h = { 'Content-Type': 'application/json' };
+    if (TG_INIT) h['X-Telegram-Init-Data'] = TG_INIT;
+    if (AUTH) h['X-Auth-Token'] = AUTH;
+    return h;
+  }
+
+  function badge(days) {
+    if (days === null) return '<span class="pill bad">нет оплаты</span>';
+    if (days < 0) return '<span class="pill bad">истёк</span>';
+    if (days <= 7) return '<span class="pill warn">' + days + ' дн.</span>';
+    return '<span class="pill ok">' + days + ' дн.</span>';
+  }
+
+  async function load() {
+    const res = await fetch('/api/admin-stats', { headers: headers() });
+    if (!res.ok) { document.getElementById('rows').innerHTML = '<tr><td colspan="9" class="muted">Нет доступа</td></tr>'; return; }
+    const data = await res.json();
+
+    document.getElementById('k-total').innerText = data.total_clients;
+    document.getElementById('k-active').innerText = data.active_clients;
+    document.getElementById('k-expiring').innerText = data.expiring_soon;
+    document.getElementById('k-mrr').innerText = Number(data.mrr).toLocaleString('ru-RU');
+
+    document.getElementById('rows').innerHTML = data.clients.map(function (c) {
+      const url = 'https://chat-bot-' + String(c.client_id).toLowerCase() + '.onrender.com';
+      return '<tr>' +
+        '<td><b>' + (c.business_name || c.client_id) + '</b><div class="muted" style="font-size:12px;">' + c.client_id + '</div></td>' +
+        '<td>' + c.tariff + '</td>' +
+        '<td>' + (c.price || 0) + '</td>' +
+        '<td>' + (c.paid_until ? new Date(c.paid_until).toLocaleDateString('ru-RU') : '—') + ' ' + badge(c.days_left) + '</td>' +
+        '<td>' + c.leads + '</td>' +
+        '<td>' + c.bookings + '</td>' +
+        '<td>' + c.documents + '</td>' +
+        '<td>' + c.products + '</td>' +
+        '<td><a href="' + url + '" target="_blank">открыть</a></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  async function verifyBackup() {
+    const box = document.getElementById('backup');
+    box.innerText = 'Проверяю…';
+    const res = await fetch('/api/backup-verify', { method: 'POST', headers: headers() });
+    box.innerText = JSON.stringify(await res.json(), null, 2);
+  }
+
+  load();
+</script>
+</body>
+</html>
