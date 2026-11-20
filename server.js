@@ -130,6 +130,47 @@ const BRANCHES = (() => {
   } catch (e) { return []; }
 })();
 
+
+const BRANCHES_GEO = (() => {
+  try {
+    const arr = JSON.parse(process.env.BRANCHES_GEO || '[]');
+    return Array.isArray(arr) ? arr.filter(x => x && x.lat && x.lon) : [];
+  } catch (e) { return []; }
+})();
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function nearestBranch(lat, lon) {
+  let best = null;
+  for (const b of BRANCHES_GEO) {
+    const d = haversine(lat, lon, b.lat, b.lon);
+    if (!best || d < best.dist) best = { addr: b.addr, dist: d };
+  }
+  return best;
+}
+
+async function sendLocationKeyboard(chatId) {
+  await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: 'Или отправьте геолокацию — найду ближайший филиал.',
+      reply_markup: {
+        keyboard: [[{ text: '📍 Отправить геолокацию', request_location: true }]],
+        resize_keyboard: true,
+        one_time_keyboard: true
+      }
+    })
+  });
+}
+
 const TARIFFS = {
   'start': { 
     name: 'Старт', 
@@ -1128,6 +1169,24 @@ app.post('/telegram-webhook', async (req, res) => {
     const chatId = msg.chat.id;
     let text = '';
 
+    if (msg.location && BRANCHES_GEO.length) {
+      const near = nearestBranch(msg.location.latitude, msg.location.longitude);
+      if (near) {
+        await sendTelegram(chatId, 'Ближе всего к вам: <b>' + near.addr + '</b> — примерно ' + near.dist.toFixed(1) + ' км. Записать вас туда?');
+        try {
+          let sess = await getSessionByTelegram(chatId);
+          if (!sess) {
+            const sid = 'tg_' + chatId + '_' + CLIENT_ID;
+            await getOrCreateSession(sid);
+            await updateSession(sid, { telegram_chat_id: chatId });
+            sess = await getSessionByTelegram(chatId);
+          }
+          if (sess) await updateSession(sess.session_id, { branch: near.addr });
+        } catch (e) {}
+      }
+      return;
+    }
+
     if (msg.voice) {
       const fileUrl = await getTelegramFileUrl(msg.voice.file_id);
       if (!fileUrl) return;
@@ -1486,18 +1545,21 @@ app.post('/telegram-webhook', async (req, res) => {
     const reply = await askAI(text, history, chatSession.session_id);
     const newHistory = [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }];
     await updateSession(chatSession.session_id, { history: newHistory.slice(-20) });
-    await sendTelegram(chatId, reply);
+    const asksBranch = BRANCHES.length && /адрес|филиал|где вы|где наход|как добрат|какой филиал/i.test(text || '');
 
-    // Кнопки выбора филиала (если у клиента задан список адресов)
-    if (BRANCHES.length && /адрес|филиал|где вы|где наход|как добрат|какой филиал/i.test(text || '')) {
+    if (asksBranch) {
+      // В Telegram не дублируем весь список текстом — показываем кнопки
       const kb = [];
-      for (let i = 0; i < BRANCHES.length; i += 3) {
-        kb.push(BRANCHES.slice(i, i + 3).map((addr, j) => ({
-          text: addr.length > 38 ? addr.slice(0, 36) + '…' : addr,
+      for (let i = 0; i < BRANCHES.length; i += 2) {
+        kb.push(BRANCHES.slice(i, i + 2).map((addr, j) => ({
+          text: addr.length > 34 ? addr.slice(0, 32) + '…' : addr,
           callback_data: 'br_' + (i + j)
         })));
       }
-      await sendTelegram(chatId, 'Выберите филиал — подскажу, как добраться и когда работаем:', kb);
+      await sendTelegram(chatId, 'У нас ' + BRANCHES.length + ' филиалов в Кемерово. Выберите ближайший:', kb);
+      if (BRANCHES_GEO.length) await sendLocationKeyboard(chatId);
+    } else {
+      await sendTelegram(chatId, reply);
     }
   } catch (error) {
     console.log('Telegram error:', error);
