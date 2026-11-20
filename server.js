@@ -2625,6 +2625,49 @@ app.post('/api/booking-update', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// ========== ПОЧТА: отправка отчёта ==========
+let nodemailer = null;
+try { nodemailer = require('nodemailer'); } catch (e) { console.log('nodemailer не установлен'); }
+
+app.post('/api/send-report-email', async (req, res) => {
+  try {
+    const uid = getRequesterId(req);
+    if (!uid) return res.status(401).json({ error: 'unauthorized' });
+    const allowed = await ownedClientIds(uid);
+    if (allowed && !allowed.includes(CLIENT_ID)) return res.status(403).json({ error: 'forbidden' });
+    if (!nodemailer) return res.status(500).json({ error: 'nodemailer не установлен' });
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER) {
+      return res.status(400).json({ error: 'Почта не настроена: задайте SMTP_HOST, SMTP_USER, SMTP_PASS' });
+    }
+
+    const { email } = req.body || {};
+    const client = await getClient(CLIENT_ID);
+    const to = email || (client && client.email);
+    if (!to) return res.status(400).json({ error: 'Укажите email' });
+
+    const leads = await fetchLeads(null);
+    const buffer = await buildXlsx(leads, 'Отчёт');
+    const port = Number(process.env.SMTP_PORT || 465);
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: port,
+      secure: port === 465,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    });
+
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: to,
+      subject: 'Заявки — ' + ((client && client.business_name) || CLIENT_ID),
+      text: 'Во вложении выгрузка заявок.',
+      attachments: [{ filename: 'leads.xlsx', content: buffer }]
+    });
+
+    res.json({ ok: true, to: to });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
