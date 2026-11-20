@@ -2389,6 +2389,10 @@ const PROMOS = (() => {
   catch (e) { return {}; }
 })();
 
+const PROMO_RULES = (() => {
+  try { const a = JSON.parse(process.env.PROMO_RULES || '[]'); return Array.isArray(a) ? a : []; }
+  catch (e) { return []; }
+})();
 const WORK_START = Number(process.env.WORK_START || 10);
 const WORK_END = Number(process.env.WORK_END || 20);
 const TZ_OFFSET = Number(process.env.TZ_OFFSET || 7);
@@ -2525,6 +2529,18 @@ async function confirmBooking(chatId, ts) {
   const promo = branch && PROMOS[branch];
   if (promo) await sendTelegram(chatId, '🎁 ' + promo);
 
+  try {
+    const local = new Date(ts + TZ_OFFSET * 3600000);
+    const day = local.getUTCDay();
+    const hour = local.getUTCHours();
+    for (const rule of PROMO_RULES) {
+      const days = Array.isArray(rule.days) ? rule.days : [];
+      const okDay = !days.length || days.includes(day);
+      const okHour = (rule.from == null || hour >= rule.from) && (rule.to == null || hour < rule.to);
+      if (okDay && okHour && rule.text) { await sendTelegram(chatId, '🎁 ' + rule.text); break; }
+    }
+  } catch (e) {}
+
   if (MANAGER_CHAT_ID) {
     await sendTelegram(MANAGER_CHAT_ID, '📅 <b>Новая запись</b>\n\n' +
       slotLabel(ts) +
@@ -2569,6 +2585,44 @@ cron.schedule('*/15 * * * *', async () => {
       await sbUpdateBooking(b.id, { review_sent: true });
     }
   } catch (e) { console.log('review cron error:', e.message); }
+});
+
+
+app.get('/api/get-bookings', async (req, res) => {
+  try {
+    const uid = getRequesterId(req);
+    if (!uid) return res.status(401).json({ error: 'unauthorized' });
+    const { client_id } = req.query;
+    const allowed = await ownedClientIds(uid);
+    if (allowed && (!client_id || !allowed.includes(client_id))) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+    const r = await fetch(COMMON_SUPABASE_URL + '/rest/v1/bookings?client_id=eq.' + client_id + '&order=slot.desc&limit=200', {
+      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': 'Bearer ' + COMMON_SUPABASE_KEY }
+    });
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/booking-update', async (req, res) => {
+  try {
+    const uid = getRequesterId(req);
+    if (!uid) return res.status(401).json({ error: 'unauthorized' });
+    const { id, client_id, patch } = req.body || {};
+    if (!id || !client_id) return res.status(400).json({ error: 'no id' });
+    const allowed = await ownedClientIds(uid);
+    if (allowed && !allowed.includes(client_id)) return res.status(403).json({ error: 'forbidden' });
+    const body = {};
+    for (const k of ['status', 'rating', 'notes']) if (patch && Object.prototype.hasOwnProperty.call(patch, k)) body[k] = patch[k];
+    if (!Object.keys(body).length) return res.status(400).json({ error: 'empty patch' });
+    const r = await fetch(COMMON_SUPABASE_URL + '/rest/v1/bookings?id=eq.' + id + '&client_id=eq.' + client_id, {
+      method: 'PATCH',
+      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': 'Bearer ' + COMMON_SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error((await r.text()).slice(0, 200));
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/health', (req, res) => {
