@@ -14,6 +14,79 @@ app.use(cors());
 app.use(express.json({ limit: '25mb' }));
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || '';
+
+const crypto = require('crypto');
+const ADMIN_TG_ID = '5818548555';
+
+function verifyTelegramInitData(initData) {
+  try {
+    if (!initData || typeof initData !== 'string') return null;
+    const params = new URLSearchParams(initData);
+    const hash = params.get('hash');
+    if (!hash) return null;
+    params.delete('hash');
+    const dataCheckString = [...params.entries()].map(([k, v]) => `${k}=${v}`).sort().join('\n');
+    const secret = crypto.createHmac('sha256', 'WebAppData').update(TELEGRAM_TOKEN).digest();
+    const calc = crypto.createHmac('sha256', secret).update(dataCheckString).digest('hex');
+    if (calc !== hash) return null;
+    const user = JSON.parse(params.get('user') || '{}');
+    return user && user.id ? String(user.id) : null;
+  } catch (e) { return null; }
+}
+
+function signAuth(telegramId) {
+  const sig = crypto.createHmac('sha256', TELEGRAM_TOKEN).update(String(telegramId)).digest('hex').slice(0, 32);
+  return `${telegramId}.${sig}`;
+}
+
+function verifyAuthToken(token) {
+  try {
+    const [id, sig] = String(token || '').split('.');
+    if (!id || !sig) return null;
+    const expect = crypto.createHmac('sha256', TELEGRAM_TOKEN).update(id).digest('hex').slice(0, 32);
+    return sig === expect ? String(id) : null;
+  } catch (e) { return null; }
+}
+
+function getRequesterId(req) {
+  const fromInit = verifyTelegramInitData(req.headers['x-telegram-init-data'] || req.query.init_data);
+  if (fromInit) return fromInit;
+  return verifyAuthToken(req.headers['x-auth-token'] || req.query.auth);
+}
+
+async function ownedClientIds(telegramId) {
+  if (String(telegramId) === ADMIN_TG_ID) return null; // null = доступ ко всем
+  try {
+    const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/clients?select=client_id&owner_telegram_id=eq.${telegramId}`, {
+      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
+    });
+    const rows = await r.json();
+    return Array.isArray(rows) ? rows.map(x => x.client_id) : [];
+  } catch (e) { return []; }
+}
+
+// Простой лимит запросов на /message: 20 в минуту с одного IP
+const __rateBucket = new Map();
+function __rateOk(ip) {
+  const now = Date.now();
+  const arr = (__rateBucket.get(ip) || []).filter(t => now - t < 60000);
+  arr.push(now);
+  __rateBucket.set(ip, arr);
+  if (__rateBucket.size > 5000) __rateBucket.clear();
+  return arr.length <= 20;
+}
+app.use('/message', (req, res, next) => {
+  const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || '?';
+  if (!__rateOk(ip)) return res.status(429).json({ error: 'Слишком много запросов, попробуйте позже' });
+  next();
+});
+
+app.get('/api/auth-token', (req, res) => {
+  const uid = getRequesterId(req);
+  if (!uid) return res.status(401).json({ error: 'unauthorized' });
+  res.json({ token: signAuth(uid) });
+});
+
 const MANAGER_CHAT_ID = process.env.MANAGER_CHAT_ID || '';
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
@@ -772,7 +845,12 @@ app.get('/app', (req, res) => {
 });
 app.get('/api/get-my-client', async (req, res) => {
   try {
+    const uid = getRequesterId(req);
+    if (!uid) return res.status(401).json({ error: 'unauthorized' });
     const { owner_telegram_id } = req.query;
+    if (String(owner_telegram_id || uid) !== String(uid) && String(uid) !== ADMIN_TG_ID) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
     const url = `${COMMON_SUPABASE_URL}/rest/v1/clients?select=*&owner_telegram_id=eq.${owner_telegram_id}&client_id=eq.${CLIENT_ID}&limit=1`;
     const r = await fetch(url, {
       headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
@@ -785,7 +863,13 @@ app.get('/api/get-my-client', async (req, res) => {
 });
 app.get('/api/get-leads', async (req, res) => {
   try {
+    const uid = getRequesterId(req);
+    if (!uid) return res.status(401).json({ error: 'unauthorized' });
     const { client_id } = req.query;
+    const allowed = await ownedClientIds(uid);
+    if (allowed && (!client_id || !allowed.includes(client_id))) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
     const isTilda = client_id === 'tilda';
     const baseUrl = isTilda ? SUPABASE_URL : COMMON_SUPABASE_URL;
     const baseKey = isTilda ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
@@ -1848,12 +1932,22 @@ app.post('/api/create-client', async (req, res) => {
 // ========== CRM: правка заявок через сервер (без anon-доступа к базе) ==========
 app.post('/api/lead-update', async (req, res) => {
   try {
+    const uid = getRequesterId(req);
+    if (!uid) return res.status(401).json({ error: 'unauthorized' });
     const { id, db, patch, action } = req.body || {};
     if (!id) return res.status(400).json({ error: 'no id' });
     const useTilda = db === 'tilda';
     const baseUrl = useTilda ? SUPABASE_URL : COMMON_SUPABASE_URL;
     const baseKey = useTilda ? SUPABASE_KEY : COMMON_SUPABASE_KEY;
     const headers = { apikey: baseKey, Authorization: 'Bearer ' + baseKey };
+
+    const leadRes = await fetch(baseUrl + '/rest/v1/leads?id=eq.' + id + '&select=client_id', { headers });
+    const leadRows = await leadRes.json();
+    const leadClient = Array.isArray(leadRows) && leadRows[0] ? leadRows[0].client_id : null;
+    const allowedForUser = await ownedClientIds(uid);
+    if (!leadClient || (allowedForUser && !allowedForUser.includes(leadClient))) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
 
     if (action === 'delete') {
       const d = await fetch(baseUrl + '/rest/v1/leads?id=eq.' + id, { method: 'DELETE', headers });
