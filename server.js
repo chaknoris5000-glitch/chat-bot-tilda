@@ -681,7 +681,9 @@ async function askAI(message, history, sessionId) {
       const badDigits = replyDigits.filter(d => !ctxDigits.includes(d));
       const streetWords = ['проспект', 'улица', 'ул.', 'переулок', 'бульвар', 'трц', 'этаж', 'д.'];
       const badStreet = streetWords.some(w => reply.toLowerCase().includes(w) && !ctx.includes(w));
-      if (badDigits.length > 0 || badStreet) {
+      const saysNo = /не указан|недоступ|не знаю|не могу предостав|уточн(ю|ить)/i.test(reply);
+      const addressAsked = /адрес|где\s|где вы|где находит|добрат|филиал/i.test(message || '');
+      if (badDigits.length > 0 || badStreet || (saysNo && addressAsked && ctx.length > 50)) {
         console.log('⚠️ выдуманные контакты, ответ заменён:', reply.slice(0, 80));
         // Отвечаем фактом из базы знаний, а не отказом
         const wantsPhone = /телефон|позвон|номер/i.test(message || '');
