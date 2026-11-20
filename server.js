@@ -2138,6 +2138,11 @@ async function createClientDirect(p) {
 
 app.post('/api/create-client', async (req, res) => {
   try {
+    // Создавать клиентов может только владелец платформы
+    const requester = getRequesterId(req);
+    if (String(requester) !== ADMIN_TG_ID) {
+      return res.status(403).json({ ok: false, error: 'forbidden' });
+    }
     const { client_id, business_name, site_url, timezone, manager_chat_id, bot_token, owner_telegram_id } = req.body;
     
     const tariff = req.body.tariff || 'business';
