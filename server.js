@@ -693,16 +693,21 @@ async function askAI(message, history, sessionId) {
           if (m) grounded = 'Наш телефон: ' + m[0].trim().replace(/[^\d+]+$/, '');
         }
         if (!grounded) {
-          // Вырезаем окно с адресами из базы знаний целиком, а не одну строку
           const src = (context || '');
-          let ci = src.search(/филиал/i);
+          let ci = src.search(/Адреса филиалов/i);
+          if (ci < 0) ci = src.search(/филиал/i);
           if (ci < 0) ci = src.search(/адрес/i);
           if (ci >= 0) {
-            let slice = src.slice(ci, ci + 400).replace(/\s+/g, ' ').trim();
-            slice = slice.replace(/^#+\s*/, '');
-            const cut = slice.lastIndexOf(' ');
-            if (slice.length >= 390 && cut > 200) slice = slice.slice(0, cut);
-            grounded = slice;
+            let slice = src.slice(ci, ci + 520).replace(/\s+/g, ' ').trim();
+            slice = slice
+              .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+              .replace(/https?:\/\/\S+/g, '')
+              .replace(/[×←→©]/g, '')
+              .replace(/\s{2,}/g, ' ')
+              .trim();
+            const cut = slice.lastIndexOf(';');
+            if (slice.length >= 500 && cut > 200) slice = slice.slice(0, cut + 1);
+            grounded = 'Наши филиалы: ' + slice;
           }
         }
         reply = grounded || 'Уточню точный адрес и телефон у администратора. Оставьте, пожалуйста, имя и номер — мы свяжемся и всё расскажем.';
