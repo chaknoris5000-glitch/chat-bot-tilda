@@ -1750,84 +1750,197 @@ cron.schedule('0 4 * * 1', async () => {
   } catch (e) { console.log('auto-crawl error:', e.message); }
 });
 
+// ========== ОБХОД САЙТА (crawl API + инкремент) ==========
+async function crawlSitePages() {
+  const out = [];
+  try {
+    const start = await fetch('https://api.firecrawl.dev/v2/crawl', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + FIRECRAWL_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: SITE_TO_CRAWL,
+        limit: 40,
+        scrapeOptions: { formats: ['markdown'], onlyMainContent: false }
+      })
+    });
+    const sj = await start.json();
+    const jobId = sj.id;
+    if (jobId) {
+      for (let i = 0; i < 40; i++) {
+        await new Promise(r => setTimeout(r, 5000));
+        const st = await fetch('https://api.firecrawl.dev/v2/crawl/' + jobId, {
+          headers: { 'Authorization': 'Bearer ' + FIRECRAWL_KEY }
+        });
+        const sd = await st.json();
+        if (sd.status === 'completed') {
+          for (const item of (sd.data || [])) {
+            const md = item.markdown || (item.data && item.data.markdown) || '';
+            const url = (item.metadata && item.metadata.sourceURL) || item.url || SITE_TO_CRAWL;
+            if (md && md.length > 100) out.push({ url: url, markdown: md });
+          }
+          break;
+        }
+        if (sd.status === 'failed') { console.log('crawl job failed'); break; }
+      }
+    }
+  } catch (e) { console.log('crawl api error:', e.message); }
+
+  if (out.length) return out;
+
+  // резервный путь: карта сайта + построчный обход
+  let pages = [];
+  try {
+    const mapRes = await fetch('https://api.firecrawl.dev/v2/map', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + FIRECRAWL_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: SITE_TO_CRAWL, limit: 60 })
+    });
+    const mapData = await mapRes.json();
+    const links = (mapData.links || []).map(l => (typeof l === 'string' ? l : l.url)).filter(u => typeof u === 'string' && u.startsWith('http'));
+    pages = [...new Set(links)].slice(0, 40);
+  } catch (e) { console.log('map error:', e.message); }
+  if (!pages.length) pages = [SITE_TO_CRAWL];
+
+  for (const pageUrl of pages) {
+    try {
+      const scrape = await fetch('https://api.firecrawl.dev/v2/scrape', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + FIRECRAWL_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: pageUrl, formats: ['markdown'], onlyMainContent: false })
+      });
+      const d = await scrape.json();
+      if (!scrape.ok) { console.log('Firecrawl error', pageUrl, JSON.stringify(d).slice(0, 150)); continue; }
+      const md = (d.data && d.data.markdown) || '';
+      if (md && md.length > 100) out.push({ url: pageUrl, markdown: md });
+    } catch (e) { console.log('scrape error', pageUrl, e.message); }
+  }
+  return out;
+}
+
+async function loadPageHashes() {
+  try {
+    const r = await fetch(COMMON_SUPABASE_URL + '/rest/v1/page_hashes?client_id=eq.' + CLIENT_ID + '&select=url,hash', {
+      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': 'Bearer ' + COMMON_SUPABASE_KEY }
+    });
+    const rows = await r.json();
+    const map = {};
+    for (const row of (Array.isArray(rows) ? rows : [])) map[row.url] = row.hash;
+    return map;
+  } catch (e) { return {}; }
+}
+
+async function savePageHash(url, hash) {
+  try {
+    await fetch(COMMON_SUPABASE_URL + '/rest/v1/page_hashes?on_conflict=client_id,url', {
+      method: 'POST',
+      headers: {
+        'apikey': COMMON_SUPABASE_KEY,
+        'Authorization': 'Bearer ' + COMMON_SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify([{ client_id: CLIENT_ID, url: url, hash: hash, updated_at: new Date().toISOString() }])
+    });
+  } catch (e) { console.log('savePageHash error:', e.message); }
+}
+
+async function extractCatalog(text) {
+  const parts = [];
+  const src = String(text || '');
+  for (let i = 0; i < src.length && parts.length < 6; i += 9000) parts.push(src.slice(i, i + 9000));
+
+  const found = [];
+  const seen = new Set();
+
+  for (const part of parts) {
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + OPENROUTER_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: AI_MODEL_CHAT,
+          temperature: 0.1,
+          max_tokens: 2500,
+          messages: [{
+            role: 'user',
+            content: 'Выдели ВСЕ товары и услуги с ценами из текста сайта. Верни строгий JSON-массив объектов {"name","price","description"}. ' +
+              'Не пропускай позиции, даже если их много. Цену бери в том виде, как в тексте (например "1 990 ₽/мес"). ' +
+              'Если цен нет — верни []. Без markdown и пояснений.\n\nТЕКСТ:\n' + part
+          }]
+        })
+      });
+      const data = await res.json();
+      let raw = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+      raw = raw.trim().replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        for (const item of arr) {
+          const name = String(item.name || '').trim();
+          if (!name) continue;
+          const key = name.toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          found.push(item);
+        }
+      }
+    } catch (e) { console.log('extractCatalog part error:', e.message); }
+  }
+
+  return found.slice(0, 120);
+}
+
 app.get('/crawl', async (req, res) => {
   try {
-    // Собираем несколько страниц сайта (главная + внутренние ссылки), а не только одну
-    let pages = [];
-    try {
-      const mapRes = await fetch('https://api.firecrawl.dev/v2/map', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${FIRECRAWL_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: SITE_TO_CRAWL, limit: 60 })
-      });
-      const mapData = await mapRes.json();
-      const links = (mapData.links || [])
-        .map(l => (typeof l === 'string' ? l : l.url))
-        .filter(u => typeof u === 'string' && u.startsWith('http'));
-      pages = [...new Set(links)].slice(0, 40);
-    } catch (e) { console.log('map error:', e.message); }
-    if (pages.length === 0) pages = [SITE_TO_CRAWL];
+    const pages = await crawlSitePages();
+    const text = pages.map(p => p.markdown).join('\n\n');
+    console.log('crawl: страниц ' + pages.length + ', символов ' + text.length);
 
-    let text = '';
-    let okPages = 0;
-    for (const pageUrl of pages) {
-      try {
-        const scrape = await fetch('https://api.firecrawl.dev/v2/scrape', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${FIRECRAWL_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: pageUrl, formats: ['markdown'], onlyMainContent: false })
-        });
-        const d = await scrape.json();
-        if (!scrape.ok) { console.log('Firecrawl error', pageUrl, JSON.stringify(d).slice(0, 200)); continue; }
-        const md = d.data?.markdown || '';
-        if (md && md.length > 100) {
-          text += `\n\n# Страница: ${pageUrl}\n\n${md}`;
-          okPages++;
-        }
-      } catch (e) { console.log('scrape error', pageUrl, e.message); }
-    }
-
-    console.log(`crawl: страниц ${pages.length}, собрано ${okPages}, символов ${text.length}`);
     if (!text || text.length < 300) {
       return res.status(500).json({ error: 'Empty text from Firecrawl', pages: pages.length });
     }
 
-    const chunks = splitIntoChunks(text, 900);
+    const hashes = await loadPageHashes();
+    let saved = 0, changed = 0, skipped = 0;
 
-    // Чистим старую базу знаний клиента, чтобы повторный парсинг не плодил дубли
-    await fetch(`${COMMON_SUPABASE_URL}/rest/v1/documents?client_id=eq.${CLIENT_ID}`, {
-      method: 'DELETE',
-      headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
-    });
+    for (const page of pages) {
+      const h = crypto.createHash('sha256').update(page.markdown).digest('hex');
+      if (hashes[page.url] === h) { skipped++; continue; }
+      changed++;
 
-    let saved = 0;
-    for (const chunk of chunks) {
       try {
-        const embedding = await getEmbedding(chunk);
-        await saveDocument(chunk, embedding, SITE_TO_CRAWL);
-        saved++;
-      } catch (e) { console.log('Ошибка сохранения чанка:', e.message); }
+        await fetch(COMMON_SUPABASE_URL + '/rest/v1/documents?client_id=eq.' + CLIENT_ID + '&url=eq.' + encodeURIComponent(page.url), {
+          method: 'DELETE',
+          headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': 'Bearer ' + COMMON_SUPABASE_KEY }
+        });
+      } catch (e) {}
+
+      const chunks = splitIntoChunks(page.markdown, 900);
+      for (const chunk of chunks) {
+        try {
+          const embedding = await getEmbedding(chunk);
+          await saveDocument(chunk, embedding, page.url);
+          saved++;
+        } catch (e) { console.log('Ошибка сохранения чанка:', e.message); }
+      }
+      await savePageHash(page.url, h);
     }
-    
-    // Структурированный каталог: товары и цены (наш LLM, без доп. кредитов Firecrawl)
+
     let productsCount = 0;
     try {
-      if (text.length > 1500) {
-        const products = await extractProducts(text);
-        productsCount = await saveProducts(products, SITE_TO_CRAWL);
-        if (productsCount > 0) {
-          const summary = 'Каталог товаров и услуг с ценами:\n' + products.map(function (p) {
-            return '- ' + (p.name || '') + (p.price ? ' — ' + p.price : '') + (p.description ? ': ' + p.description : '');
-          }).join('\n');
-          try {
-            const emb2 = await getEmbedding(summary);
-            await saveDocument(summary, emb2, SITE_TO_CRAWL);
-          } catch (e) { console.log('catalog doc error:', e.message); }
-        }
+      const products = await extractCatalog(text);
+      productsCount = await saveProducts(products, SITE_TO_CRAWL);
+      if (productsCount > 0) {
+        const summary = 'Каталог товаров и услуг с ценами:\n' + products.map(function (p) {
+          return '- ' + (p.name || '') + (p.price ? ' — ' + p.price : '') + (p.description ? ': ' + p.description : '');
+        }).join('\n');
+        try {
+          const emb2 = await getEmbedding(summary);
+          await saveDocument(summary, emb2, SITE_TO_CRAWL);
+        } catch (e) { console.log('catalog doc error:', e.message); }
       }
     } catch (e) { console.log('catalog error:', e.message); }
 
-    res.json({ ok: true, saved, total: chunks.length, products: productsCount });
+    res.json({ ok: true, pages: pages.length, changed: changed, skipped: skipped, saved: saved, products: productsCount });
   } catch (error) {
     console.log('Crawl error:', error.message);
     res.status(500).json({ error: 'Ошибка Firecrawl' });
