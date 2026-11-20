@@ -691,8 +691,10 @@ async function askAI(message, history, sessionId) {
           if (m) grounded = 'Наш телефон: ' + m[0].trim().replace(/[^\d+]+$/, '');
         }
         if (!grounded) {
-          const m = (context || '').match(/[^\n]{0,40}(?:улица|ул\.|проспект|трц)[^\n]{0,60}/i);
-          if (m) grounded = 'Наш адрес: ' + m[0].trim().replace(/^[^\wА-Яа-я+]+/, '');
+          // Берём целый фрагмент из базы знаний, а не обрезанный кусок посреди слова
+          const segs = (context || '').split(/[\n;]+/).map(s => s.trim()).filter(Boolean);
+          const seg = segs.find(s => /(?:улица|ул\.|проспект|трц|филиал)/i.test(s) && s.length > 8);
+          if (seg) grounded = 'Наш адрес: ' + seg.slice(0, 200);
         }
         reply = grounded || 'Уточню точный адрес и телефон у администратора. Оставьте, пожалуйста, имя и номер — мы свяжемся и всё расскажем.';
       }
