@@ -2992,6 +2992,122 @@ async function saveProducts(list, sourceUrl) {
   }
 }
 
+
+// ========== АДМИН-ПАНЕЛЬ ПЛАТФОРМЫ ==========
+const TARIFF_PRICES = { start: 1990, business: 2490, unlimited: 4990, result: 0 };
+
+async function sbSelect(pathAndQuery) {
+  const r = await fetch(COMMON_SUPABASE_URL + '/rest/v1/' + pathAndQuery, {
+    headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': 'Bearer ' + COMMON_SUPABASE_KEY }
+  });
+  const data = await r.json();
+  return Array.isArray(data) ? data : [];
+}
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+app.get('/api/admin-stats', async (req, res) => {
+  try {
+    const uid = getRequesterId(req);
+    if (String(uid) !== ADMIN_TG_ID) return res.status(403).json({ error: 'forbidden' });
+
+    const [clients, leads, bookings, docs, products] = await Promise.all([
+      sbSelect('clients?select=*&order=id'),
+      sbSelect('leads?select=client_id'),
+      sbSelect('bookings?select=client_id,slot,status'),
+      sbSelect('documents?select=client_id'),
+      sbSelect('products?select=client_id')
+    ]);
+
+    const count = (arr) => {
+      const map = {};
+      for (const x of arr) map[x.client_id] = (map[x.client_id] || 0) + 1;
+      return map;
+    };
+    const leadsMap = count(leads);
+    const bookingsMap = count(bookings);
+    const docsMap = count(docs);
+    const productsMap = count(products);
+
+    const now = Date.now();
+    let mrr = 0;
+    const enriched = clients.map(function (c) {
+      const paid = c.paid_until ? new Date(c.paid_until).getTime() : 0;
+      const daysLeft = paid ? Math.ceil((paid - now) / 86400000) : null;
+      const price = TARIFF_PRICES[c.tariff] || 0;
+      if (paid > now) mrr += price;
+      return {
+        id: c.id,
+        client_id: c.client_id,
+        business_name: c.business_name,
+        tariff: c.tariff || 'business',
+        price: price,
+        paid_until: c.paid_until,
+        days_left: daysLeft,
+        leads_limit: c.leads_limit,
+        owner_telegram_id: c.owner_telegram_id,
+        leads: leadsMap[c.client_id] || 0,
+        bookings: bookingsMap[c.client_id] || 0,
+        documents: docsMap[c.client_id] || 0,
+        products: productsMap[c.client_id] || 0
+      };
+    });
+
+    res.json({
+      total_clients: clients.length,
+      active_clients: enriched.filter(function (c) { return c.days_left !== null && c.days_left > 0; }).length,
+      expiring_soon: enriched.filter(function (c) { return c.days_left !== null && c.days_left >= 0 && c.days_left <= 7; }).length,
+      mrr: mrr,
+      clients: enriched
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/backup-verify', async (req, res) => {
+  try {
+    const uid = getRequesterId(req);
+    if (String(uid) !== ADMIN_TG_ID) return res.status(403).json({ error: 'forbidden' });
+
+    const listRes = await fetch(COMMON_SUPABASE_URL + '/storage/v1/object/list/backups', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + COMMON_SUPABASE_KEY,
+        'apikey': COMMON_SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ prefix: '', limit: 50, sortBy: { column: 'created_at', order: 'desc' } })
+    });
+    const items = await listRes.json();
+    const list = Array.isArray(items) ? items : [];
+    if (!list.length) return res.json({ ok: false, error: 'бэкапов нет' });
+
+    const latest = list[0];
+    const fileRes = await fetch(COMMON_SUPABASE_URL + '/storage/v1/object/backups/' + latest.name, {
+      headers: { 'Authorization': 'Bearer ' + COMMON_SUPABASE_KEY, 'apikey': COMMON_SUPABASE_KEY }
+    });
+    if (!fileRes.ok) return res.json({ ok: false, error: 'не удалось скачать', status: fileRes.status });
+
+    const dump = await fileRes.json();
+    const data = dump.data || {};
+    const report = {};
+    let ok = true;
+    for (const table of Object.keys(data)) {
+      const rows = Array.isArray(data[table]) ? data[table].length : 0;
+      const live = await sbSelect(table + '?select=id');
+      report[table] = { in_backup: rows, now: live.length };
+      if (rows === 0) ok = false;
+    }
+
+    res.json({ ok: ok, backup: latest.name, created_at: latest.created_at, size: latest.metadata && latest.metadata.size, tables: report });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
