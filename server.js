@@ -694,7 +694,7 @@ async function askAI(message, history, sessionId) {
           // Берём целый фрагмент из базы знаний, а не обрезанный кусок посреди слова
           const segs = (context || '').split(/[\n;]+/).map(s => s.trim()).filter(Boolean);
           const seg = segs.find(s => /(?:улица|ул\.|проспект|трц|филиал)/i.test(s) && s.length > 8);
-          if (seg) grounded = 'Наш адрес: ' + seg.slice(0, 200);
+          if (seg) grounded = /^адрес/i.test(seg) ? seg.slice(0, 250) : 'Наш адрес: ' + seg.slice(0, 200);
         }
         reply = grounded || 'Уточню точный адрес и телефон у администратора. Оставьте, пожалуйста, имя и номер — мы свяжемся и всё расскажем.';
       }
