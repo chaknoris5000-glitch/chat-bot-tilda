@@ -148,6 +148,8 @@
             <div class="menu-item" onclick="switchTab('tasks')"><div class="menu-item-left"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Задачи</div><span class="badge-count" id="task-count" style="display:none;">0</span></div>
             <div class="menu-label">Настройки</div>
             <div class="menu-item" onclick="switchTab('settings')"><div class="menu-item-left"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Настройки</div></div>
+            <div class="menu-item" onclick="switchTab('bookings')"><div class="menu-item-left"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Записи</div><span class="badge-count" id="bookings-count" style="display:none;">0</span></div>
+
         </div>
 
         <div class="main-content">
@@ -201,6 +203,16 @@
                         <thead><tr><th>Задача</th><th>Клиент</th><th>Когда</th><th>Действие</th></tr></thead>
                         <tbody id="tasksBody"></tbody>
                     </table>
+                </div>
+            </div>
+
+            <div id="bookings-view" style="display: none;">
+                <div style="background:#fff;border-radius:12px;padding:16px;">
+                    <div style="display:flex;gap:8px;margin-bottom:12px;">
+                        <button class="btn btn-outline btn-sm" onclick="loadBookings('upcoming')">Предстоящие</button>
+                        <button class="btn btn-outline btn-sm" onclick="loadBookings('all')">Все</button>
+                    </div>
+                    <div id="bookings-list"></div>
                 </div>
             </div>
 
@@ -793,6 +805,70 @@
             closeTaskModal(); loadLeads(); switchTab('tasks');
         }
 
+
+        let allBookings = [];
+
+        function currentClientIdSafe() {
+            return window.currentClientId || (currentUserTgId === ADMIN_TELEGRAM_ID ? 'tilda' : null);
+        }
+
+        async function loadBookings(mode) {
+            try {
+                const cid = currentClientIdSafe();
+                if (!cid) return;
+                const r = await fetch('/api/get-bookings?client_id=' + encodeURIComponent(cid));
+                allBookings = await r.json();
+                if (!Array.isArray(allBookings)) allBookings = [];
+                renderBookings(mode === 'all');
+                const up = allBookings.filter(b => new Date(b.slot) > new Date() && b.status !== 'cancelled').length;
+                const badge = document.getElementById('bookings-count');
+                if (badge) { badge.innerText = up; badge.style.display = up ? 'inline-block' : 'none'; }
+            } catch (e) { console.error(e); }
+        }
+
+        function renderBookings(showAll) {
+            const box = document.getElementById('bookings-list');
+            if (!box) return;
+            const now = new Date();
+            let list = allBookings.slice();
+            if (!showAll) list = list.filter(b => new Date(b.slot) >= now);
+            list.sort((a, b) => new Date(a.slot) - new Date(b.slot));
+            if (!list.length) {
+                box.innerHTML = '<div style="padding:24px;text-align:center;color:#64748b;">Записей пока нет</div>';
+                return;
+            }
+            box.innerHTML = list.map(function (b) {
+                const d = new Date(b.slot);
+                const when = d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                const icon = b.status === 'done' ? '✅' : (b.status === 'cancelled' ? '✖️' : '🕐');
+                const parts = [];
+                if (b.service) parts.push(b.service);
+                if (b.branch) parts.push(b.branch);
+                if (b.price) parts.push(b.price + ' ₽');
+                if (b.rating) parts.push('⭐ ' + b.rating);
+                const buttons = b.status === 'new' || !b.status
+                    ? '<button class="btn btn-outline btn-sm" onclick="bookingAction(' + b.id + ',\'done\')">Завершить</button>' +
+                      '<button class="btn btn-outline btn-sm" onclick="bookingAction(' + b.id + ',\'cancelled\')">Отменить</button>'
+                    : '';
+                return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #eef2f7;">' +
+                    '<div><b>' + when + '</b> ' + icon +
+                    '<div style="font-size:13px;color:#64748b;">' + (parts.join(' · ') || '—') + '</div></div>' +
+                    '<div style="display:flex;gap:6px;">' + buttons + '</div></div>';
+            }).join('');
+        }
+
+        async function bookingAction(id, status) {
+            try {
+                const cid = currentClientIdSafe();
+                await fetch('/api/booking-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id, client_id: cid, patch: { status: status } })
+                });
+                await loadBookings('all');
+            } catch (e) { console.error(e); }
+        }
+
         function switchTab(tab) {
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.main-content > div:not(.header-actions-mobile)').forEach(el => el.style.display = 'none');
@@ -813,6 +889,11 @@
                 document.querySelectorAll('.menu-item')[3].classList.add('active');
                 document.getElementById('page-title').innerText = 'Задачи и напоминания';
                 document.getElementById('tasks-view').style.display = 'block';
+            } else if (tab === 'bookings') {
+                document.querySelectorAll('.menu-item')[5].classList.add('active');
+                document.getElementById('page-title').innerText = 'Записи';
+                document.getElementById('bookings-view').style.display = 'block';
+                loadBookings('upcoming');
             } else {
                 document.querySelectorAll('.menu-item')[4].classList.add('active');
                 document.getElementById('page-title').innerText = 'Настройки';
