@@ -3082,8 +3082,9 @@ app.post('/api/backup-verify', async (req, res) => {
       body: JSON.stringify({ prefix: '', limit: 50, sortBy: { column: 'created_at', order: 'desc' } })
     });
     const items = await listRes.json();
-    const list = Array.isArray(items) ? items : [];
-    if (!list.length) return res.json({ ok: false, error: 'бэкапов нет' });
+    const all = Array.isArray(items) ? items : [];
+    const list = all.filter(function (x) { return String(x.name).indexOf('dump-') === 0; });
+    if (!list.length) return res.json({ ok: false, error: 'бэкапов основной базы нет' });
 
     const latest = list[0];
     const fileRes = await fetch(COMMON_SUPABASE_URL + '/storage/v1/object/backups/' + latest.name, {
