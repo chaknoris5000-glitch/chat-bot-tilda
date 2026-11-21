@@ -2544,6 +2544,11 @@ cron.schedule('0 3 * * *', async () => {
 const __alerted = new Map();
 const __failCount = new Map();
 async function checkBots(alert = true) {
+  // будим роутер: напоминания и отзывы
+  try {
+    await fetch('https://bot-router.onrender.com/cron/tick?key=cron-1795233367814', { signal: AbortSignal.timeout(30000) });
+  } catch (e) {}
+
   const r = await fetch(`${COMMON_SUPABASE_URL}/rest/v1/clients?select=client_id,business_name`, {
     headers: { 'apikey': COMMON_SUPABASE_KEY, 'Authorization': `Bearer ${COMMON_SUPABASE_KEY}` }
   });
