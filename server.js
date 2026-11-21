@@ -2578,7 +2578,9 @@ async function checkBots(alert = true) {
   const results = [];
   for (const c of Array.isArray(clients) ? clients : []) {
     if (!c.client_id || c.client_id === 'demo-client') continue;
-    const url = `https://chat-bot-${String(c.client_id).toLowerCase()}.onrender.com/health`;
+    const url = process.env.ROUTER_URL
+      ? process.env.ROUTER_URL.replace(/\/$/, '') + '/health/' + encodeURIComponent(c.client_id)
+      : `https://chat-bot-${String(c.client_id).toLowerCase()}.onrender.com/health`;
     let ok = false;
     let lastErr = '';
     for (let attempt = 0; attempt < 3 && !ok; attempt++) {
