@@ -2164,10 +2164,20 @@ cron.schedule('0 10 1 * *', async () => {
 // новый Render-сервис из этого же репозитория + запись в базе. Отдельный репозиторий не нужен.
 async function createClientDirect(p) {
   if (process.env.ROUTER_URL && process.env.ROUTER_ADMIN_KEY) {
+    const routerPayload = {
+      client_id: p.client_id,
+      business_name: p.business_name || p.client_id,
+      site_url: p.site_url,
+      bot_token: p.bot_token,
+      owner_telegram_id: p.owner_telegram_id,
+      chat_id: p.chat_id,
+      tariff: p.tariff || 'business',
+      leads_limit: p.leads_limit
+    };
     const r = await fetch(process.env.ROUTER_URL.replace(/\/$/, '') + '/api/create-client', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Admin-Token': process.env.ROUTER_ADMIN_KEY },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(routerPayload)
     });
     const data = await r.json().catch(function () { return {}; });
     if (!r.ok) throw new Error(data.error || ('router ' + r.status));
