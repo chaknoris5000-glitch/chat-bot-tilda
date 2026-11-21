@@ -2163,6 +2163,18 @@ cron.schedule('0 10 1 * *', async () => {
 // Прямое создание клиента (резервный путь, если GitHub Actions недоступен):
 // новый Render-сервис из этого же репозитория + запись в базе. Отдельный репозиторий не нужен.
 async function createClientDirect(p) {
+  if (process.env.ROUTER_URL && process.env.ROUTER_ADMIN_KEY) {
+    const r = await fetch(process.env.ROUTER_URL.replace(/\/$/, '') + '/api/create-client', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': process.env.ROUTER_ADMIN_KEY },
+      body: JSON.stringify(payload)
+    });
+    const data = await r.json().catch(function () { return {}; });
+    if (!r.ok) throw new Error(data.error || ('router ' + r.status));
+    return { ok: true, via: 'router', ...data };
+  }
+
+
   const renderKey = process.env.RENDER_API_KEY;
   if (!renderKey) throw new Error('RENDER_API_KEY не задан');
   if (!/^[a-z0-9][a-z0-9-]{2,24}$/.test(String(p.client_id || ''))) {
